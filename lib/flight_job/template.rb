@@ -40,24 +40,29 @@ module FlightJob
             .downcase           # Make it case insensitive
     end
 
-    attr_reader :prefix, :joined
+    ##
+    # Helper method for loading in all the templates
+    def self.load_all
+      Dir.glob(File.join(Config::CACHE.templates_dir, '*'))
+         .map { |p| Template.new(p) }
+         .sort
+         .tap { |guides| guides.each_with_index { |g, i| g.index = i + 1 } }
+    end
+
+    attr_reader :prefix, :name
     attr_writer :index
 
     def initialize(*a)
       super
 
-      # Standardizes the case and word boundaries
-      name = self.class.standardize_string(File.basename(path, '.*'))
+      # Sets the initial name off the basename
+      @name = File.basename(path)
 
-      # Detects if an prefix has been provided
-      match = PREFIX_REGEX.match(name)
-      if match
+      # Strips the prefix from the name. It is only used for sort order
+      if match = PREFIX_REGEX.match(name)
         # Remove the prefix from the name, and trim leading zeros
         @prefix = match.named_captures['prefix'].to_i
-        @joined = match.named_captures['rest']
-      else
-        @prefix = nil
-        @joined = name
+        @name = match.named_captures['rest']
       end
     end
 
@@ -66,7 +71,7 @@ module FlightJob
     def <=>(other)
       return nil unless self.class == other.class
       if prefix == other.prefix
-        joined <=> other.joined
+        name <=> other.name
       elsif prefix && other.prefix
         prefix <=> other.prefix
       elsif prefix
@@ -86,17 +91,6 @@ module FlightJob
       @index || raise(InternalError, <<~ERROR.chomp)
         The template index has not been set: #{path}
       ERROR
-    end
-
-    def parts
-      @parts ||= joined.split('_')
-    end
-
-    ##
-    # Converts the parts to a human friendly format. This does
-    # not include the prefix
-    def humanized_name
-      @humanized_name ||= parts.map(&:capitalize).join(' ')
     end
   end
 end

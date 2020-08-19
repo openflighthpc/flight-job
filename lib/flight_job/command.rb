@@ -25,8 +25,8 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+require_relative 'template'
 require_relative 'list_output'
-require_relative 'matcher'
 
 module FlightJob
   class Command
@@ -54,10 +54,6 @@ module FlightJob
 
     def run
       raise NotImplementedError
-    end
-
-    def matcher
-      @matcher ||= Matcher.new
     end
 
     def list_output

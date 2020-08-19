@@ -29,7 +29,7 @@ module FlightJob
   module Commands
     class List < Command
       def run
-        puts list_output.render(*matcher.templates)
+        puts list_output.render(*Template.load_all)
       end
     end
   end

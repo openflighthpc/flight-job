@@ -45,9 +45,9 @@ module FlightJob
     end
     register_column(header: 'Name') do |template|
       if $stdout.tty?
-        Paint[template.humanized_name, :cyan]
+        Paint[template.name, :cyan]
       else
-        template.parts.join('_')
+        template.name
       end
     end
     register_column(header: "File (Dir: #{Config::CACHE.templates_dir})", verbose: true) do |template|

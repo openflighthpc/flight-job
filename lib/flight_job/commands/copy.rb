@@ -42,30 +42,36 @@ module FlightJob
               Could not locate a template with index: #{args.first}
             ERROR
           end
-          matcher.templates[index]
+          templates[index]
 
-        # Handle loose resolution by name
+        # Handles an exact match
+        elsif template = templates.find { |t| t.name == args.first }
+          template
+
         else
-          templates = load_templates_from_args
-          if templates.length == 1
-            templates.first
-          elsif templates.length > 1
-            raise MissingError, <<~ERROR.chomp
-              Could not uniquely identify a job template. Did you mean one of the following?
-              #{Paint[list_output.render(*templates), :reset]}
-            ERROR
+          # Attempts a did you mean?
+          regex = /#{args.first}/
+          matches = templates.select { |t| regex.match?(t.name) }
+          if matches.empty?
+            raise MissingError, "Could not locate: #{args.first}"
           else
-            raise MissingError, "Could not locate: #{args.join(' ')}"
+            raise MissingError, <<~ERROR.chomp
+              Could not locate: #{args.first}. Did you mean one of the following?
+              #{Paint[list_output.render(*matches), :reset]}
+            ERROR
           end
         end
       end
 
       def load_templates_from_args
         Template.standardize_string(args.first)
-                .split('_')
                 .uniq
                 .reduce(matcher) { |memo, key| memo.search(key) }
                 .templates
+      end
+
+      def templates
+        @templates ||= Template.load_all
       end
     end
   end
