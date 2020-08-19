@@ -1,4 +1,3 @@
-# frozen_string_literal: true
 #==============================================================================
 # Copyright (C) 2020-present Alces Flight Ltd.
 #
@@ -25,14 +24,39 @@
 # For more information on Flight Job, please visit:
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
-source 'https://rubygems.org'
 
-gem 'commander-openflighthpc', '~> 2.1'
-gem 'hashie'
-gem 'xdg'
-gem 'output_mode'
+require 'output_mode'
 
-group :development do
-  gem 'pry'
-  gem 'pry-byebug'
+module FlightJob
+  module ListOuput
+    # Defines a handy interface for generating Tabulated data
+    extend OutputMode::TLDR::Index
+
+    # NOTE: (~_~)
+    # Someone should probably talk to the maintainer about making this change
+    class << self
+      alias_method 'register_column', 'register_callable'
+    end
+
+    register_column(header: 'Index') do |template|
+      # NOTE: The OutputMode library does not supprt *_with_index type notation
+      #       Instead the index needs to be cached on the object itself
+      $stdout.tty? ? Paint[template.index, :yellow] : template.index
+    end
+    register_column(header: 'Name') do |template|
+      if $stdout.tty?
+        Paint[template.humanized_name, :cyan]
+      else
+        template.parts.join('_')
+      end
+    end
+    register_column(header: "File (Dir: #{Config::CACHE.templates_dir})", verbose: true) do |template|
+      if $stdout.tty?
+        Pathname.new(template.path).relative_path_from Config::CACHE.templates_dir
+      else
+        template.path
+      end
+    end
+  end
 end
+

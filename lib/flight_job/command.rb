@@ -25,6 +25,8 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+require_relative 'list_output'
+
 module FlightJob
   class Command
     attr_accessor :args, :opts
