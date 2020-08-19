@@ -26,6 +26,7 @@
 #==============================================================================
 
 require_relative 'list_output'
+require_relative 'matcher'
 
 module FlightJob
   class Command
