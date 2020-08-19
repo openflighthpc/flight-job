@@ -29,7 +29,7 @@ module FlightJob
   module Commands
     class List < Command
       def run
-        puts Dir.glob(File.join(Config::CACHE.templates_dir, '*'))
+        puts list_output.render(*matcher.templates)
       end
     end
   end

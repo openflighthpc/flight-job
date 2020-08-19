@@ -48,7 +48,7 @@ module FlightJob
     ##
     # Optionally allow a Matcher to be created with a set of templates
     def initialize(templates = nil)
-      @guides = templates || self.class.load_templates
+      @templates = templates || self.class.load_templates
     end
 
     ##

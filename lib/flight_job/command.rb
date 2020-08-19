@@ -55,5 +55,13 @@ module FlightJob
     def run
       raise NotImplementedError
     end
+
+    def matcher
+      @matcher ||= Matcher.new
+    end
+
+    def list_output
+      @list_output ||= ListOutput.build_output
+    end
   end
 end

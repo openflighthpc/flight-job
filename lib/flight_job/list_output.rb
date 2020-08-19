@@ -28,7 +28,7 @@
 require 'output_mode'
 
 module FlightJob
-  module ListOuput
+  module ListOutput
     # Defines a handy interface for generating Tabulated data
     extend OutputMode::TLDR::Index
 
