@@ -29,4 +29,9 @@ source 'https://rubygems.org'
 
 gem 'commander-openflighthpc', '~> 2.1'
 gem 'hashie'
-gem 'xdg', git: 'https://github.com/bkuhlmann/xdg'
+gem 'xdg'
+
+group :development do
+  gem 'pry'
+  gem 'pry-byebug'
+end

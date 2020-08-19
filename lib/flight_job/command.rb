@@ -29,9 +29,9 @@ module FlightJob
   class Command
     attr_accessor :args, :opts
 
-    def initialize(args, opts)
+    def initialize(*args, **opts)
       @args = args.freeze
-      @opts = Hashie::Mash.new(opts.__hash__)
+      @opts = Hashie::Mash.new(opts)
     end
 
     def run!

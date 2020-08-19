@@ -54,7 +54,8 @@ module FlightJob
 
     if Config::CACHE.development?
       create_command 'console' do |c|
-        c.action { Command.new.instance_exec { binding.pry } }
+        require_relative 'commands'
+        c.action { FlightJob::Command.new().instance_exec { binding.pry } }
       end
     end
   end

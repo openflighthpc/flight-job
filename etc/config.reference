@@ -1,3 +1,4 @@
+# vim: set filetype=ruby:
 #==============================================================================
 # Copyright (C) 2020-present Alces Flight Ltd.
 #
@@ -24,14 +25,24 @@
 # For more information on Flight Job, please visit:
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
-require_relative '../command'
 
-module FlightJob
-  module Commands
-    class Hello < Command
-      def run
-        puts "Hello, flight_job"
-      end
-    end
-  end
-end
+# ==============================================================================
+# Application Name
+# The name of the application to use in the help text
+# ==============================================================================
+config :app_name, default: ENV.fetch('FLIGHT_PROGRAM_NAME', 'bin/job')
+
+# ==============================================================================
+# Log Path
+# The file the logger will write to. It will write to standard error when set to
+# empty string.
+# ==============================================================================
+config :log_path, default: "#{xdg.cache_home}/flight/log/share/job.log",
+                  required: false
+
+# ==============================================================================
+# Log level
+# Set at which severity the application will log
+# Valid levels: 'disabled', 'fatal', 'error', 'warn', 'info', 'debug'
+# ==============================================================================
+config :log_level, default: 'error'
