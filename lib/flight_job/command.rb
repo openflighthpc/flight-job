@@ -61,7 +61,7 @@ module FlightJob
     end
 
     def list_output
-      @list_output ||= ListOutput.build_output
+      @list_output ||= ListOutput.build_output(verbose: opts.verbose)
     end
   end
 end

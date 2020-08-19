@@ -56,6 +56,8 @@ module FlightJob
       Paint.mode = 0
     end
 
+    global_slop.bool '--verbose', 'Display additional details'
+
     create_command 'list' do |c|
       c.summary = 'List available job templates'
     end
