@@ -49,6 +49,9 @@ module FlightJob
           # NOTE: expand_path honours absolute path inputs
           path = File.expand_path(dst_name)
 
+          # Allow copies to a directory with the original filename
+          path = File.join(path, src_name) if Dir.exists? path
+
           if File.exists?(path)
             # Identifies the used copy indices
             regex = /(?<=\.)[0-9]+\Z/
