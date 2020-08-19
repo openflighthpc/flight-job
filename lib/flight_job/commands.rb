@@ -38,7 +38,7 @@ module FlightJob
       const_get(const_string).new(*args, **opts)
     rescue NameError
       Config::CACHE.logger.fatal "Command class not defined (maybe?): #{self}::#{const_string}"
-      raise InternalError, 'Command Not Found!'
+      raise InternalError.define_class(127), 'Command Not Found!'
     end
 
     Dir.glob(File.expand_path('commands/*.rb', __dir__)).each do |file|

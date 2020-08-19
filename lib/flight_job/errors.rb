@@ -24,6 +24,37 @@
 # For more information on Flight Job, please visit:
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
-module FlightJob
-  FlightJobError = Class.new(RuntimeError)
+
+module FlightFact
+  class Error < RuntimeError
+    def self.define_class(code)
+      Class.new(self).tap do |klass|
+        klass.instance_variable_set(:@exit_code, code)
+      end
+    end
+
+    def self.exit_code
+      @exit_code || begin
+        superclass.respond_to?(:exit_code) ? superclass.exit_code : 2
+      end
+    end
+
+    def exit_code
+      self.class.exit_code
+    end
+  end
+
+  InternalError = Error.define_class(1)
+  GeneralError = Error.define_class(2)
+  InputError = GeneralError.define_class(3)
+
+  class InteractiveOnly < InputError
+    MSG = 'This command requires an interactive terminal'
+
+    def initialize(msg = MSG)
+      super
+    end
+  end
+
+  MissingError = GeneralError.define_class(20)
 end
