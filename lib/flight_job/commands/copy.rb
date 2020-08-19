@@ -29,34 +29,73 @@ module FlightJob
   module Commands
     class Copy < Command
       def run
-        puts File.read(resolve_template.path)
+        FileUtils.mkdir_p File.dirname(dst_path)
+        FileUtils.cp resolve_template.path, dst_path
+        $stderr.puts <<~INFO.chomp
+          Successfully copied the template to: #{dst_path}
+        INFO
+      end
+
+      def src_name
+        args.first
+      end
+
+      def dst_name
+        args.length > 1 ? args[1] : src_name
+      end
+
+      def dst_path
+        @dst_path ||= begin
+          # NOTE: expand_path honours absolute path inputs
+          path = File.expand_path(dst_name)
+
+          if File.exists?(path)
+            # Identifies the used copy indices
+            regex = /(?<=\.)[0-9]+\Z/
+            copies = Dir.glob("#{path}\.*")
+                        .map { |p| (m = regex.match(p)) ? m[0].to_i : nil }
+                        .reject(&:nil?)
+                        .sort
+            copies.unshift(0)
+
+            # Finds the first unused index
+            index = copies.each_with_index
+                          .find { |cur, idx| cur + 1 != copies[idx + 1] }
+                          .first + 1
+
+            # Appends the path with the index
+            "#{path}.#{index}"
+          else
+            path
+          end
+        end
       end
 
       def resolve_template
         # Finds by ID if there is a single integer argument
-        if args.first.match?(/\A\d+\Z/)
+        if src_name.match?(/\A\d+\Z/)
           # Corrects for the 1-based numbering
-          index = args.first.to_i - 1
+          index = src_name.to_i - 1
           if index < 0 || index >= matcher.templates.length
             raise MissingError, <<~ERROR.chomp
-              Could not locate a template with index: #{args.first}
+              Could not locate a template with index: #{src_name}
             ERROR
           end
           templates[index]
 
         # Handles an exact match
-        elsif template = templates.find { |t| t.name == args.first }
+        elsif template = templates.find { |t| t.name == src_name }
           template
 
         else
           # Attempts a did you mean?
-          regex = /#{args.first}/
+          regex = /#{src_name}/
           matches = templates.select { |t| regex.match?(t.name) }
           if matches.empty?
-            raise MissingError, "Could not locate: #{args.first}"
+            raise MissingError, "Could not locate: #{src_name}"
           else
             raise MissingError, <<~ERROR.chomp
-              Could not locate: #{args.first}. Did you mean one of the following?
+              Could not locate: #{src_name}. Did you mean one of the following?
               #{Paint[list_output.render(*matches), :reset]}
             ERROR
           end
@@ -64,7 +103,7 @@ module FlightJob
       end
 
       def load_templates_from_args
-        Template.standardize_string(args.first)
+        Template.standardize_string(src_name)
                 .uniq
                 .reduce(matcher) { |memo, key| memo.search(key) }
                 .templates
