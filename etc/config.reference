@@ -30,7 +30,17 @@
 # Application Name
 # The name of the application to use in the help text
 # ==============================================================================
-config :app_name, default: ENV.fetch('FLIGHT_PROGRAM_NAME', 'bin/job')
+#<% if app_name -%><%= app_name %><% else -%>
+config :app_name, default: 'bin/app'
+#<% end -%>
+
+# ==============================================================================
+# Templates Directory
+# The directory to where the templates are stored
+# ==============================================================================
+#<% if templates_dir -%><%= templates_dir %><% else -%>
+config :templates_dir, default: File.expand_path('../var/templates', __dir__)
+#<% end -%>
 
 # ==============================================================================
 # Log Path
@@ -46,3 +56,4 @@ config :log_path, default: "#{xdg.cache_home}/flight/log/share/job.log",
 # Valid levels: 'disabled', 'fatal', 'error', 'warn', 'info', 'debug'
 # ==============================================================================
 config :log_level, default: 'error'
+

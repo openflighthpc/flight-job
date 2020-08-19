@@ -24,50 +24,12 @@
 # For more information on Flight Job, please visit:
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
-require_relative 'config'
-
-require 'commander'
 
 module FlightJob
-  module CLI
-    extend Commander::CLI
-
-    def self.create_command(name, args_str = '')
-      command(name) do |c|
-        c.syntax = "#{program :name} #{name} #{args_str}"
-        c.hidden if name.split.length > 1
-
-        c.action do |args, opts|
-          require_relative 'commands'
-          Commands.build(name, *args, **opts.to_h).run!
-        end
-
-        yield c if block_given?
-      end
-    end
-
-    program :application, 'Flight Job'
-    program :name, Config::CACHE.app_name
-    program :version, "v#{FlightJob::VERSION}"
-    program :description, 'Generate a new job from a predefined template'
-    program :help_paging, false
-
-    if [/^xterm/, /rxvt/, /256color/].all? { |regex| ENV['TERM'] !~ regex }
-      Paint.mode = 0
-    end
-
-    create_command 'list' do |c|
-      c.summary = 'List available job templates'
-    end
-
-    create_command 'copy', 'NAME [DEST]' do |c|
-      c.summary = 'Make a copy of a job template'
-    end
-
-    if Config::CACHE.development?
-      create_command 'console' do |c|
-        require_relative 'commands'
-        c.action { FlightJob::Command.new().instance_exec { binding.pry } }
+  module Commands
+    class List < Command
+      def run
+        puts Dir.glob(File.join(Config::CACHE.templates_dir, '*'))
       end
     end
   end

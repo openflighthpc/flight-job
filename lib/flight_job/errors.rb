@@ -25,7 +25,7 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-module FlightFact
+module FlightJob
   class Error < RuntimeError
     def self.define_class(code)
       Class.new(self).tap do |klass|
