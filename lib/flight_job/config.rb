@@ -25,78 +25,104 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 require 'xdg'
-require 'tty-config'
 require 'fileutils'
+require 'hashie'
+require 'yaml'
+
+require_relative 'errors'
+require_relative 'version'
 
 module FlightJob
-  module Config
-    class << self
-      flight_job_DIR_SUFFIX = File.join('flight','flight_job')
+  REFERENCE_PATH = File.expand_path('../../etc/config.reference', __dir__)
+  CONFIG_PATH = File.expand_path('../../etc/config.yaml', __dir__)
 
-      def data
-        @data ||= TTY::Config.new.tap do |cfg|
-          cfg.append_path(File.join(root, 'etc'))
-          begin
-            cfg.read
-          rescue TTY::Config::ReadError
-            nil
-          end
+  class Config < Hashie::Trash
+    include Hashie::Extensions::IgnoreUndeclared
+    include Hashie::Extensions::Dash::IndifferentAccess
+
+    def self.xdg
+      @xdg ||= XDG::Environment.new
+    end
+
+    def self.load_reference(path)
+      self.instance_eval(File.read(path), path, 0) if File.exists?(path)
+    end
+
+    def self.config(sym, **input_opts)
+      opts = input_opts.dup
+
+      # Make keys with defaults required by default
+      opts[:required] = true if opts.key? :default && !opts.key?(:required)
+
+      # Defines the underlining property
+      property(sym, **opts)
+
+      # Define the truthiness method as not empty and not nil
+      define_method(:"#{sym}?") do
+        value = send(sym)
+        if value.respond_to?(:empty?)
+          !value.empty?
+        else
+          !value.nil?
         end
       end
+    end
 
-      def save_data
-        FileUtils.mkdir_p(File.join(root, 'etc'))
-        data.write(force: true)
+    # Loads the config keys from the reference and adds the development key
+    self.load_reference(REFERENCE_PATH)
+    config :development
+
+    # Defines the logging methods
+    def log_path_or_stderr
+      if log_level == 'disabled'
+        '/dev/null'
+      elsif log_path
+        FileUtils.mkdir_p File.dirname(log_path)
+        log_path
+      else
+        $stderr
       end
+    end
 
-      def data_writable?
-        File.writable?(File.join(root, 'etc'))
-      end
+    def logger
+      @logger ||= Logger.new(log_path_or_stderr).tap do |log|
+        next if log_level == 'disabled'
 
-      def user_data
-        @user_data ||= TTY::Config.new.tap do |cfg|
-          xdg_config.all.map do |p|
-            File.join(p, _DIR_SUFFIX)
-          end.each(&cfg.method(:append_path))
-          begin
-            cfg.read
-          rescue TTY::Config::ReadError
-            nil
-          end
+        # Determine the level
+        level = case log_level
+        when 'fatal'
+          Logger::FATAL
+        when 'error'
+          Logger::ERROR
+        when 'warn'
+          Logger::WARN
+        when 'info'
+          Logger::INFO
+        when 'debug'
+          Logger::DEBUG
+        end
+
+        if level.nil?
+          # Log bad log levels
+          log.level = Logger::ERROR
+          log.error "Unrecognized log level: #{log_level}"
+        else
+          # Sets good log levels
+          log.level = level
         end
       end
+    end
+  end
 
-      def save_user_data
-        FileUtils.mkdir_p(
-          File.join(
-            xdg_config.home,
-            flight_job_DIR_SUFFIX
-          )
-        )
-        user_data.write(force: true)
-      end
-
-      def path
-        config_path_provider.path ||
-          config_path_provider.paths.first
-      end
-
-      def root
-        @root ||= File.expand_path(File.join(__dir__, '..', '..'))
-      end
-
-      private
-      def xdg_config
-        @xdg_config ||= XDG::Config.new
-      end
-
-      def xdg_data
-        @xdg_data ||= XDG::Data.new
-      end
-
-      def xdg_cache
-        @xdg_cache ||= XDG::Cache.new
-      end
+  # Caches the config
+  Config::CACHE = if File.exists? CONFIG_PATH
+    data = File.read(CONFIG_PATH)
+    Config.new(YAML.load(data, symbolize_names: true)).tap do |c|
+      c.logger.info "Loaded Config: #{CONFIG_PATH}"
+    end
+  else
+    Config.new({}).tap do |c|
+      c.logger.info "Missing Config: #{CONFIG_PATH}"
     end
   end
 end

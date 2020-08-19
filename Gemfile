@@ -27,7 +27,6 @@
 #==============================================================================
 source 'https://rubygems.org'
 
-gem 'commander-openflighthpc', '~> 1.1.0'
-gem 'tty-prompt'
-gem 'tty-config'
+gem 'commander-openflighthpc', '~> 2.1'
+gem 'hashie'
 gem 'xdg', git: 'https://github.com/bkuhlmann/xdg'

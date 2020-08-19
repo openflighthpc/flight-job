@@ -24,20 +24,29 @@
 # For more information on Flight Job, please visit:
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
-require 'ostruct'
 
 module FlightJob
   class Command
-    attr_accessor :args, :options
+    attr_accessor :args, :opts
 
-    def initialize(args, options, command_name = nil)
+    def initialize(args, opts)
       @args = args.freeze
-      @options = OpenStruct.new(options.__hash__)
+      @opts = Hashie::Mash.new(opts.__hash__)
     end
 
-    # this wrapper is here to later enable error handling &/ logging
     def run!
+      Config::CACHE.logger.info "Running: #{self.class}"
       run
+      Config::CACHE.logger.info 'Exited: 0'
+    rescue => e
+      if e.respond_to? :exit_code
+        Config::CACHE.logger.fatal "Exited: #{e.exit_code}"
+      else
+        Config::CACHE.logger.fatal 'Exited non-zero'
+      end
+      Config::CACHE.logger.debug e.backtrace.reverse.join("\n")
+      Config::CACHE.logger.error "(#{e.class}) #{e.message}"
+      raise e
     end
 
     def run

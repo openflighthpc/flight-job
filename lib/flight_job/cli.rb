@@ -24,57 +24,38 @@
 # For more information on Flight Job, please visit:
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
-require_relative 'commands'
-require_relative 'version'
+require_relative 'config'
 
-require 'tty/reader'
 require 'commander'
 
 module FlightJob
   module CLI
-    PROGRAM_NAME = ENV.fetch('FLIGHT_PROGRAM_NAME','flight_job')
+    extend Commander::CLI
 
-    extend Commander::Delegates
-    program :application, "Flight Job"
-    program :name, PROGRAM_NAME
+    def self.create_command(name, args_str = '')
+      command(name) do |c|
+        c.syntax = "#{program :name} #{name} #{args_str}"
+        c.hidden = true if name.split.length > 1
+
+        c.action do |args, opts|
+          require_relative 'commands'
+          Commands.build(name, *args, **opts.to_h).run!
+        end
+
+        yield c if block_given?
+      end
+    end
+
+    program :application, 'Flight Job'
+    program :name, Config::CACHE.app_name
     program :version, "v#{FlightJob::VERSION}"
-    program :description, '%DESCRIPTION%'
+    program :description, 'Generate a new job from a predefined template'
     program :help_paging, false
-    default_command :help
-    silent_trace!
 
-    error_handler do |runner, e|
-      case e
-      when TTY::Reader::InputInterrupt
-        $stderr.puts "\n#{Paint['WARNING', :underline, :yellow]}: Cancelled by user"
-        exit(130)
-      else
-        Commander::Runner::DEFAULT_ERROR_HANDLER.call(runner, e)
+    if Config::CACHE.development?
+      create_command 'console' do |c|
+        c.action { Command.new.instance_exec { binding.pry } }
       end
     end
-
-    if ENV['TERM'] !~ /^xterm/ && ENV['TERM'] !~ /rxvt/
-      Paint.mode = 0
-    end
-
-    class << self
-      def cli_syntax(command, args_str = nil)
-        command.syntax = [
-          PROGRAM_NAME,
-          command.name,
-          args_str
-        ].compact.join(' ')
-      end
-    end
-
-    command :hello do |c|
-      cli_syntax(c)
-      c.summary = 'Say hello'
-      c.action Commands, :hello
-      c.description = <<EOF
-Say hello.
-EOF
-    end
-    alias_command :h, :hello
   end
 end

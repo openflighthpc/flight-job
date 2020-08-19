@@ -24,32 +24,25 @@
 # For more information on Flight Job, please visit:
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
-require_relative 'commands/hello'
+
+require_relative 'command'
 
 module FlightJob
   module Commands
-    class << self
-      def method_missing(s, *a, &b)
-        if clazz = to_class(s)
-          clazz.new(*a).run!
-        else
-          raise 'command not defined'
-        end
-      end
+    def self.constantize(sym)
+      sym.to_s.dup.split(/[-_]/).each { |c| c[0] = c[0].upcase }.join
+    end
 
-      def respond_to_missing?(s)
-        !!to_class(s)
-      end
+    def self.build(s, *args, **opts)
+      const_string = constantize(s)
+      const_get(const_string).new(*args, **opts)
+    rescue NameError
+      Config::CACHE.logger.fatal "Command class not defined (maybe?): #{self}::#{const_string}"
+      raise InternalError, 'Command Not Found!'
+    end
 
-      private
-      def to_class(s)
-        s.to_s.split('-').reduce(self) do |clazz, p|
-          p.gsub!(/_(.)/) {|a| a[1].upcase}
-          clazz.const_get(p[0].upcase + p[1..-1])
-        end
-      rescue NameError
-        nil
-      end
+    Dir.glob(File.expand_path('commands/*.rb', __dir__)).each do |file|
+      autoload constantize(File.basename(file, '.*')), file
     end
   end
 end
