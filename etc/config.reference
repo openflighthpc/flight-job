@@ -30,7 +30,7 @@
 # CLI "Program" Configuration
 # Sets the various program fields on FlightJob::CLI
 # ==============================================================================
-#<%= program || begin -%>
+#<% if program -%><%= program %><% else -%>
 config :program_name,         default: 'bin/job'
 config :program_application,  default: 'Flight Job'
 config :program_description,  default: 'Generate a new job from a predefined template'
@@ -40,7 +40,7 @@ config :program_description,  default: 'Generate a new job from a predefined tem
 # Templates Directory
 # The directory to where the templates are stored
 # ==============================================================================
-#<% templates_dir || begin -%>
+#<% if templates_dir -%><%= templates_dir %><% else -%>
 config :templates_dir, default: File.expand_path('../var/templates', __dir__)
 #<% end -%>
 
