@@ -1,22 +1,49 @@
 # Flight Job
 
-%SUMMARY%
-
-## Overview
-
-What is it?
+Generate a job script from a predefined template
 
 ## Installation
 
-How is it installed?
+Requires a modern-ish version of ruby circa `2.7`
 
 ## Configuration
 
-Any required or optional configuration?
+[See the reference config](etc/config.reference)
+
+By default the job templates need to be stored in: `var/templates`
 
 ## Operation
 
-How do you use it?
+The following will list the available templates
+NOTE: The behaviour is undefined if no templates are available
+
+```
+flight job list
+```
+
+The copy command is used to copy a template to another directory. By default it will copy to the current directory using the original file name.
+
+```
+# Copy to the current directory
+$ fight job copy simple.sh
+Successfully copied the template to: /root/simple.sh
+
+# Change the name
+$ flight job copy simple.sh demo.sh
+Successfully copied the template to: /root/demo.sh
+
+# Change the directory
+$ flight job copy simple.sh /tmp
+Successfully copied the template to: /tmp/simple.sh
+
+# Handles duplicate files
+$ flight job copy simple.sh
+Successfully copied the template to: /root/simple.sh.1
+
+# Allows copy by index
+$ flight job copy 3
+Successfully copied the template to: /root/simple.sh.2
+```
 
 # Contributing
 
