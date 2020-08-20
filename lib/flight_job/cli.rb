@@ -46,10 +46,17 @@ module FlightJob
       end
     end
 
-    program :application, 'Flight Job'
-    program :name, Config::CACHE.app_name
+    # Configures the CLI from the config
+    regex = /(?<=\Aprogram_).*\Z/
+    Config.properties.each do |prop|
+      if match = regex.match(prop.to_s)
+        sym = match[0].to_sym
+        program sym, Config::CACHE[prop]
+      end
+    end
+
+    # Forces version to match the code base
     program :version, "v#{FlightJob::VERSION}"
-    program :description, 'Generate a new job from a predefined template'
     program :help_paging, false
 
     if [/^xterm/, /rxvt/, /256color/].all? { |regex| ENV['TERM'] !~ regex }
