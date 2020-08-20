@@ -30,17 +30,6 @@ module FlightJob
     PREFIX_REGEX = /\A(?<prefix>\d+)_(?<rest>.*)\Z/
 
     ##
-    # Used to convert strings into a standardized format. This provides case
-    # and word boundary invariance. The standardization process will:
-    # * Use underscore for the word boundaries, and
-    # * Downcase all letters
-    def self.standardize_string(string)
-      string.dup                # Don't modify the input string
-            .gsub(/[\s-]/, '_') # Treat hyphen as an underscore
-            .downcase           # Make it case insensitive
-    end
-
-    ##
     # Helper method for loading in all the templates
     def self.load_all
       Dir.glob(File.join(Config::CACHE.templates_dir, '*'))
@@ -67,11 +56,17 @@ module FlightJob
     end
 
     ##
+    # Strips the file extension, downcases, and converts `-` to `_` for sorting purposes
+    def sort_name
+      @sort_name ||= File.basename(name, '.*').gsub('-', '_').downcase
+    end
+
+    ##
     # Comparison Operator
     def <=>(other)
       return nil unless self.class == other.class
       if prefix == other.prefix
-        name <=> other.name
+        sort_name <=> other.sort_name
       elsif prefix && other.prefix
         prefix <=> other.prefix
       elsif prefix
