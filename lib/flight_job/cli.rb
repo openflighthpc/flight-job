@@ -66,12 +66,15 @@ module FlightJob
     global_slop.bool '--verbose', 'Display additional details'
 
     create_command 'list' do |c|
-      c.summary = 'List available job templates'
+      c.summary = 'List available templates'
     end
 
     create_command 'copy', 'NAME [DEST]' do |c|
-      c.summary = 'Make a copy of a job template'
+      c.summary = 'Generate a job script from a template'
     end
+
+    alias_command 'ls', 'list'
+    alias_command 'cp', 'copy'
 
     if Config::CACHE.development?
       create_command 'console' do |c|

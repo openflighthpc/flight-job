@@ -29,11 +29,15 @@
 # ==============================================================================
 # CLI "Program" Configuration
 # Sets the various program fields on FlightJob::CLI
+#
+# Naming Conventions:
+# * template(s)   - The internal library of files used to generate job scripts
+# * job script(s) - The output file to be ran
 # ==============================================================================
 #<% if program -%><%= program %><% else -%>
 config :program_name,         default: 'bin/job'
 config :program_application,  default: 'Flight Job'
-config :program_description,  default: 'Generate a new job from a predefined template'
+config :program_description,  default: 'Generate a job script from a predefined template'
 #<% end -%>
 
 # ==============================================================================
