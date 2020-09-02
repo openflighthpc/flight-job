@@ -25,11 +25,34 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+require 'ostruct'
+require 'erb'
+
 module FlightJob
   module Commands
     class Info < Command
+      TEMPLATE = <<~ERB
+        # <%= filename -%> -- <%= name -%>
+
+        ## DESCRIPTION
+
+        <%= desc -%>
+
+        <%= extended_desc -%>
+
+        ## LICENSE
+
+        This work is licensed under a <%= license -%> License.
+
+        ## COPYRIGHT
+
+        <%= copyright -%>
+      ERB
+      ERB_TEMPLATE = ERB.new(TEMPLATE, nil, '-')
+
       def run
-        puts template.metadata
+        bind = OpenStruct.new(template.metadata).instance_exec { self.binding }
+        puts ERB_TEMPLATE.result(bind)
       end
 
       def template

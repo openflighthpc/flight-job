@@ -104,6 +104,8 @@ module FlightJob
                .reject(&:nil?)
                .each_with_object({}) do |match, memo|
           memo[match.named_captures['key'].to_sym] = match.named_captures['value']
+        end.tap do |hash|
+          hash[:filename] = name
         end
       end
     end
