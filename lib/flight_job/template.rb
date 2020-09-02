@@ -28,6 +28,7 @@
 module FlightJob
   Template = Struct.new(:path) do
     PREFIX_REGEX = /\A(?<prefix>\d+)_(?<rest>.*)\Z/
+    METADATA_REGEX = /\A#@\s*flight_JOB\[(?<key>.+)\]\s*:\s*(?<value>.*)\Z/
 
     ##
     # Helper method for loading in all the templates
@@ -86,6 +87,25 @@ module FlightJob
       @index || raise(InternalError, <<~ERROR.chomp)
         The template index has not been set: #{path}
       ERROR
+    end
+
+    ##
+    # The content of the template file
+    def content
+      @content = File.read(path)
+    end
+
+    ##
+    # Loads the flight_JOB metadata from the magic comments
+    def metadata
+      @metadata = begin
+        content.each_line
+               .map { |l| METADATA_REGEX.match(l) }
+               .reject(&:nil?)
+               .each_with_object({}) do |match, memo|
+          memo[match.named_captures['key'].to_sym] = match.named_captures['value']
+        end
+      end
     end
   end
 end

@@ -29,7 +29,7 @@ module FlightJob
   module Commands
     class Info < Command
       def run
-        puts template.path
+        puts template.metadata
       end
 
       def template
