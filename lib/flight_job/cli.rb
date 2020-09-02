@@ -73,6 +73,10 @@ module FlightJob
       c.summary = 'Generate a job script from a template'
     end
 
+    create_command 'info', 'NAME' do |c|
+      c.summary = 'Display details about a template'
+    end
+
     alias_command 'ls', 'list'
     alias_command 'cp', 'copy'
 

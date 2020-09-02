@@ -27,47 +27,9 @@
 
 module FlightJob
   module Commands
-    class Copy < Command
+    class Info < Command
       def run
-        FileUtils.mkdir_p File.dirname(dst_path)
-        FileUtils.cp template.path, dst_path
-        $stderr.puts <<~INFO.chomp
-          Successfully copied the template to: #{dst_path}
-        INFO
-      end
-
-      def dst_name
-        args.length > 1 ? args[1] : template.name
-      end
-
-      def dst_path
-        @dst_path ||= begin
-          # NOTE: expand_path honours absolute path inputs
-          path = File.expand_path(dst_name)
-
-          # Allow copies to a directory with the original filename
-          path = File.join(path, template.name) if Dir.exists?(path)
-
-          if File.exists?(path)
-            # Identifies the used copy indices
-            regex = /(?<=\.)[0-9]+\Z/
-            copies = Dir.glob("#{path}\.*")
-                        .map { |p| (m = regex.match(p)) ? m[0].to_i : nil }
-                        .reject(&:nil?)
-                        .sort
-            copies.unshift(0)
-
-            # Finds the first unused index
-            index = copies.each_with_index
-                          .find { |cur, idx| cur + 1 != copies[idx + 1] }
-                          .first + 1
-
-            # Appends the path with the index
-            "#{path}.#{index}"
-          else
-            path
-          end
-        end
+        puts template.path
       end
 
       def template

@@ -59,5 +59,38 @@ module FlightJob
     def list_output
       @list_output ||= ListOutput.build_output(verbose: opts.verbose)
     end
+
+    def load_template(name_or_id)
+      templates = Template.load_all
+
+      # Finds by ID if there is a single integer argument
+      if name_or_id.match?(/\A\d+\Z/)
+        # Corrects for the 1-based numbering
+        index = name_or_id.to_i - 1
+        if index < 0 || index >= templates.length
+          raise MissingError, <<~ERROR.chomp
+            Could not locate a template with index: #{name_or_id}
+          ERROR
+        end
+        templates[index]
+
+      # Handles an exact match
+      elsif match = templates.find { |t| t.name == name_or_id }
+        match
+
+      else
+        # Attempts a did you mean?
+        regex = /#{name_or_id}/
+        matches = templates.select { |t| regex.match?(t.name) }
+        if matches.empty?
+          raise MissingError, "Could not locate: #{name_or_id}"
+        else
+          raise MissingError, <<~ERROR.chomp
+            Could not locate: #{name_or_id}. Did you mean one of the following?
+            #{Paint[list_output.render(*matches), :reset]}
+          ERROR
+        end
+      end
+    end
   end
 end
