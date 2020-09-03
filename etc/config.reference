@@ -49,6 +49,14 @@ config :templates_dir, default: File.expand_path('../var/templates', __dir__)
 #<% end -%>
 
 # ==============================================================================
+# Minimum Terminal Width
+# The minimum terminal width when wrapping output text. This prevents various
+# edge cases in small terminals. The terminal is responsible for wrapping the
+# text if its width is smaller than the minimum.
+# ==============================================================================
+config :minimum_terminal_width, default: 80
+
+# ==============================================================================
 # Log Path
 # The file the logger will write to. It will write to standard error when set to
 # empty string.
