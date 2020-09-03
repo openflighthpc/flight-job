@@ -38,8 +38,7 @@ module FlightJob
         ## DESCRIPTION
 
         <%= desc -%>
-
-        <%= extended_desc -%>
+        <%= extended_desc %>
 
         ## LICENSE
 
