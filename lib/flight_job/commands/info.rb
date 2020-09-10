@@ -27,18 +27,18 @@
 
 require 'ostruct'
 require 'erb'
+require_relative '../markdown_renderer'
 
 module FlightJob
   module Commands
     class Info < Command
       TEMPLATE = <<~ERB
-        # <%= filename -%> -- <%= name -%>
+        # <%= filename -%> -- <%= name %>
 
         ## DESCRIPTION
 
-        <%= desc -%>
-
-        <%= extended_desc -%>
+        <%= desc %>
+        <%= extended_desc -%><%= "\n" if extended_desc -%>
 
         ## LICENSE
 
@@ -52,7 +52,8 @@ module FlightJob
 
       def run
         bind = OpenStruct.new(template.metadata).instance_exec { self.binding }
-        puts ERB_TEMPLATE.result(bind)
+        rendered = ERB_TEMPLATE.result(bind)
+        puts MarkdownRenderer.new(rendered).wrap_markdown
       end
 
       def template

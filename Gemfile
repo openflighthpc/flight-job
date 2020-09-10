@@ -31,6 +31,8 @@ gem 'commander-openflighthpc', '~> 2.1'
 gem 'hashie'
 gem 'xdg'
 gem 'output_mode'
+gem 'tty-markdown', '~> 0.6.0'
+gem 'word_wrap'
 
 group :development do
   gem 'pry'
