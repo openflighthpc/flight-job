@@ -114,8 +114,15 @@ module FlightJob
       @list_output ||= ListOutput.build_output(verbose: opts.verbose)
     end
 
+    def load_templates
+      locals = Dir.glob(File.join(Config::CACHE.templates_dir, '*'))
+                  .map { |p| Template.new(p) }
+      remotes = request_templates.map { |t| Template.new(t.id, t) }
+      [*locals, *remotes].sort.tap { |x| x.each_with_index { |t, i| t.index = i + 1 } }
+    end
+
     def load_template(name_or_id)
-      templates = Template.load_all
+      templates = load_templates
 
       # Finds by ID if there is a single integer argument
       if name_or_id.match?(/\A\d+\Z/)

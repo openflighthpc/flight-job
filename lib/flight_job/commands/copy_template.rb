@@ -29,6 +29,10 @@ module FlightJob
   module Commands
     class CopyTemplate < Command
       def run
+        raise InputError, <<~ERROR.chomp if template.record
+          Remote templates can not be copied!
+        ERROR
+
         FileUtils.mkdir_p File.dirname(dst_path)
         FileUtils.cp template.path, dst_path
         $stderr.puts <<~INFO.chomp

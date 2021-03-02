@@ -26,18 +26,9 @@
 #==============================================================================
 
 module FlightJob
-  Template = Struct.new(:path) do
+  Template = Struct.new(:path, :record) do
     PREFIX_REGEX = /\A(?<prefix>\d+)_(?<rest>.*)\Z/
     METADATA_REGEX = /\A#@\s*flight_JOB\[(?<key>.+)\]\s*:\s*(?<value>.*)\Z/
-
-    ##
-    # Helper method for loading in all the templates
-    def self.load_all
-      Dir.glob(File.join(Config::CACHE.templates_dir, '*'))
-         .map { |p| Template.new(p) }
-         .sort
-         .tap { |guides| guides.each_with_index { |g, i| g.index = i + 1 } }
-    end
 
     attr_reader :prefix, :name
     attr_writer :index
@@ -98,7 +89,14 @@ module FlightJob
     ##
     # Loads the flight_JOB metadata from the magic comments
     def metadata
-      @metadata = begin
+      @metadata ||= if record
+        {
+          filename: URI.join(Config::CACHE.base_url_domain, (record.class::INDIVIDUAL_URL % { id: record.id })),
+          name: record.id,
+          desc: record.synopsis,
+          extended_desc: record.description
+        }
+      else
         content.each_line
                .map { |l| METADATA_REGEX.match(l) }
                .reject(&:nil?)
