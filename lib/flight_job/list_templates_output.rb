@@ -28,7 +28,7 @@
 require 'output_mode'
 
 module FlightJob
-  module ListOutput
+  module ListTemplatesOutput
     # Defines a handy interface for generating Tabulated data
     extend OutputMode::TLDR::Index
 
@@ -41,7 +41,9 @@ module FlightJob
       template.name
     end
     register_column(header: "File (Dir: #{Config::CACHE.templates_dir})", verbose: true) do |template|
-      if $stdout.tty?
+      if template.record
+        template.metadata[:filename]
+      elsif $stdout.tty?
         Pathname.new(template.path).relative_path_from Config::CACHE.templates_dir
       else
         template.path

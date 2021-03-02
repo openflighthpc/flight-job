@@ -29,7 +29,7 @@ require 'faraday'
 require 'faraday_middleware'
 
 require_relative 'template'
-require_relative 'list_output'
+require_relative 'list_templates_output'
 
 require_relative 'records'
 
@@ -110,10 +110,11 @@ module FlightJob
       TemplatesRecord.fetch_all(connection: connection)
     end
 
-    def list_output
-      @list_output ||= ListOutput.build_output(
+    def list_templates_output
+      @list_templates_output ||= ListTemplatesOutput.build_output(
         verbose: (opts.verbose ? true : nil),
         ascii: (opts.ascii ? true : nil),
+        interactive: (opts.ascii ? true : nil),
         row_color: :cyan,
         header_color: :bold
       )
@@ -153,7 +154,7 @@ module FlightJob
         else
           raise MissingError, <<~ERROR.chomp
             Could not locate: #{name_or_id}. Did you mean one of the following?
-            #{Paint[list_output.render(*matches), :reset]}
+            #{Paint[list_templates_output.render(*matches), :reset]}
           ERROR
         end
       end
