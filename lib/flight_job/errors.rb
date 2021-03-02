@@ -50,6 +50,8 @@ module FlightJob
   ClientError = GeneralError.define_class(4)
   ServerError = GeneralError.define_class(5)
 
+  UnsupportedError = GeneralError.define_class(6)
+
   class InteractiveOnly < InputError
     MSG = 'This command requires an interactive terminal'
 

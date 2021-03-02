@@ -82,12 +82,18 @@ module FlightJob
       c.summary = 'List the existing scripts'
     end
 
+    create_command 'create-script', 'TEMPLATE' do |c|
+      c.summary = 'Generate a new script for a template'
+    end
+
+    alias_command 'create', 'create-script'
+
     # NOTE: The following alias are required for backwards compatibility with
     # version 1.1.X. Removing them would require a hard version bump
-    alias_command 'info', 'show-template'
-    alias_command 'ls',   'list-templates'
-    alias_command 'cp',   'copy-template'
-    alias_command 'copy', 'copy-template'
+    alias_command 'info',   'show-template'
+    alias_command 'ls',     'list-templates'
+    alias_command 'cp',     'copy-template'
+    alias_command 'copy',   'copy-template'
 
     if Config::CACHE.development?
       create_command 'console' do |c|
