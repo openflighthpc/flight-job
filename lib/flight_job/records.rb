@@ -29,6 +29,8 @@ require 'json_schemer'
 require 'simple_jsonapi_client'
 require 'active_support/inflector'
 
+require 'tsort'
+
 module FlightJob
   class BaseRecord < SimpleJSONAPIClient::Base
     def self.inherited(base)
@@ -82,6 +84,11 @@ module FlightJob
     })
 
     attributes :text, :default, :format, :askWhen
+
+    def related_question_id
+      return nil unless askWhen
+      askWhen['value'].split('.')[1]
+    end
 
     def supported?
       if askWhen && !(ask_errors = ASK_WHEN_SCHEMA.validate(askWhen).to_a).empty?

@@ -108,7 +108,7 @@ module FlightJob
 
     def request_template_questions(id)
       url = File.join(TemplatesRecord::INDIVIDUAL_URL % { id: id }, 'questions')
-      QuestionsRecord.fetch_all(connection: connection, url: url)
+      QuestionsRecord.fetch_all(connection: connection, url: url).to_a
     end
 
     def request_templates
