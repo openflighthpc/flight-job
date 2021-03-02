@@ -29,12 +29,7 @@ module FlightJob
   module Commands
     class ListTemplates < Command
       def run
-        templates = [
-          *Template.load_all,
-          *request_templates.map { |t| Template.new(t.id) }
-        ].sort.tap { |templates| templates.each_with_index { |t, i| t.index = i + 1 }}
-
-        puts list_output.render(*templates)
+        puts list_output.render(*load_templates)
       end
     end
   end
