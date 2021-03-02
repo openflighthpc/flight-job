@@ -27,12 +27,14 @@
 #==============================================================================
 source 'https://rubygems.org'
 
+gem 'activesupport'
 gem 'commander-openflighthpc', '~> 2.1'
 gem 'hashie'
 gem 'xdg'
 gem 'output_mode'
 gem 'tty-markdown', '~> 0.6.0'
 gem 'word_wrap'
+gem 'simple_jsonapi_client'
 
 group :development do
   gem 'pry'

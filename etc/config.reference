@@ -49,6 +49,30 @@ config :templates_dir, default: File.expand_path('../var/templates', __dir__)
 #<% end -%>
 
 # ==============================================================================
+# App Base URL
+# Specify the location where the API server is being hosted
+# ==============================================================================
+config :base_url, default: 'https://127.0.0.1/job-scripts/api'
+
+# ==============================================================================
+# Verify SSL
+# Specify if SSL certificates should be checked. Disable for self-signed certs
+# ==============================================================================
+config :verify_ssl, default: true
+
+# ==============================================================================
+# API Prefix
+# Specify the relative path from the base URL including the API version.
+# ==============================================================================
+config :api_prefix, default: '/v0'
+
+# ==============================================================================
+# Authentication token
+# Credentials for accessing the remote API server
+# ==============================================================================
+config :token
+
+# ==============================================================================
 # Minimum Terminal Width
 # The minimum terminal width when wrapping output text. This prevents various
 # edge cases in small terminals. The terminal is responsible for wrapping the

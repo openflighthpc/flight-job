@@ -1,17 +1,35 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    activesupport (6.1.3)
+      concurrent-ruby (~> 1.0, >= 1.0.2)
+      i18n (>= 1.6, < 2)
+      minitest (>= 5.1)
+      tzinfo (~> 2.0)
+      zeitwerk (~> 2.3)
     byebug (11.1.3)
     coderay (1.1.3)
     commander-openflighthpc (2.2.0)
       highline (> 1.7.2)
       paint (~> 2.1.0)
       slop (~> 4.8)
+    concurrent-ruby (1.1.8)
     equatable (0.6.1)
+    faraday (1.3.0)
+      faraday-net_http (~> 1.0)
+      multipart-post (>= 1.2, < 3)
+      ruby2_keywords
+    faraday-net_http (1.0.1)
+    faraday_middleware (1.0.0)
+      faraday (~> 1.0)
     hashie (4.1.0)
     highline (2.0.3)
+    i18n (1.8.9)
+      concurrent-ruby (~> 1.0)
     kramdown (1.16.2)
     method_source (1.0.0)
+    minitest (5.14.4)
+    multipart-post (2.1.1)
     necromancer (0.6.0)
     output_mode (1.0.0)
       pastel (~> 0.7)
@@ -28,6 +46,10 @@ GEM
       byebug (~> 11.0)
       pry (~> 0.13.0)
     rouge (3.22.0)
+    ruby2_keywords (0.0.4)
+    simple_jsonapi_client (0.2.5)
+      faraday (>= 0.12, < 2.0)
+      faraday_middleware (> 0.11, < 2.0)
     slop (4.8.2)
     strings (0.1.8)
       strings-ansi (~> 0.1)
@@ -49,20 +71,25 @@ GEM
       pastel (~> 0.7.2)
       strings (~> 0.1.5)
       tty-screen (~> 0.7)
+    tzinfo (2.0.4)
+      concurrent-ruby (~> 1.0)
     unicode-display_width (1.7.0)
     unicode_utils (1.4.0)
     word_wrap (1.0.0)
     xdg (4.2.0)
+    zeitwerk (2.4.2)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
+  activesupport
   commander-openflighthpc (~> 2.1)
   hashie
   output_mode
   pry
   pry-byebug
+  simple_jsonapi_client
   tty-markdown (~> 0.6.0)
   word_wrap
   xdg
