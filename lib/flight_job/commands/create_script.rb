@@ -27,16 +27,56 @@
 
 module FlightJob
   module Commands
+    QuestionSort = Struct.new(:hash) do
+      include TSort
+
+      def self.build(questions)
+        new(questions.map { |q| [q.id, q] }.to_h)
+      end
+
+      attr_accessor :questions
+
+      def tsort
+        super
+      rescue TSort::Cyclic
+        raise UnsupportedError, <<~ERROR.chomp
+          Failed to resolve the templates question order.
+          Please contact your system administrator for further assistence.
+        ERROR
+      end
+
+      def tsort_each_node(&b)
+        hash.values.each(&b)
+      end
+
+      def tsort_each_child(question, &b)
+        id = hash[question.id].related_question_id
+        ids = id.nil? ? [] : [id]
+        ids.map do |id|
+          if hash.key?(id)
+            hash[id]
+          else
+            raise UnsupportedError, <<~ERROR.chomp
+              Could not locate question: #{id}
+              Please contact your system administrator for further assistence.
+            ERROR
+          end
+        end.each(&b)
+      end
+    end
+
     class CreateScript < Command
       def run
         questions = request_template_questions(args.first)
+        raise_unsupported unless questions.all?(&:supported?)
+        questions = QuestionSort.build(questions).tsort
+      end
 
-        unless questions.all?(&:supported?)
-          raise UnsupportedError, <<~ERROR.chomp
-            The selected template format is not currently supported.
-            Please contact your system administrator for further assistance.
-          ERROR
-        end
+      def raise_unsupported
+        raise UnsupportedError, <<~ERROR.chomp
+          The selected template format is not currently supported.
+          Please contact your system administrator for further assistance.
+        ERROR
       end
     end
   end
