@@ -78,6 +78,10 @@ module FlightJob
       c.summary = 'Display details about a template'
     end
 
+    create_command 'list-scripts' do |c|
+      c.summary = 'List the existing scripts'
+    end
+
     # NOTE: The following alias are required for backwards compatibility with
     # version 1.1.X. Removing them would require a hard version bump
     alias_command 'info', 'show-template'
