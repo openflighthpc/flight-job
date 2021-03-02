@@ -27,6 +27,33 @@
 
 module FlightJob
   module Commands
+    class CreateScript < Command
+      def run
+        questions = request_template_questions(args.first)
+        raise_unsupported unless questions.all?(&:supported?)
+        questions = QuestionSort.build(questions).tsort
+
+        answers = questions.each_with_object({}) do |question, memo|
+          if question.related_question_id
+            related = memo[question.related_question_id]
+            unless related == question.askWhen['eq']
+              Config::CACHE.logger.debug("Skipping question: #{question.id}")
+              next
+            end
+          end
+
+          puts question.id
+        end
+      end
+
+      def raise_unsupported
+        raise UnsupportedError, <<~ERROR.chomp
+          The selected template format is not currently supported.
+          Please contact your system administrator for further assistance.
+        ERROR
+      end
+    end
+
     QuestionSort = Struct.new(:hash) do
       include TSort
 
@@ -62,21 +89,6 @@ module FlightJob
             ERROR
           end
         end.each(&b)
-      end
-    end
-
-    class CreateScript < Command
-      def run
-        questions = request_template_questions(args.first)
-        raise_unsupported unless questions.all?(&:supported?)
-        questions = QuestionSort.build(questions).tsort
-      end
-
-      def raise_unsupported
-        raise UnsupportedError, <<~ERROR.chomp
-          The selected template format is not currently supported.
-          Please contact your system administrator for further assistance.
-        ERROR
       end
     end
   end
