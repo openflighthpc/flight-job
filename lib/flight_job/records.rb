@@ -60,4 +60,10 @@ module FlightJob
   class TemplatesRecord < BaseRecord
     attributes :name, :synopsis, :description
   end
+
+  class ScriptsRecord < BaseRecord
+    attributes :name
+
+    has_one :template, class_name: 'FlightJob::TemplatesRecord'
+  end
 end

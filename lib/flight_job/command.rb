@@ -110,14 +110,22 @@ module FlightJob
       TemplatesRecord.fetch_all(connection: connection)
     end
 
-    def list_templates_output
-      @list_templates_output ||= ListTemplatesOutput.build_output(
+    def request_scripts
+      ScriptsRecord.fetch_all(connection: connection, includes: ['template'])
+    end
+
+    def output_mode_options
+      {
         verbose: (opts.verbose ? true : nil),
         ascii: (opts.ascii ? true : nil),
         interactive: (opts.ascii ? true : nil),
         row_color: :cyan,
         header_color: :bold
-      )
+      }
+    end
+
+    def list_templates_output
+      @list_templates_output ||= ListTemplatesOutput.build_output(**output_mode_options)
     end
 
     def load_templates
