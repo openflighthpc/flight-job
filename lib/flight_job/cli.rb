@@ -65,20 +65,24 @@ module FlightJob
 
     global_slop.bool '--verbose', 'Display additional details'
 
-    create_command 'list' do |c|
+    create_command 'list-templates' do |c|
       c.summary = 'List available templates'
     end
 
-    create_command 'copy', 'NAME [DEST]' do |c|
-      c.summary = 'Generate a job script from a template'
+    create_command 'copy-template', 'NAME [DEST]' do |c|
+      c.summary = 'Generate a local copy of a template'
     end
 
-    create_command 'info', 'NAME' do |c|
+    create_command 'show-template', 'NAME' do |c|
       c.summary = 'Display details about a template'
     end
 
-    alias_command 'ls', 'list'
-    alias_command 'cp', 'copy'
+    # NOTE: The following alias are required for backwards compatibility with
+    # version 1.1.X. Removing them would require a hard version bump
+    alias_command 'info', 'show-template'
+    alias_command 'ls',   'list-templates'
+    alias_command 'cp',   'copy-template'
+    alias_command 'copy', 'copy-template'
 
     if Config::CACHE.development?
       create_command 'console' do |c|
