@@ -1,5 +1,5 @@
 #==============================================================================
-# Copyright (C) 2020-present Alces Flight Ltd.
+# Copyright (C) 2021-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -25,17 +25,39 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-module FlightJob
-  module Commands
-    class ListTemplates < Command
-      def run
-        templates = [
-          *Template.load_all,
-          *request_templates.map { |t| Template.new(t.id) }
-        ].sort.tap { |templates| templates.each_with_index { |t, i| t.index = i + 1 }}
+require 'simple_jsonapi_client'
+require 'active_support/inflector'
 
-        puts list_output.render(*templates)
+module FlightJob
+  class BaseRecord < SimpleJSONAPIClient::Base
+    def self.inherited(base)
+      base.const_set(
+        'TYPE',
+        base.name.split('::').last.sub(/Record\Z/, '').underscore.dasherize
+      )
+      base.const_set('COLLECTION_URL', File.join(Config::CACHE.base_url_path, Config::CACHE.api_prefix, base::TYPE))
+      base.const_set('INDIVIDUAL_URL', "#{base::COLLECTION_URL}/%{id}")
+      base.const_set('SINGULAR_TYPE', base::TYPE.singularize)
+    end
+
+    ##
+    # Override the delete method to nicely handle missing records
+    def delete
+      super
+    rescue SimpleJSONAPIClient::Errors::NotFoundError
+      if $!.response['content-type'] == 'application/vnd.api+json'
+        # Handle proper API errors
+        raise MissingError, <<~ERROR.chomp
+          Could not locate #{self.class::SINGULAR_TYPE}: "#{self.id}"
+        ERROR
+      else
+        # Fallback to the top level error handler
+        raise e
       end
     end
+  end
+
+  class TemplatesRecord < BaseRecord
+    attributes :name
   end
 end

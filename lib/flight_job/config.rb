@@ -112,6 +112,14 @@ module FlightJob
         end
       end
     end
+
+    def base_url_domain
+      base_url.sub(/#{base_url_path}\Z/, '')
+    end
+
+    def base_url_path
+      URI(base_url).path
+    end
   end
 
   # Caches the config

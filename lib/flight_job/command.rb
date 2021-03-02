@@ -25,8 +25,13 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+require 'faraday'
+require 'faraday_middleware'
+
 require_relative 'template'
 require_relative 'list_output'
+
+require_relative 'records'
 
 module FlightJob
   class Command
@@ -49,11 +54,60 @@ module FlightJob
       end
       Config::CACHE.logger.debug e.backtrace.reverse.join("\n")
       Config::CACHE.logger.error "(#{e.class}) #{e.message}"
-      raise e
+
+      if e.is_a?(Faraday::ConnectionFailed)
+        raise GeneralError, 'Failed to establish a connection to the scheduler!'
+      elsif e.is_a?(SimpleJSONAPIClient::Errors::NotFoundError) && e.response['content-type'] != 'application/vnd.api+json'
+        raise GeneralError, <<~ERROR.chomp
+          Received an unrecognised response from the upstream api!
+          Please check the following configuration and try again: #{Paint["'base_url' and 'api_prefix'", :yellow]}
+        ERROR
+      elsif e.is_a?(SimpleJSONAPIClient::Errors::APIError) && e.response['content-type'] == 'application/vnd.api+json' && e.status < 500
+        # Generic error handling of API requests. In general these errors should
+        # be caught before here. However this is a useful fallback
+        raise ClientError, <<~ERROR.chomp
+          An error has occurred during your request:
+          #{e.message}
+        ERROR
+      elsif e.is_a?(SimpleJSONAPIClient::Errors::APIError)
+        raise ServerError, <<~ERROR.chomp
+          An unexpected error has occurred during your request!
+          Please contact your system administrator for further assistance.
+        ERROR
+      else
+        raise e
+      end
     end
 
     def run
       raise NotImplementedError
+    end
+
+    def faraday_options
+      {
+        url: Config::CACHE.base_url_domain,
+        ssl: { verify: Config::CACHE.verify_ssl },
+        headers: {
+          'Content-Type' => 'application/vnd.api+json',
+          'Accept' => 'application/vnd.api+json',
+          'Authorization' => "Bearer #{Config::CACHE.token}"
+        }
+      }
+    end
+
+    def connection
+      @connection ||= Faraday.new(**faraday_options) do |c|
+        c.use Faraday::Response::Logger, Config::CACHE.logger, { bodies: true } do |l|
+          l.filter(/(Authorization:)(.*)/, '\1 [REDACTED]')
+        end
+        c.request :json
+        c.response :json, :content_type => /\bjson$/
+        c.adapter :net_http
+      end
+    end
+
+    def request_templates
+      TemplatesRecord.fetch_all(connection: connection)
     end
 
     def list_output
