@@ -1,6 +1,5 @@
-# frozen_string_literal: true
 #==============================================================================
-# Copyright (C) 2020-present Alces Flight Ltd.
+# Copyright (C) 2021-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -25,20 +24,20 @@
 # For more information on Flight Job, please visit:
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
-source 'https://rubygems.org'
 
-gem 'activesupport'
-gem 'commander-openflighthpc', '~> 2.1'
-gem 'hashie'
-gem 'xdg'
-gem 'output_mode'
-gem 'tty-markdown', '~> 0.6.0'
-gem 'json_schemer'
-gem 'tty-prompt'
-gem 'word_wrap'
-gem 'simple_jsonapi_client'
+module FlightJob
+  module Commands
+    class CreateScript < Command
+      def run
+        questions = request_template_questions(args.first)
 
-group :development do
-  gem 'pry'
-  gem 'pry-byebug'
+        unless questions.all?(&:supported?)
+          raise UnsupportedError, <<~ERROR.chomp
+            The selected template format is not currently supported.
+            Please contact your system administrator for further assistance.
+          ERROR
+        end
+      end
+    end
+  end
 end

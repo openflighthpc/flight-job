@@ -25,6 +25,7 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+require 'json_schemer'
 require 'simple_jsonapi_client'
 require 'active_support/inflector'
 
@@ -65,5 +66,30 @@ module FlightJob
     attributes :name
 
     has_one :template, class_name: 'FlightJob::TemplatesRecord'
+  end
+
+  class QuestionsRecord < BaseRecord
+    ASK_WHEN_SCHEMA = JSONSchemer.schema({
+      "type" => "object",
+      "additionalProperties" => false,
+      "required": ["value", "eq"],
+      "properties" => {
+        "value" => {
+          "type" => "string", "pattern" => "^question\.[a-zA-Z_-]+\.answer$"
+        },
+        "eq" => { "type" => ["string"] }
+      }
+    })
+
+    attributes :text, :default, :format, :askWhen
+
+    def supported?
+      if askWhen && !(ask_errors = ASK_WHEN_SCHEMA.validate(askWhen).to_a).empty?
+        Config::CACHE.logger.error("Unsupported askWhen for question: #{id}")
+        Config::CACHE.logger.debug(JSON.pretty_generate(ask_errors))
+        return false
+      end
+      true
+    end
   end
 end
