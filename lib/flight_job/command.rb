@@ -111,7 +111,12 @@ module FlightJob
     end
 
     def list_output
-      @list_output ||= ListOutput.build_output(verbose: opts.verbose)
+      @list_output ||= ListOutput.build_output(
+        verbose: (opts.verbose ? true : nil),
+        ascii: (opts.ascii ? true : nil),
+        row_color: :cyan,
+        header_color: :bold
+      )
     end
 
     def load_templates
