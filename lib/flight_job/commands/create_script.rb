@@ -25,6 +25,8 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+require 'tty-prompt'
+
 module FlightJob
   module Commands
     class CreateScript < Command
@@ -42,8 +44,26 @@ module FlightJob
             end
           end
 
-          puts question.id
+          memo[question.id] = case question.format['type']
+          when 'text'
+            prompt.ask(question.text, default: question.default)
+          when  'multiline_text'
+            # NOTE: The 'default' field does not work particularly well for multiline inputs
+            # Consider replacing with $EDITOR
+            lines = prompt.multiline(question.text)
+            lines.empty? ? question.default : lines.join('')
+          when 'select'
+            opts = {}
+            choices = question.format['options'].each_with_index.map do |opt, idx|
+              opts[:default] = idx + 1 if opt['value'] == question.default
+              { name: opt['text'], value: opt['value'] }
+            end
+            prompt.select(question.text, choices, **opts)
+          else
+            raise InternalError, "Unexpectedly reached question type: #{question.format['type']}"
+          end
         end
+        puts answers
       end
 
       def raise_unsupported
@@ -51,6 +71,10 @@ module FlightJob
           The selected template format is not currently supported.
           Please contact your system administrator for further assistance.
         ERROR
+      end
+
+      def prompt
+        @prompt = TTY::Prompt.new
       end
     end
 
