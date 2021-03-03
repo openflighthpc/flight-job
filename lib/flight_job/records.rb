@@ -131,4 +131,8 @@ module FlightJob
       true
     end
   end
+
+  class SubmissionsRecord < BaseRecord
+    has_one :script, class_name: 'FlightJob::ScriptRecord'
+  end
 end

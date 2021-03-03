@@ -83,10 +83,15 @@ module FlightJob
     end
 
     create_command 'create-script', 'TEMPLATE' do |c|
-      c.summary = 'Generate a new script for a template'
+      c.summary = 'Generate a new script from a template'
+    end
+
+    create_command 'submit-script', 'SCRIPT_ID' do |c|
+      c.summary = 'Start a job from a previously rendered script'
     end
 
     alias_command 'create', 'create-script'
+    alias_command 'submit', 'submit-script'
 
     # NOTE: The following alias are required for backwards compatibility with
     # version 1.1.X. Removing them would require a hard version bump
