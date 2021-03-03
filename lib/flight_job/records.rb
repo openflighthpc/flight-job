@@ -107,8 +107,7 @@ module FlightJob
             }
           }
         }
-      },
-      "else" => { "required" => ["type"] }
+      }
     })
 
     attributes :text, :default, :format, :askWhen
