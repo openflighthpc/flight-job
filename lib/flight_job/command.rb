@@ -113,6 +113,16 @@ module FlightJob
 
     def request_templates
       TemplatesRecord.fetch_all(connection: connection)
+                     .sort_by(&:name)
+                     .tap do |templates|
+        templates.each_with_index do |template, idx|
+          template.index = idx + 1
+        end
+      end
+    end
+
+    def request_template(id)
+      TemplatesRecord.fetch(connection: connection, url_opts: { id: id })
     end
 
     def request_scripts
@@ -133,40 +143,34 @@ module FlightJob
       @list_templates_output ||= ListTemplatesOutput.build_output(**output_mode_options)
     end
 
-    def load_templates
-      locals = Dir.glob(File.join(Config::CACHE.templates_dir, '*'))
-                  .map { |p| Template.new(p) }
-      remotes = request_templates.map { |t| Template.new(t.id, t) }
-      [*locals, *remotes].sort.tap { |x| x.each_with_index { |t, i| t.index = i + 1 } }
-    end
-
-    def load_template(name_or_id)
-      templates = load_templates
+    def load_template(id_or_index)
+      begin
+        return request_template(id_or_index)
+      rescue SimpleJSONAPIClient::Errors::NotFoundError
+        # NOOP
+      end
+      templates = request_templates
 
       # Finds by ID if there is a single integer argument
-      if name_or_id.match?(/\A\d+\Z/)
+      if id_or_index.match?(/\A\d+\Z/)
         # Corrects for the 1-based numbering
-        index = name_or_id.to_i - 1
+        index = id_or_index.to_i - 1
         if index < 0 || index >= templates.length
           raise MissingError, <<~ERROR.chomp
-            Could not locate a template with index: #{name_or_id}
+            Could not locate a template with index: #{id_or_index}
           ERROR
         end
         templates[index]
 
-      # Handles an exact match
-      elsif match = templates.find { |t| t.name == name_or_id }
-        match
-
       else
         # Attempts a did you mean?
-        regex = /#{name_or_id}/
+        regex = /#{id_or_index}/
         matches = templates.select { |t| regex.match?(t.name) }
         if matches.empty?
-          raise MissingError, "Could not locate: #{name_or_id}"
+          raise MissingError, "Could not locate: #{id_or_index}"
         else
           raise MissingError, <<~ERROR.chomp
-            Could not locate: #{name_or_id}. Did you mean one of the following?
+            Could not locate: #{id_or_index}. Did you mean one of the following?
             #{Paint[list_templates_output.render(*matches), :reset]}
           ERROR
         end

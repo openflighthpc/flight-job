@@ -61,6 +61,8 @@ module FlightJob
   end
 
   class TemplatesRecord < BaseRecord
+    attr_accessor :index
+
     attributes :name, :synopsis, :description
   end
 

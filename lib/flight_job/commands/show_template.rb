@@ -33,25 +33,25 @@ module FlightJob
   module Commands
     class ShowTemplate < Command
       TEMPLATE = <<~ERB
-        # <%= filename -%> -- <%= name %>
+        # <%= id %>
 
         ## DESCRIPTION
 
-        <%= desc %>
-        <%= extended_desc -%><%= "\n" if extended_desc -%>
+        <%= synopsis %>
+        <%= description -%><%= "\n" if description -%>
 
         ## LICENSE
 
-        This work is licensed under a <%= license -%> License.
+        This work is licensed under a <%#= license -%> License.
 
         ## COPYRIGHT
 
-        <%= copyright -%>
+        <%#= copyright -%>
       ERB
       ERB_TEMPLATE = ERB.new(TEMPLATE, nil, '-')
 
       def run
-        bind = OpenStruct.new(template.metadata).instance_exec { self.binding }
+        bind = template.instance_exec { self.binding }
         rendered = ERB_TEMPLATE.result(bind)
         puts MarkdownRenderer.new(rendered).wrap_markdown
       end

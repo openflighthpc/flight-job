@@ -41,14 +41,6 @@ config :program_description,  default: 'Generate a job script from a predefined 
 #<% end -%>
 
 # ==============================================================================
-# Templates Directory
-# The directory to where the templates are stored
-# ==============================================================================
-#<% if templates_dir -%><%= templates_dir %><% else -%>
-config :templates_dir, default: File.expand_path('../var/templates', __dir__)
-#<% end -%>
-
-# ==============================================================================
 # App Base URL
 # Specify the location where the API server is being hosted
 # ==============================================================================

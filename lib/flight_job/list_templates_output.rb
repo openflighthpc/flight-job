@@ -37,17 +37,11 @@ module FlightJob
       #       Instead the index needs to be cached on the object itself
       template.index
     end
-    register_column(header: 'Name') do |template|
-      template.name
+    register_column(header: 'ID') do |template|
+      template.id
     end
-    register_column(header: "File (Dir: #{Config::CACHE.templates_dir})", verbose: true) do |template|
-      if template.record
-        template.metadata[:filename]
-      elsif $stdout.tty?
-        Pathname.new(template.path).relative_path_from Config::CACHE.templates_dir
-      else
-        template.path
-      end
+    register_column(header: 'Friendly Name') do |template|
+      template.name
     end
   end
 end
