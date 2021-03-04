@@ -72,6 +72,15 @@ module FlightJob
     self.load_reference(REFERENCE_PATH)
     config :development
 
+    # Ensures the token file exists
+    def token
+      if File.readable?(token_file)
+        File.read(token_file)
+      else
+        raise CredentialsError, token_error
+      end
+    end
+
     # Defines the logging methods
     def log_path_or_stderr
       if log_level == 'disabled'

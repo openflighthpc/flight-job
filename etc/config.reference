@@ -60,9 +60,18 @@ config :api_prefix, default: '/v0'
 
 # ==============================================================================
 # Authentication token
-# Credentials for accessing the remote API server
+# The file contain access credentials for the remote API server
 # ==============================================================================
-config :token
+config :token_file, default: File.join(xdg.data_home, 'flight/login/token.conf')
+
+# ==============================================================================
+# Token Error
+# A message to be displayed when there is an error related to a token.
+# ==============================================================================
+config :token_error, default: <<~ERROR.chomp
+  An error was encountered when trying to access the remote server!
+  Please check your authorization credentials and try again.
+ERROR
 
 # ==============================================================================
 # Minimum Terminal Width
