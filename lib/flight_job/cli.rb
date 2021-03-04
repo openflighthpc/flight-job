@@ -70,10 +70,6 @@ module FlightJob
       c.summary = 'List available templates'
     end
 
-    create_command 'copy-template', 'NAME [DEST]' do |c|
-      c.summary = 'Generate a local copy of a template'
-    end
-
     create_command 'show-template', 'NAME' do |c|
       c.summary = 'Display details about a template'
     end
@@ -97,8 +93,6 @@ module FlightJob
     # version 1.1.X. Removing them would require a hard version bump
     alias_command 'info',   'show-template'
     alias_command 'ls',     'list-templates'
-    alias_command 'cp',     'copy-template'
-    alias_command 'copy',   'copy-template'
 
     if Config::CACHE.development?
       create_command 'console' do |c|
