@@ -67,9 +67,14 @@ module FlightJob
   end
 
   class ScriptsRecord < BaseRecord
-    attributes :name
+    attributes :name, :createdAt
 
     has_one :template, class_name: 'FlightJob::TemplatesRecord'
+
+    def local_created_at_datetime
+      return unless createdAt
+      DateTime.rfc3339(createdAt).to_time.getlocal.to_datetime
+    end
   end
 
   class QuestionsRecord < BaseRecord

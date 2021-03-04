@@ -126,7 +126,7 @@ module FlightJob
     end
 
     def request_scripts
-      ScriptsRecord.fetch_all(connection: connection, includes: ['template'])
+      ScriptsRecord.fetch_all(connection: connection, includes: ['template']).to_a
     end
 
     def output_mode_options

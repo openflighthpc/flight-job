@@ -34,11 +34,15 @@ module FlightJob
       register_column(header: 'ID', row_color: :yellow) do |script|
         script.id
       end
+      register_column(header: 'Created At', verbose: true) { |s| s.local_created_at_datetime }
+      register_column(header: 'Created At', verbose: false) do |s|
+        s.local_created_at_datetime.strftime('%d/%m %H:%M')
+      end
       register_column(header: 'Name') { |s| s.name }
       register_column(header: 'Template') { |s| s.template&.name }
 
       def run
-        scripts = request_scripts
+        scripts = request_scripts.sort_by(&:createdAt)
         if scripts.empty?
           $stderr.puts 'No scripts located'
         else
