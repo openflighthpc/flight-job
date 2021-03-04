@@ -32,17 +32,9 @@ module FlightJob
     # Defines a handy interface for generating Tabulated data
     extend OutputMode::TLDR::Index
 
-    register_column(header: 'Index', row_color: :yellow) do |template|
-      # NOTE: The OutputMode library does not supprt *_with_index type notation
-      #       Instead the index needs to be cached on the object itself
-      template.index
-    end
-    register_column(header: 'ID') do |template|
-      template.id
-    end
-    register_column(header: 'Friendly Name') do |template|
-      template.name
-    end
+    register_column(header: 'ID', row_color: :yellow, &:id)
+    register_column(header: 'Friendly Name', &:name)
+    register_column(header: 'Synopsis', &:synopsis)
   end
 end
 

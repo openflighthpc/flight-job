@@ -142,39 +142,5 @@ module FlightJob
     def list_templates_output
       @list_templates_output ||= ListTemplatesOutput.build_output(**output_mode_options)
     end
-
-    def load_template(id_or_index)
-      begin
-        return request_template(id_or_index)
-      rescue SimpleJSONAPIClient::Errors::NotFoundError
-        # NOOP
-      end
-      templates = request_templates
-
-      # Finds by ID if there is a single integer argument
-      if id_or_index.match?(/\A\d+\Z/)
-        # Corrects for the 1-based numbering
-        index = id_or_index.to_i - 1
-        if index < 0 || index >= templates.length
-          raise MissingError, <<~ERROR.chomp
-            Could not locate a template with index: #{id_or_index}
-          ERROR
-        end
-        templates[index]
-
-      else
-        # Attempts a did you mean?
-        regex = /#{id_or_index}/
-        matches = templates.select { |t| regex.match?(t.name) }
-        if matches.empty?
-          raise MissingError, "Could not locate: #{id_or_index}"
-        else
-          raise MissingError, <<~ERROR.chomp
-            Could not locate: #{id_or_index}. Did you mean one of the following?
-            #{Paint[list_templates_output.render(*matches), :reset]}
-          ERROR
-        end
-      end
-    end
   end
 end

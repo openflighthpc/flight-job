@@ -76,7 +76,7 @@ module FlightJob
       c.summary = 'List available templates'
     end
 
-    create_command 'info-template', 'NAME' do |c|
+    create_command 'info-template', 'TEMPLATE_ID' do |c|
       c.summary = 'Display metadata details about a template'
     end
 
@@ -84,7 +84,7 @@ module FlightJob
       c.summary = 'List the existing scripts'
     end
 
-    create_command 'create-script', 'TEMPLATE' do |c|
+    create_command 'create-script', 'TEMPLATE_ID' do |c|
       c.summary = 'Generate a new script from a template'
     end
 

@@ -57,7 +57,7 @@ module FlightJob
       end
 
       def template
-        @template ||= load_template(args.first)
+        @template ||= request_template(args.first)
       end
     end
   end

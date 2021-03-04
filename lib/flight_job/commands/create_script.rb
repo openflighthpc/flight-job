@@ -31,7 +31,7 @@ module FlightJob
   module Commands
     class CreateScript < Command
       def run
-        questions = request_template_questions(template.id)
+        questions = request_template_questions(args.first)
         raise_unsupported unless questions.all?(&:supported?)
         questions = QuestionSort.build(questions).tsort
 
@@ -65,12 +65,8 @@ module FlightJob
         end
 
         payload = answers.to_json
-        path = File.join(Config::CACHE.base_url_path, Config::CACHE.api_prefix, 'render', template.id)
+        path = File.join(Config::CACHE.base_url_path, Config::CACHE.api_prefix, 'render', args.first)
         connection.post(path, payload, { 'Content-Type' => 'application/json', 'Accept' => 'text/plain' })
-      end
-
-      def template
-        @template = load_template(args.first)
       end
 
       def raise_unsupported
