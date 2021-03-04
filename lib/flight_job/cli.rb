@@ -70,8 +70,8 @@ module FlightJob
       c.summary = 'List available templates'
     end
 
-    create_command 'show-template', 'NAME' do |c|
-      c.summary = 'Display details about a template'
+    create_command 'info-template', 'NAME' do |c|
+      c.summary = 'Display metadata details about a template'
     end
 
     create_command 'list-scripts' do |c|
@@ -88,10 +88,7 @@ module FlightJob
 
     alias_command 'create', 'create-script'
     alias_command 'submit', 'submit-script'
-
-    # NOTE: The following alias are required for backwards compatibility with
-    # version 1.1.X. Removing them would require a hard version bump
-    alias_command 'info',   'show-template'
+    alias_command 'info',   'info-template'
     alias_command 'ls',     'list-templates'
 
     if Config::CACHE.development?
