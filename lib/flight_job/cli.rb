@@ -27,8 +27,10 @@
 require_relative 'config'
 
 require 'commander'
+require_relative 'help_formatter'
 
 module FlightJob
+
   module CLI
     extend Commander::CLI
 
@@ -58,6 +60,10 @@ module FlightJob
     # Forces version to match the code base
     program :version, "v#{FlightJob::VERSION}"
     program :help_paging, false
+
+    # NOTE: There is a bug in Commander where the help formatter aliases aren't set
+    @help_formatter_aliases = {}
+    program :help_formatter, HelpFormatter
 
     if [/^xterm/, /rxvt/, /256color/].all? { |regex| ENV['TERM'] !~ regex }
       Paint.mode = 0
