@@ -27,6 +27,7 @@
 require_relative 'config'
 
 require 'commander'
+require_relative 'help_formatter'
 
 module FlightJob
   module CLI
@@ -59,26 +60,36 @@ module FlightJob
     program :version, "v#{FlightJob::VERSION}"
     program :help_paging, false
 
+    # NOTE: There is a bug in Commander where the help formatter aliases aren't set
+    @help_formatter_aliases = {}
+    program :help_formatter, HelpFormatter
+
     if [/^xterm/, /rxvt/, /256color/].all? { |regex| ENV['TERM'] !~ regex }
       Paint.mode = 0
     end
 
     global_slop.bool '--verbose', 'Display additional details'
 
-    create_command 'list' do |c|
+    create_command 'list-templates' do |c|
       c.summary = 'List available templates'
     end
 
-    create_command 'copy', 'NAME [DEST]' do |c|
+    create_command 'copy-template', 'NAME [DEST]' do |c|
       c.summary = 'Generate a job script from a template'
     end
 
-    create_command 'info', 'NAME' do |c|
+    create_command 'info-template', 'NAME' do |c|
       c.summary = 'Display details about a template'
     end
 
-    alias_command 'ls', 'list'
-    alias_command 'cp', 'copy'
+    alias_command 'create', 'create-script'
+    alias_command 'submit', 'submit-script'
+
+    # The following aliases are required for backwards compatibility with
+    # version 1.1.X of the CLI
+    alias_command 'info',   'info-template'
+    alias_command 'ls',     'list-templates'
+    alias_command 'cp',     'copy-template'
 
     if Config::CACHE.development?
       create_command 'console' do |c|

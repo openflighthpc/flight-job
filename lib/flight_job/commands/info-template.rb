@@ -31,7 +31,7 @@ require_relative '../markdown_renderer'
 
 module FlightJob
   module Commands
-    class Info < Command
+    class InfoTemplate < Command
       TEMPLATE = <<~ERB
         # <%= filename -%> -- <%= name %>
 

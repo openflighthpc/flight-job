@@ -27,7 +27,7 @@
 
 module FlightJob
   module Commands
-    class Copy < Command
+    class CopyTemplate < Command
       def run
         FileUtils.mkdir_p File.dirname(dst_path)
         FileUtils.cp template.path, dst_path
