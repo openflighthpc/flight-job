@@ -1,5 +1,6 @@
+# frozen_string_literal: true
 #==============================================================================
-# Copyright (C) 2020-present Alces Flight Ltd.
+# Copyright (C) 2021-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -25,24 +26,24 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require_relative 'command'
+require_relative 'flight_job/configuration'
+require_relative 'flight_job/command'
 
 module FlightJob
+  def self.constantize(sym)
+    sym.to_s.dup.split(/[-_]/).each { |c| c[0] = c[0].upcase }.join
+  end
+
+  # Setup the autoloads for the commands
   module Commands
-    def self.constantize(sym)
-      sym.to_s.dup.split(/[-_]/).each { |c| c[0] = c[0].upcase }.join
-    end
-
-    def self.build(s, *args, **opts)
-      const_string = constantize(s)
-      const_get(const_string).new(*args, **opts)
-    rescue NameError
-      FlightJob.logger.fatal "Command class not defined (maybe?): #{self}::#{const_string}"
-      raise InternalError.define_class(127), 'Command Not Found!'
-    end
-
-    Dir.glob(File.expand_path('commands/*.rb', __dir__)).each do |file|
-      autoload constantize(File.basename(file, '.*')), file
+    Dir.glob(File.expand_path('flight_job/commands/*', __dir__)).each do |path|
+      autoload FlightJob.constantize(File.basename(path, '.*')), path
     end
   end
+
+  # Setup the autoloads for models
+  Dir.glob(File.expand_path('flight_job/models/*', __dir__)).each do |path|
+    autoload FlightJob.constantize(File.basename(path, '.*')), path
+  end
 end
+

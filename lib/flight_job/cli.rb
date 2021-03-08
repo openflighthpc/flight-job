@@ -40,8 +40,15 @@ module FlightJob
         c.hidden if name.split.length > 1
 
         c.action do |args, opts|
-          require_relative 'commands'
-          Commands.build(name, *args, **opts.to_h).run!
+          require_relative '../flight_job'
+          begin
+            const_string = FlightJob.constantize(c.name)
+            command = FlightJob::Commands.const_get(const_string).new(args, opts)
+          rescue NameError
+            FlightJob.logger.fatal "Command class not defined (maybe?): #{self}::#{const_string}"
+            raise InternalError.define_class(127), 'Command Not Found!'
+          end
+          command.run!
         end
 
         yield c if block_given?

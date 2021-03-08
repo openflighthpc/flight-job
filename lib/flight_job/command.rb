@@ -26,17 +26,15 @@
 #==============================================================================
 
 require 'ostruct'
-
-require_relative 'template'
 require_relative 'list_output'
 
 module FlightJob
   class Command
     attr_accessor :args, :opts
 
-    def initialize(*args, **opts)
+    def initialize(args, opts)
       @args = args.freeze
-      @opts = OpenStruct.new(opts)
+      @opts = opts
     end
 
     def run!

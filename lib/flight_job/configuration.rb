@@ -30,6 +30,7 @@ require 'active_support/core_ext/hash/keys'
 require 'logger'
 
 require 'flight_configuration'
+require_relative 'errors'
 
 module FlightJob
   class Configuration
