@@ -56,8 +56,18 @@ module FlightJob
       raise NotImplementedError
     end
 
+    def output_mode_options
+      {
+        verbose: (opts.verbose ? true : nil),
+        ascii: (opts.ascii ? true : nil),
+        interactive: (opts.ascii ? true : nil),
+        row_color: :cyan,
+        header_color: :bold
+      }
+    end
+
     def list_output
-      @list_output ||= ListOutput.build_output(verbose: opts.verbose)
+      @list_output ||= ListOutput.build_output(**output_mode_options)
     end
 
     def load_template(name_or_id)

@@ -69,6 +69,7 @@ module FlightJob
     end
 
     global_slop.bool '--verbose', 'Display additional details'
+    global_slop.bool '--ascii', 'Display a simplified version of the output'
 
     create_command 'list-templates' do |c|
       c.summary = 'List available templates'

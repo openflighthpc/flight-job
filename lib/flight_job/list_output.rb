@@ -29,26 +29,15 @@ require 'output_mode'
 
 module FlightJob
   module ListOutput
-    # Defines a handy interface for generating Tabulated data
     extend OutputMode::TLDR::Index
 
-    # NOTE: (~_~)
-    # Someone should probably talk to the maintainer about making this change
-    class << self
-      alias_method 'register_column', 'register_callable'
-    end
-
-    register_column(header: 'Index') do |template|
-      # NOTE: The OutputMode library does not supprt *_with_index type notation
+    register_column(header: 'Index', row_color: :yellow) do |template|
+      # NOTE: The OutputMode library does not support *_with_index type notation
       #       Instead the index needs to be cached on the object itself
-      $stdout.tty? ? Paint[template.index, :yellow] : template.index
+      template.index
     end
     register_column(header: 'Name') do |template|
-      if $stdout.tty?
-        Paint[template.name, :cyan]
-      else
-        template.name
-      end
+      template.name
     end
     register_column(header: "File (Dir: #{Config::CACHE.templates_dir})", verbose: true) do |template|
       if $stdout.tty?
