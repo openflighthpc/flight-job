@@ -1,6 +1,5 @@
-# vim: set filetype=ruby:
 #==============================================================================
-# Copyright (C) 2020-present Alces Flight Ltd.
+# Copyright (C) 2021-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -27,26 +26,12 @@
 #==============================================================================
 
 # ==============================================================================
-# CLI "Program" Configuration
-# Sets the various program fields on FlightJob::CLI
-#
-# Naming Conventions:
-# * template(s)   - The internal library of files used to generate job scripts
-# * job script(s) - The output file to be ran
-# ==============================================================================
-#<% if program -%><%= program %><% else -%>
-config :program_name,         default: 'bin/job'
-config :program_application,  default: 'Flight Job'
-config :program_description,  default: 'Generate a job script from a predefined template'
-#<% end -%>
-
-# ==============================================================================
 # Templates Directory
-# The directory to where the templates are stored
+# Specify where the templates will be stored.
+#
+# Relative paths are expanded from the install directory.
 # ==============================================================================
-#<% if templates_dir -%><%= templates_dir %><% else -%>
-config :templates_dir, default: File.expand_path('../var/templates', __dir__)
-#<% end -%>
+# templates_dir: usr/share
 
 # ==============================================================================
 # Minimum Terminal Width
@@ -54,20 +39,20 @@ config :templates_dir, default: File.expand_path('../var/templates', __dir__)
 # edge cases in small terminals. The terminal is responsible for wrapping the
 # text if its width is smaller than the minimum.
 # ==============================================================================
-config :minimum_terminal_width, default: 80
+# minimum_terminal_width: 80
 
 # ==============================================================================
 # Log Path
-# The file the logger will write to. It will write to standard error when set to
-# empty string.
+# The file the logger will write to. It will write to standard error if
+# omitted.
+#
+# Relative paths are expanded from the install directory.
 # ==============================================================================
-config :log_path, default: "#{xdg.cache_home}/flight/log/share/job.log",
-                  required: false
+# log_path: ~/.cache/flight/log/share/job.log
 
 # ==============================================================================
 # Log level
 # Set at which severity the application will log
-# Valid levels: 'disabled', 'fatal', 'error', 'warn', 'info', 'debug'
+# Valid levels: 'fatal', 'error', 'warn', 'info', 'debug'
 # ==============================================================================
-config :log_level, default: 'error'
-
+# log_level: error

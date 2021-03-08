@@ -1,17 +1,33 @@
+GIT
+  remote: https://github.com/openflighthpc/flight_configuration.git
+  revision: 24928260e542768f13cc513a3a08af69f690dfbc
+  branch: 24928260e542768f13cc513a3a08af69f690dfbc
+  specs:
+    flight_configuration (0.1.0)
+
 GEM
   remote: https://rubygems.org/
   specs:
+    activesupport (6.1.3)
+      concurrent-ruby (~> 1.0, >= 1.0.2)
+      i18n (>= 1.6, < 2)
+      minitest (>= 5.1)
+      tzinfo (~> 2.0)
+      zeitwerk (~> 2.3)
     byebug (11.1.3)
     coderay (1.1.3)
     commander-openflighthpc (2.2.0)
       highline (> 1.7.2)
       paint (~> 2.1.0)
       slop (~> 4.8)
+    concurrent-ruby (1.1.8)
     equatable (0.6.1)
-    hashie (4.1.0)
     highline (2.0.3)
+    i18n (1.8.9)
+      concurrent-ruby (~> 1.0)
     kramdown (1.16.2)
     method_source (1.0.0)
+    minitest (5.14.4)
     necromancer (0.7.0)
     output_mode (1.4.0)
       pastel (>= 0.7)
@@ -49,23 +65,25 @@ GEM
       pastel (~> 0.7.2)
       strings (~> 0.1.5)
       tty-screen (~> 0.7)
+    tzinfo (2.0.4)
+      concurrent-ruby (~> 1.0)
     unicode-display_width (1.7.0)
     unicode_utils (1.4.0)
     word_wrap (1.0.0)
-    xdg (4.2.0)
+    zeitwerk (2.4.2)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
+  activesupport
   commander-openflighthpc (~> 2.1)
-  hashie
+  flight_configuration!
   output_mode
   pry
   pry-byebug
   tty-markdown (~> 0.6.0)
   word_wrap
-  xdg
 
 BUNDLED WITH
    2.1.4

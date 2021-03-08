@@ -1,5 +1,6 @@
 etc/config.*
 !etc/config.reference
 var
+usr/share
 .bundle/*
 vendor

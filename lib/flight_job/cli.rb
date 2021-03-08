@@ -24,7 +24,8 @@
 # For more information on Flight Job, please visit:
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
-require_relative 'config'
+require_relative 'configuration'
+require_relative 'version'
 
 require 'commander'
 require_relative 'help_formatter'
@@ -47,16 +48,9 @@ module FlightJob
       end
     end
 
-    # Configures the CLI from the config
-    regex = /(?<=\Aprogram_).*\Z/
-    Config.properties.each do |prop|
-      if match = regex.match(prop.to_s)
-        sym = match[0].to_sym
-        program sym, Config::CACHE[prop]
-      end
-    end
-
-    # Forces version to match the code base
+    program :name,         ENV.fetch('FLIGHT_PROGRAM_NAME') { 'bin/job' }
+    program :application,  'Flight Job'
+    program :description,  'Generate a job script from a predefined template'
     program :version, "v#{FlightJob::VERSION}"
     program :help_paging, false
 
@@ -92,10 +86,12 @@ module FlightJob
     alias_command 'ls',     'list-templates'
     alias_command 'cp',     'copy-template'
 
-    if Config::CACHE.development?
+    if FlightJob.config.development
       create_command 'console' do |c|
-        require_relative 'commands'
-        c.action { FlightJob::Command.new().instance_exec { binding.pry } }
+        c.action do
+          require_relative 'command'
+          FlightJob::Command.new().instance_exec { binding.pry }
+        end
       end
     end
   end

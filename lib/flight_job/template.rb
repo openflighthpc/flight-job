@@ -33,7 +33,7 @@ module FlightJob
     ##
     # Helper method for loading in all the templates
     def self.load_all
-      Dir.glob(File.join(Config::CACHE.templates_dir, '*'))
+      Dir.glob(File.join(FlightJob.config.templates_dir, '*'))
          .map { |p| Template.new(p) }
          .sort
          .tap { |guides| guides.each_with_index { |g, i| g.index = i + 1 } }

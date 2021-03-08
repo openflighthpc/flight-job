@@ -25,6 +25,8 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+require 'ostruct'
+
 require_relative 'template'
 require_relative 'list_output'
 
@@ -34,21 +36,21 @@ module FlightJob
 
     def initialize(*args, **opts)
       @args = args.freeze
-      @opts = Hashie::Mash.new(opts)
+      @opts = OpenStruct.new(opts)
     end
 
     def run!
-      Config::CACHE.logger.info "Running: #{self.class}"
+      FlightJob.logger.info "Running: #{self.class}"
       run
-      Config::CACHE.logger.info 'Exited: 0'
+      FlightJob.logger.info 'Exited: 0'
     rescue => e
       if e.respond_to? :exit_code
-        Config::CACHE.logger.fatal "Exited: #{e.exit_code}"
+        FlightJob.logger.fatal "Exited: #{e.exit_code}"
       else
-        Config::CACHE.logger.fatal 'Exited non-zero'
+        FlightJob.logger.fatal 'Exited non-zero'
       end
-      Config::CACHE.logger.debug e.backtrace.reverse.join("\n")
-      Config::CACHE.logger.error "(#{e.class}) #{e.message}"
+      FlightJob.logger.debug e.backtrace.reverse.join("\n")
+      FlightJob.logger.error "(#{e.class}) #{e.message}"
       raise e
     end
 

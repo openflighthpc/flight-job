@@ -39,9 +39,9 @@ module FlightJob
     register_column(header: 'Name') do |template|
       template.name
     end
-    register_column(header: "File (Dir: #{Config::CACHE.templates_dir})", verbose: true) do |template|
+    register_column(header: "File (Dir: #{FlightJob.config.templates_dir})", verbose: true) do |template|
       if $stdout.tty?
-        Pathname.new(template.path).relative_path_from Config::CACHE.templates_dir
+        Pathname.new(template.path).relative_path_from FlightJob.config.templates_dir
       else
         template.path
       end

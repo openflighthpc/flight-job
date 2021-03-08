@@ -28,8 +28,8 @@
 source 'https://rubygems.org'
 
 gem 'commander-openflighthpc', '~> 2.1'
-gem 'hashie'
-gem 'xdg'
+gem 'activesupport'
+gem 'flight_configuration', github: 'openflighthpc/flight_configuration', branch: '24928260e542768f13cc513a3a08af69f690dfbc'
 gem 'output_mode'
 gem 'tty-markdown', '~> 0.6.0'
 gem 'word_wrap'

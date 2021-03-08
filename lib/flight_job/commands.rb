@@ -37,7 +37,7 @@ module FlightJob
       const_string = constantize(s)
       const_get(const_string).new(*args, **opts)
     rescue NameError
-      Config::CACHE.logger.fatal "Command class not defined (maybe?): #{self}::#{const_string}"
+      FlightJob.logger.fatal "Command class not defined (maybe?): #{self}::#{const_string}"
       raise InternalError.define_class(127), 'Command Not Found!'
     end
 
