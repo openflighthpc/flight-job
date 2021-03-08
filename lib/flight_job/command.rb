@@ -71,6 +71,9 @@ module FlightJob
     end
 
     def load_template(name_or_id)
+      template = Template.new(id: name_or_id)
+      return template if template.valid?
+
       templates = Template.load_all
 
       # Finds by ID if there is a single integer argument
@@ -83,10 +86,6 @@ module FlightJob
           ERROR
         end
         templates[index]
-
-      # Handles an exact match
-      elsif match = templates.find { |t| t.name == name_or_id }
-        match
 
       else
         # Attempts a did you mean?

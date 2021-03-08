@@ -37,13 +37,13 @@ module FlightJob
       template.index
     end
     register_column(header: 'Name') do |template|
-      template.name
+      template.id
     end
     register_column(header: "File (Dir: #{FlightJob.config.templates_dir})", verbose: true) do |template|
       if $stdout.tty?
-        Pathname.new(template.path).relative_path_from FlightJob.config.templates_dir
+        Pathname.new(template.template_path).relative_path_from FlightJob.config.templates_dir
       else
-        template.path
+        template.template_path
       end
     end
   end

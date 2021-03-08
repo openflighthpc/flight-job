@@ -25,89 +25,157 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+require 'json_schemer'
+
 module FlightJob
-  Template = Struct.new(:path) do
-    PREFIX_REGEX = /\A(?<prefix>\d+)_(?<rest>.*)\Z/
-    METADATA_REGEX = /\A#@\s*flight_JOB\[(?<key>.+)\]\s*:\s*(?<value>.*)\Z/
+  class Template < ApplicationModel
+    FORMAT_SPEC = {
+      "type" => "object",
+      "additionalProperties" => false,
+      "required" => ['type'],
+      "properties" => {
+        'type' => { "type" => "string" },
+        'options' => {
+          "type" => "array",
+          "items" => {
+            "type" => "object",
+            "additionalProperties" => false,
+            "required" => ['text', 'value'],
+            "properties" => {
+              'text' => { "type" => "string" },
+              'value' => { "type" => "string" }
+            }
+          }
+        }
+      }
+    }
 
-    ##
-    # Helper method for loading in all the templates
-    def self.load_all
-      Dir.glob(File.join(FlightJob.config.templates_dir, '*'))
-         .map { |p| Template.new(p) }
-         .sort
-         .tap { |guides| guides.each_with_index { |g, i| g.index = i + 1 } }
-    end
+    ASK_WHEN_SPEC = {
+      "type" => "object",
+      "additionalProperties" => false,
+      "required" => ['value', 'eq'],
+      "properties" => {
+        'value' => { "type" => "string" },
+        'eq' => { "type" => "string" }
+      }
+    }
 
-    attr_reader :prefix, :name
-    attr_writer :index
+    QUESTIONS_SPEC = {
+      "type" => "array",
+      "items" => {
+        "type" => "object",
+        "additionalProperties" => false,
+        "required" => ['id', 'text'],
+        "properties" => {
+          'id' => { 'type' => 'string' },
+          'text' => { 'type' => 'string' },
+          'description' => { 'type' => 'string' },
+          # NOTE' => Forcing the default to be a string is a stop-gap measure
+          # It keeps the initial implementation simple as everything is a strings
+          # Eventually multiple formats will be supported
+          'default' => { 'type' => 'string' },
+          'format' => FORMAT_SPEC,
+          'ask_when' => ASK_WHEN_SPEC
+        }
+      }
+    }
 
-    def initialize(*a)
-      super
+    SCHEMA = JSONSchemer.schema({
+      "type" => "object",
+      "additionalProperties" => false,
+      "required" => ['synopsis', 'version', 'generation_questions', 'name'],
+      "properties" => {
+        'name' => { "type" => 'string' },
+        'script_template' => { "type" => 'string' },
+        'synopsis' => { "type" => 'string' },
+        'description' => { "type" => 'string' },
+        'version' => { "type" => 'integer', 'enum' => [0] },
+        'generation_questions' => QUESTIONS_SPEC
+      }
+    })
 
-      # Sets the initial name off the basename
-      @name = File.basename(path)
-
-      # Strips the prefix from the name. It is only used for sort order
-      if match = PREFIX_REGEX.match(name)
-        # Remove the prefix from the name, and trim leading zeros
-        @prefix = match.named_captures['prefix'].to_i
-        @name = match.named_captures['rest']
+    def self.load_all(validate: true)
+      templates = Dir.glob(new(id: '*').metadata_path).map do |path|
+        id = File.basename(File.dirname(path))
+        new(id: id)
       end
-    end
 
-    ##
-    # Strips the file extension, downcases, and converts `-` to `_` for sorting purposes
-    def sort_name
-      @sort_name ||= File.basename(name, '.*').gsub('-', '_').downcase
-    end
-
-    ##
-    # Comparison Operator
-    def <=>(other)
-      return nil unless self.class == other.class
-      if prefix == other.prefix
-        sort_name <=> other.sort_name
-      elsif prefix && other.prefix
-        prefix <=> other.prefix
-      elsif prefix
-        -1
+      if validate
+        templates.select do |template|
+          next true if template.valid?
+          FlightJob.logger.warn "Rejecting invalid template: #{template.id}"
+          FlightJob.logger.debug("Errors: \n") { template.errors }
+          false
+        end
       else
-        1
+        templates
       end
     end
 
-    ##
-    # A template's index depends on the sort order within the greater list of templates
-    # To prevent time complexity issues, it is injected onto template after it is loaded
-    # This creates two problems:
-    #  * It could be accessed before being set, triggering an internal error
-    #  * It can become stale and should be viewed with scepticism
-    def index
-      @index || raise(InternalError, <<~ERROR.chomp)
-        The template index has not been set: #{path}
-      ERROR
-    end
+    attr_accessor :id, :index
 
-    ##
-    # The content of the template file
-    def content
-      @content = File.read(path)
-    end
-
-    ##
-    # Loads the flight_JOB metadata from the magic comments
-    def metadata
-      @metadata = begin
-        content.each_line
-               .map { |l| METADATA_REGEX.match(l) }
-               .reject(&:nil?)
-               .each_with_object({}) do |match, memo|
-          memo[match.named_captures['key'].to_sym] = match.named_captures['value']
-        end.tap do |hash|
-          hash[:filename] = name
+    # Validates the metadata and questions file
+    validate do
+      if metadata
+        unless (schema_errors = SCHEMA.validate(metadata).to_a).empty?
+          FlightJob.logger.error("The following metadata file is invalid: #{metadata_path}")
+          FlightJob.logger.debug "Errors:\n" do
+            schema_errors.each_with_index.map do |error, index|
+              "Error #{index + 1}:\n#{JSON.pretty_generate(error)}"
+            end.join("\n")
+          end
+          errors.add(:metadata, 'is not valid')
         end
       end
+    end
+
+    # Validates the script
+    validate do
+      unless File.exists? template_path
+        errors.add(:template, "has not been saved")
+      end
+    end
+
+    def metadata_path
+      File.join(FlightJob.config.templates_dir, id, "metadata.yaml")
+    end
+
+    def template_path
+      File.join(FlightJob.config.templates_dir, id, "#{script_template_name}.erb")
+    end
+
+    def script_template_name
+      metadata.fetch('script_template', 'script.sh')
+    end
+
+    # NOTE: The metadata is intentionally cached to prevent excess file reads during
+    # serialization. This cache is not intended to be reset, instead a new Template
+    # instance should be initialized.
+    def metadata
+      @metadata ||= begin
+        YAML.load(File.read(metadata_path)).to_h
+      end
+    rescue Errno::ENOENT
+      errors.add(:metadata, "has not been saved")
+      {}
+    rescue Psych::SyntaxError
+      errors.add(:metadata, "is not valid YAML")
+      {}
+    end
+
+    def questions_data
+      return [] if metadata.nil?
+      metadata['generation_questions']
+    end
+
+    def generation_questions
+      @questions ||= questions_data.map do |datum|
+        Question.new(**datum.symbolize_keys)
+      end
+    end
+
+    def to_erb
+      ERB.new(File.read(template_path), nil, '-')
     end
   end
 end

@@ -30,14 +30,14 @@ module FlightJob
     class CopyTemplate < Command
       def run
         FileUtils.mkdir_p File.dirname(dst_path)
-        FileUtils.cp template.path, dst_path
+        FileUtils.cp template.template_path, dst_path
         $stderr.puts <<~INFO.chomp
           Successfully copied the template to: #{dst_path}
         INFO
       end
 
       def dst_name
-        args.length > 1 ? args[1] : template.name
+        args.length > 1 ? args[1] : template.id
       end
 
       def dst_path
