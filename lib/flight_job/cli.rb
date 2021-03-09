@@ -70,7 +70,8 @@ module FlightJob
     end
 
     global_slop.bool '--verbose', 'Display additional details'
-    global_slop.bool '--ascii', 'Display a simplified version of the output'
+    global_slop.bool '--ascii', 'Display a simplified version of the output, when supported'
+    global_slop.bool '--json', 'Display a JSON version of the output, when supported'
 
     create_command 'list-templates' do |c|
       c.summary = 'List available templates'

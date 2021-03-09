@@ -26,6 +26,7 @@
 #==============================================================================
 
 require 'ostruct'
+require 'pastel'
 
 module FlightJob
   class Command
@@ -34,6 +35,10 @@ module FlightJob
     def initialize(args, opts)
       @args = args.freeze
       @opts = opts
+
+      if opts.json && opts.ascii
+        raise InputError, "The following flags can not be used together: #{pastel.yellow('--ascii --json')}"
+      end
     end
 
     def run!
@@ -55,17 +60,22 @@ module FlightJob
       raise NotImplementedError
     end
 
+    def pastel
+      @pastel ||= Pastel.new
+    end
+
     def output_options
       {
         verbose: (opts.verbose ? true : nil),
         ascii: (opts.ascii ? true : nil),
-        interactive: (opts.ascii ? true : nil)
+        interactive: (opts.ascii || $stdout.tty? ? true : nil),
+        json: (opts.json ? true : nil)
       }
     end
 
     def load_template(name_or_id)
       template = Template.new(id: name_or_id)
-      return template if template.valid?
+      return template if template.valid?(:verbose)
 
       templates = Template.load_all
 

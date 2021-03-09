@@ -55,15 +55,13 @@ module FlightJob
     end
 
     def render(template)
-      if erb?
+      if @opts[:json]
+        JSONRenderer.new(false, @opts[:interactive]).render(template)
+      else
         bind = nil
         template.instance_exec { bind = self.binding }
         MarkdownRenderer.new(TEMPLATE.result(bind)).wrap_markdown
       end
-    end
-
-    def erb?
-      true
     end
   end
 end

@@ -185,8 +185,15 @@ module FlightJob
       FileUtils.chmod(0600, metadata_path)
     end
 
+    def serializable_hash
+      { "id" => id }.merge(metadata)
+    end
+
     private
 
+    # NOTE: The raw metadata is exposed through the CLI with the --json flag.
+    # This allows it to be directly passed to the API layer.
+    # Consider refactoring when introducing a non-backwards compatible change
     def metadata
       @metadata ||= if File.exists?(metadata_path)
                       YAML.load File.read(metadata_path)

@@ -25,35 +25,16 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require 'output_mode'
 
 module FlightJob
-  module Outputs::ListTemplates
-    extend OutputMode::TLDR::Index
-
-    register_column(header: 'Index', row_color: :yellow) do |template|
-      # NOTE: The OutputMode library does not support *_with_index type notation
-      #       Instead the index needs to be cached on the object itself
-      template.index
-    end
-    register_column(header: 'Name') do |template|
-      template.id
-    end
-    register_column(header: "File (Dir: #{FlightJob.config.templates_dir})", verbose: true) do |template|
-      if $stdout.tty?
-        Pathname.new(template.template_path).relative_path_from FlightJob.config.templates_dir
+  JSONRenderer = Struct.new(:array, :interactive) do
+    def render(*objects)
+      data = if array
+        objects.map(&:serializable_hash)
       else
-        template.template_path
+        objects.first.serializable_hash
       end
-    end
-
-    def self.build_output(**opts)
-      if opts.delete(:json)
-        JSONRenderer.new(true, opts[:interactive])
-      else
-        super(row_color: :cyan, header_color: :bold, **opts)
-      end
+      interactive ? JSON.pretty_generate(data) : JSON.dump(data)
     end
   end
 end
-

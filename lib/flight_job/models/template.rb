@@ -175,9 +175,9 @@ module FlightJob
       metadata.fetch('script_template', 'script.sh')
     end
 
-    # NOTE: The metadata is intentionally cached to prevent excess file reads during
-    # serialization. This cache is not intended to be reset, instead a new Template
-    # instance should be initialized.
+    # NOTE: The raw metadata is exposed through the CLI with the --json flag.
+    # This allows it to be directly passed to the API layer.
+    # Consider refactoring when introducing a non-backwards compatible change
     def metadata
       @metadata ||= begin
         YAML.load(File.read(metadata_path)).to_h
@@ -188,6 +188,10 @@ module FlightJob
     rescue Psych::SyntaxError
       errors.add(:metadata, "is not valid YAML")
       {}
+    end
+
+    def serializable_hash
+      { 'id' => id }.merge(metadata)
     end
 
     def questions_data
