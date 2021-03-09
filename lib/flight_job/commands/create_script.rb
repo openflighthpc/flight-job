@@ -1,5 +1,5 @@
 #==============================================================================
-# Copyright (C) 2020-present Alces Flight Ltd.
+# Copyright (C) 2021-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -26,36 +26,24 @@
 #==============================================================================
 
 module FlightJob
-  class Error < RuntimeError
-    def self.define_class(code)
-      Class.new(self).tap do |klass|
-        klass.instance_variable_set(:@exit_code, code)
+  module Commands
+    class CreateScript < Command
+      def run
+        # Locate the template
+        template = Template.new(id: args.first)
+        unless template.valid?
+          FlightJob.logger.debug("Missing/invalid template: #{template}\n") do
+            template.errors.full_messages.join("\n")
+          end
+          raise MissingTemplateError, "Could not locate template: #{template.id}"
+        end
+
+        # Render the script
+        script = Script.new(template_id: template.id, script_name: template.script_template_name)
+        script.render
+
+        $stderr.puts "Generated Script: #{script.script_path}"
       end
     end
-
-    def self.exit_code
-      @exit_code || begin
-        superclass.respond_to?(:exit_code) ? superclass.exit_code : 2
-      end
-    end
-
-    def exit_code
-      self.class.exit_code
-    end
   end
-
-  InternalError = Error.define_class(1)
-  GeneralError = Error.define_class(2)
-  InputError = GeneralError.define_class(3)
-
-  class InteractiveOnly < InputError
-    MSG = 'This command requires an interactive terminal'
-
-    def initialize(msg = MSG)
-      super
-    end
-  end
-
-  MissingError = GeneralError.define_class(20)
-  MissingTemplateError = MissingError.define_class(21)
 end

@@ -50,7 +50,10 @@ module FlightJob
       super(*a, **opts)
     end
 
-    attribute :templates_dir, default: 'usr/share'
+    attribute :templates_dir, default: 'usr/share',
+              transform: relative_to(root_path)
+    attribute :scripts_dir, default: '~/.local/share/flight/job/scripts',
+              transform: relative_to(root_path)
     attribute :minimum_terminal_width, default: 80
     attribute :log_path, required: false,
               default: '~/.cache/flight/log/share/job.log',

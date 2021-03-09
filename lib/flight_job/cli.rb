@@ -84,6 +84,11 @@ module FlightJob
       c.summary = 'Display details about a template'
     end
 
+    # XXX: Consider making the method signature: TEMPLATE_NAME [SCRIPT_NAME]
+    create_command 'create-script', 'TEMPLATE_NAME' do |c|
+      c.summary = 'Render a new script from a template'
+    end
+
     alias_command 'create', 'create-script'
     alias_command 'submit', 'submit-script'
 
