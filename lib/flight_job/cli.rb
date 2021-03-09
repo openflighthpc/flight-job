@@ -1,5 +1,5 @@
 #==============================================================================
-# Copyright (C) 2020-present Alces Flight Ltd.
+# Copyright (C) 2021-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -82,6 +82,10 @@ module FlightJob
 
     create_command 'info-template', 'NAME' do |c|
       c.summary = 'Display details about a template'
+    end
+
+    create_command 'list-scripts' do |c|
+      c.summary = 'List the rendered scripts'
     end
 
     # XXX: Consider making the method signature: TEMPLATE_NAME [SCRIPT_NAME]

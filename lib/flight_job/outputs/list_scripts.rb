@@ -1,5 +1,5 @@
 #==============================================================================
-# Copyright (C) 2020-present Alces Flight Ltd.
+# Copyright (C) 2021-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -25,13 +25,22 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+require 'output_mode'
+
 module FlightJob
-  module Commands
-    class ListTemplates < Command
-      def run
-        puts Outputs::ListTemplates.build_output(**index_output_mode_options)
-                                   .render(*Template.load_all)
-      end
+  module Outputs::ListScripts
+    extend OutputMode::TLDR::Index
+
+    register_column(header: 'ID', row_color: :yellow) { |s| s.id }
+    register_column(header: 'Name') { |s| s.script_name }
+    register_column(header: 'Template') { |s| s.template_id }
+
+    # Toggle the format of the created at time
+    register_column(header: 'Created At', verbose: true) { |s| s.created_at }
+    register_column(header: 'Created At', verbose: false) do |script|
+      DateTime.rfc3339(script.created_at).strftime('%d/%m %H:%M')
     end
   end
 end
+
+

@@ -45,13 +45,13 @@ module FlightJob
     })
 
     def self.load_all
-      Dir.glob(new('*').metadata_path).each do |path|
+      Dir.glob(new(id: '*').metadata_path).map do |path|
         self.load(File.basename(File.dirname(path)))
       end.reject(&:nil?)
     end
 
     def self.load(id)
-      script = new(id)
+      script = new(id: id)
       if script.valid?(:load)
         script
       else
@@ -130,6 +130,10 @@ module FlightJob
       else
         @errors.add(:script_path, 'can not be determined')
       end
+    end
+
+    def created_at
+      metadata['created_at']
     end
 
     def template_id

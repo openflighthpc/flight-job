@@ -1,5 +1,5 @@
 #==============================================================================
-# Copyright (C) 2020-present Alces Flight Ltd.
+# Copyright (C) 2021-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -27,10 +27,9 @@
 
 module FlightJob
   module Commands
-    class ListTemplates < Command
+    class ListScripts < Command
       def run
-        puts Outputs::ListTemplates.build_output(**index_output_mode_options)
-                                   .render(*Template.load_all)
+        puts Outputs::ListScripts.build_output(**index_output_mode_options).render(*Script.load_all)
       end
     end
   end
