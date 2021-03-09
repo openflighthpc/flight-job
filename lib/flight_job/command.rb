@@ -26,7 +26,6 @@
 #==============================================================================
 
 require 'ostruct'
-require_relative 'list_output'
 
 module FlightJob
   class Command
@@ -66,10 +65,6 @@ module FlightJob
       }
     end
 
-    def list_output
-      @list_output ||= ListOutput.build_output(**output_mode_options)
-    end
-
     def load_template(name_or_id)
       template = Template.new(id: name_or_id)
       return template if template.valid?
@@ -90,13 +85,14 @@ module FlightJob
       else
         # Attempts a did you mean?
         regex = /#{name_or_id}/
-        matches = templates.select { |t| regex.match?(t.name) }
+        matches = templates.select { |t| regex.match?(t.id) }
         if matches.empty?
           raise MissingError, "Could not locate: #{name_or_id}"
         else
+          output = Outputs::ListTemplates.build_output(**output_mode_options).render(*matches)
           raise MissingError, <<~ERROR.chomp
             Could not locate: #{name_or_id}. Did you mean one of the following?
-            #{Paint[list_output.render(*matches), :reset]}
+            #{Paint[output, :reset]}
           ERROR
         end
       end

@@ -44,7 +44,7 @@ module FlightJob
       end
 
       def template
-        @template ||= Template.new(id: args.first).tap do |t|
+        @template ||= load_template(args.first).tap do |t|
           unless t.valid?
             FlightJob.logger.debug("Missing/invalid template: #{t.id}\n") do
               t.errors.full_messages.join("\n")

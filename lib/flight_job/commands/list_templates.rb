@@ -29,7 +29,8 @@ module FlightJob
   module Commands
     class ListTemplates < Command
       def run
-        puts list_output.render(*Template.load_all)
+        puts Outputs::ListTemplates.build_output(**output_mode_options)
+                                   .render(*Template.load_all)
       end
     end
   end

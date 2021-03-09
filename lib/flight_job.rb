@@ -45,5 +45,12 @@ module FlightJob
   Dir.glob(File.expand_path('flight_job/models/*', __dir__)).each do |path|
     autoload FlightJob.constantize(File.basename(path, '.*')), path
   end
+
+  # Setup the autoloads for outputs
+  module Outputs
+    Dir.glob(File.expand_path('flight_job/outputs/*', __dir__)).each do |path|
+      autoload FlightJob.constantize(File.basename(path, '.*')), path
+    end
+  end
 end
 

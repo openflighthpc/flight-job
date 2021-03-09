@@ -28,7 +28,7 @@
 require 'output_mode'
 
 module FlightJob
-  module ListOutput
+  module Outputs::ListTemplates
     extend OutputMode::TLDR::Index
 
     register_column(header: 'Index', row_color: :yellow) do |template|
