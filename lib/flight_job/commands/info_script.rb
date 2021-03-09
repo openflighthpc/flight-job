@@ -25,38 +25,20 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+require 'ostruct'
+require 'erb'
+require_relative '../markdown_renderer'
+
 module FlightJob
-  class Error < RuntimeError
-    def self.define_class(code)
-      Class.new(self).tap do |klass|
-        klass.instance_variable_set(:@exit_code, code)
+  module Commands
+    class InfoScript < Command
+      def run
+        puts Outputs::InfoScript.build_output(**output_options).render(script)
+      end
+
+      def script
+        @script ||= load_script(args.first)
       end
     end
-
-    def self.exit_code
-      @exit_code || begin
-        superclass.respond_to?(:exit_code) ? superclass.exit_code : 2
-      end
-    end
-
-    def exit_code
-      self.class.exit_code
-    end
   end
-
-  InternalError = Error.define_class(1)
-  GeneralError = Error.define_class(2)
-  InputError = GeneralError.define_class(3)
-
-  class InteractiveOnly < InputError
-    MSG = 'This command requires an interactive terminal'
-
-    def initialize(msg = MSG)
-      super
-    end
-  end
-
-  MissingError = GeneralError.define_class(20)
-  MissingTemplateError = MissingError.define_class(21)
-  MissingScriptError = MissingError.define_class(22)
 end

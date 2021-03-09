@@ -25,38 +25,21 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+require 'output_mode'
+
 module FlightJob
-  class Error < RuntimeError
-    def self.define_class(code)
-      Class.new(self).tap do |klass|
-        klass.instance_variable_set(:@exit_code, code)
-      end
-    end
+  module Outputs::InfoScript
+    extend OutputMode::TLDR::Show
 
-    def self.exit_code
-      @exit_code || begin
-        superclass.respond_to?(:exit_code) ? superclass.exit_code : 2
-      end
-    end
+    register_attribute(header: 'ID') { |s| s.id }
+    register_attribute(header: 'Name') { |s| s.script_name }
+    register_attribute(header: 'Path') { |s| s.script_path }
+    register_attribute(header: 'Template ID') { |s| s.template_id }
 
-    def exit_code
-      self.class.exit_code
+    # Toggle the format of the created at time
+    register_attribute(header: 'Created At', verbose: true) { |s| s.created_at }
+    register_attribute(header: 'Created At', verbose: false) do |script|
+      DateTime.rfc3339(script.created_at).strftime('%d/%m %H:%M')
     end
   end
-
-  InternalError = Error.define_class(1)
-  GeneralError = Error.define_class(2)
-  InputError = GeneralError.define_class(3)
-
-  class InteractiveOnly < InputError
-    MSG = 'This command requires an interactive terminal'
-
-    def initialize(msg = MSG)
-      super
-    end
-  end
-
-  MissingError = GeneralError.define_class(20)
-  MissingTemplateError = MissingError.define_class(21)
-  MissingScriptError = MissingError.define_class(22)
 end

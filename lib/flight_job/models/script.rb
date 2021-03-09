@@ -46,19 +46,16 @@ module FlightJob
 
     def self.load_all
       Dir.glob(new(id: '*').metadata_path).map do |path|
-        self.load(File.basename(File.dirname(path)))
+        id = File.basename(File.dirname(path))
+        script = new(id: id)
+        if script.valid?(:load)
+          script
+        else
+          FlightJob.logger.error("Failed to load missing/invalid script: #{id}")
+          FlightJob.logger.debug(script.errors)
+          nil
+        end
       end.reject(&:nil?)
-    end
-
-    def self.load(id)
-      script = new(id: id)
-      if script.valid?(:load)
-        script
-      else
-        FlightJob.logger.error("Failed to load missing/invalid script: #{id}")
-        FlightJob.logger.debug(script.errors)
-        nil
-      end
     end
 
     attr_writer :id
@@ -112,6 +109,12 @@ module FlightJob
 
     def id
       @id ||= SecureRandom.uuid
+    end
+
+    # NOTE: Only used for a shorthand existence check, full validation is required in
+    # before it can be used
+    def exists?
+      File.exists? metadata_path
     end
 
     def metadata_path

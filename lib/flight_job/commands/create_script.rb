@@ -40,7 +40,8 @@ module FlightJob
         script = Script.new(template_id: template.id, script_name: template.script_template_name)
         script.render(**answers)
 
-        $stderr.puts "Generated Script: #{script.script_path}"
+        # Render the script output
+        puts Outputs::InfoScript.build_output(**output_options).render(script)
       end
 
       def template

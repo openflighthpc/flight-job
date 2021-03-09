@@ -74,7 +74,7 @@ module FlightJob
         # Corrects for the 1-based numbering
         index = name_or_id.to_i - 1
         if index < 0 || index >= templates.length
-          raise MissingError, <<~ERROR.chomp
+          raise MissingTemplateError, <<~ERROR.chomp
             Could not locate a template with index: #{name_or_id}
           ERROR
         end
@@ -92,6 +92,17 @@ module FlightJob
             Could not locate: #{name_or_id}. Did you mean one of the following?
             #{Paint[output, :reset]}
           ERROR
+        end
+      end
+    end
+
+    def load_script(id)
+      Script.new(id: args.first).tap do |script|
+        unless script.exists?
+          raise MissingScriptError, "Could not locate script: #{id}"
+        end
+        unless script.valid?(:load)
+          raise InternalError, "Unexpectedly failed to load script: #{id}"
         end
       end
     end

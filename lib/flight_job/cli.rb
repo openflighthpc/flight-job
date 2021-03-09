@@ -88,6 +88,10 @@ module FlightJob
       c.summary = 'List the rendered scripts'
     end
 
+    create_command 'info-script', 'SCRIPT_ID' do |c|
+      c.summary = 'Display details about a rendered script'
+    end
+
     # XXX: Consider making the method signature: TEMPLATE_NAME [SCRIPT_NAME]
     create_command 'create-script', 'TEMPLATE_NAME' do |c|
       c.summary = 'Render a new script from a template'
