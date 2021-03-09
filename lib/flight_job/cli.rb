@@ -87,6 +87,7 @@ module FlightJob
     # XXX: Consider making the method signature: TEMPLATE_NAME [SCRIPT_NAME]
     create_command 'create-script', 'TEMPLATE_NAME' do |c|
       c.summary = 'Render a new script from a template'
+      c.slop.bool '--stdin', 'Provide the answers via STDIN as JSON'
     end
 
     alias_command 'create', 'create-script'

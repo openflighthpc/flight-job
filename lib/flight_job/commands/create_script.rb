@@ -25,9 +25,13 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+require 'json'
+
 module FlightJob
   module Commands
     class CreateScript < Command
+      MAX_STDIN_SIZE = 1*1024*024
+
       def run
         # Locate the template
         template = Template.new(id: args.first)
@@ -40,9 +44,29 @@ module FlightJob
 
         # Render the script
         script = Script.new(template_id: template.id, script_name: template.script_template_name)
-        script.render
+        script.render(**answers)
 
         $stderr.puts "Generated Script: #{script.script_path}"
+      end
+
+      def answers
+        @answers ||= if opts.stdin
+          begin
+            # TODO: Validate the correct answers have been provided
+            input = $stdin.read_nonblock(MAX_STDIN_SIZE)
+            if input.length == MAX_STDIN_SIZE
+              raise InputError, "The STDIN exceeds the maximum size of: #{MAX_STDIN_SIZE}B"
+            end
+            JSON.parse(input)
+          rescue Errno::EWOULDBLOCK, Errno::EWOULDBLOCK
+            raise InputError, "Failed to read the data from STDIN"
+          rescue JSON::ParserError
+            raise InputError, 'The STDIN is not valid JSON!'
+          end
+        else
+          # TODO: Implement answering questions
+          {}
+        end
       end
     end
   end
