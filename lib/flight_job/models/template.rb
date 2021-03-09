@@ -27,6 +27,8 @@
 
 require 'json_schemer'
 
+require_relative '../questions_sort'
+
 module FlightJob
   class Template < ApplicationModel
     FORMAT_SPEC = {
@@ -55,7 +57,9 @@ module FlightJob
       "additionalProperties" => false,
       "required" => ['value', 'eq'],
       "properties" => {
-        'value' => { "type" => "string" },
+        # NOTE: The question asking mechanism is coupled to the pattern match
+        # bellow. They must be updated in tandem
+        'value' => { "type" => "string", "pattern" => "^question\.[a-zA-Z_-]+\.answer$" },
         'eq' => { "type" => "string" }
       }
     }
@@ -133,6 +137,23 @@ module FlightJob
     validate do
       unless File.exists? template_path
         errors.add(:template, "has not been saved")
+      end
+    end
+
+    validate on: :verbose do
+      # Ensure the questions are sorted correctly
+      begin
+        sorted = QuestionSort.build(generation_questions).tsort
+        unless sorted == generation_questions
+          FlightJob.logger.error "The questions for template '#{id}' have not been topographically sorted! A possible sort order is:\n" do
+            sorted.map(&:id).join(',')
+          end
+          errors.add(:questions, 'have not been topographically sorted')
+        end
+      rescue TSort::Cyclic
+        errors.add(:questions, 'form a circular loop')
+      rescue UnresolvedReference
+        errors.add(:questions, "could not locate referenced question: #{$!.message}")
       end
     end
 

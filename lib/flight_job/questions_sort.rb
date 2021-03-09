@@ -25,13 +25,36 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-module FlightJob
-  class Question < ApplicationModel
-    attr_accessor :id, :text, :description, :default, :format, :ask_when, :template
+require 'tsort'
 
-    def related_question_id
-      return nil unless ask_when
-      ask_when['value'].split('.')[1]
+module FlightJob
+  QuestionSort = Struct.new(:hash) do
+    # NOTE: This is not a user facing error, instead it is used to flag
+    # the missing question ID
+    class UnresolvedReference < RuntimeError; end
+
+    include TSort
+
+    def self.build(questions)
+      new(questions.map { |q| [q.id, q] }.to_h)
+    end
+
+    attr_accessor :questions
+
+    def tsort_each_node(&b)
+      hash.values.each(&b)
+    end
+
+    def tsort_each_child(question, &b)
+      id = hash[question.id].related_question_id
+      ids = id.nil? ? [] : [id]
+      ids.map do |id|
+        if hash.key?(id)
+          hash[id]
+        else
+          raise UnresolvedReference, id
+        end
+      end.each(&b)
     end
   end
 end
