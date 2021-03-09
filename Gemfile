@@ -34,6 +34,7 @@ gem 'flight_configuration', github: 'openflighthpc/flight_configuration', branch
 gem 'json_schemer'
 gem 'output_mode'
 gem 'tty-markdown', '~> 0.6.0'
+gem 'tty-prompt'
 gem 'word_wrap'
 
 group :development do
