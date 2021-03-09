@@ -40,6 +40,10 @@ module FlightJob
     register_column(header: 'Created At', verbose: false) do |script|
       DateTime.rfc3339(script.created_at).strftime('%d/%m %H:%M')
     end
+
+    def self.build_output(**opts)
+      super(row_color: :cyan, header_color: :bold, **opts)
+    end
   end
 end
 

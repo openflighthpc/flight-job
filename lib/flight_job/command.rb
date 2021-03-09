@@ -55,13 +55,11 @@ module FlightJob
       raise NotImplementedError
     end
 
-    def index_output_mode_options
+    def output_options
       {
         verbose: (opts.verbose ? true : nil),
         ascii: (opts.ascii ? true : nil),
-        interactive: (opts.ascii ? true : nil),
-        row_color: :cyan,
-        header_color: :bold
+        interactive: (opts.ascii ? true : nil)
       }
     end
 
@@ -89,7 +87,7 @@ module FlightJob
         if matches.empty?
           raise MissingError, "Could not locate: #{name_or_id}"
         else
-          output = Outputs::ListTemplates.build_output(**index_output_mode_options).render(*matches)
+          output = Outputs::ListTemplates.build_output(**output_options).render(*matches)
           raise MissingError, <<~ERROR.chomp
             Could not locate: #{name_or_id}. Did you mean one of the following?
             #{Paint[output, :reset]}

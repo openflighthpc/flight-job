@@ -1,5 +1,5 @@
 #==============================================================================
-# Copyright (C) 2020-present Alces Flight Ltd.
+# Copyright (C) 2021-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -25,20 +25,45 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require 'ostruct'
-require 'erb'
 require_relative '../markdown_renderer'
 
 module FlightJob
-  module Commands
-    class InfoTemplate < Command
-      def run
-        puts Outputs::InfoTemplate.build_output(**output_options).render(template)
-      end
+  class Outputs::InfoTemplate
+    TEMPLATE = ERB.new(<<~ERB, nil, '-')
+      # <%= template_path -%> -- <%= id %>
 
-      def template
-        @template ||= load_template(args.first)
+      ## DESCRIPTION
+
+      <%= metadata['synopsis'] %>
+      <%= metadata['description'] -%><%= "\n" if metadata['description'] -%>
+
+      ## LICENSE
+
+      This work is licensed under a <%#= license -%> License.
+
+      ## COPYRIGHT
+
+      <%#= copyright -%>
+    ERB
+
+    def self.build_output(**opts)
+      new(**opts)
+    end
+
+    def initialize(**opts)
+      @opts = opts
+    end
+
+    def render(template)
+      if erb?
+        bind = nil
+        template.instance_exec { bind = self.binding }
+        MarkdownRenderer.new(TEMPLATE.result(bind)).wrap_markdown
       end
+    end
+
+    def erb?
+      true
     end
   end
 end

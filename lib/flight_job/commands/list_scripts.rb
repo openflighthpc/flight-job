@@ -29,7 +29,7 @@ module FlightJob
   module Commands
     class ListScripts < Command
       def run
-        puts Outputs::ListScripts.build_output(**index_output_mode_options).render(*Script.load_all)
+        puts Outputs::ListScripts.build_output(**output_options).render(*Script.load_all)
       end
     end
   end

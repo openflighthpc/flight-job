@@ -46,6 +46,10 @@ module FlightJob
         template.template_path
       end
     end
+
+    def self.build_output(**opts)
+      super(row_color: :cyan, header_color: :bold, **opts)
+    end
   end
 end
 
