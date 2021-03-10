@@ -28,18 +28,31 @@
 require 'output_mode'
 
 module FlightJob
-  module Outputs::InfoScript
+  module Outputs::InfoJob
     extend OutputMode::TLDR::Show
 
-    register_attribute(header: 'ID') { |s| s.id }
-    register_attribute(header: 'Name') { |s| s.script_name }
-    register_attribute(header: 'Path') { |s| s.script_path }
-    register_attribute(header: 'Template ID') { |s| s.template_id }
+    register_attribute(header: 'ID') { |j| j.id }
+    register_attribute(header: 'Script ID') { |j| j.script_id }
+    register_attribute(header: 'Submitted') { |j| j.submit_status == 0 }
+    register_attribute(header: 'State') { |j| j.state }
 
     # Toggle the format of the created at time
-    register_attribute(header: 'Created At', verbose: true) { |s| s.created_at }
-    register_attribute(header: 'Created At', verbose: false) do |script|
-      DateTime.rfc3339(script.created_at).strftime('%d/%m %H:%M')
+    register_attribute(header: 'Created At', verbose: true) { |j| j.created_at }
+    register_attribute(header: 'Created At', verbose: false) do |job|
+      DateTime.rfc3339(job.created_at).strftime('%d/%m %H:%M')
+    end
+
+    # NOTE: These could be the predicted times instead of the actual, consider
+    # delineating the two
+    register_attribute(header: 'Start Time', verbose: true) { |j| j.start_time }
+    register_attribute(header: 'Start Time', verbose: false) do |job|
+      next nil unless job.start_time
+      DateTime.rfc3339(job.start_time).strftime('%d/%m %H:%M')
+    end
+    register_attribute(header: 'End Time', verbose: true) { |j| j.end_time }
+    register_attribute(header: 'End Time', verbose: false) do |job|
+      next nil unless job.end_time
+      DateTime.rfc3339(job.end_time).strftime('%d/%m %H:%M')
     end
 
     def self.build_output(**opts)
@@ -51,3 +64,4 @@ module FlightJob
     end
   end
 end
+

@@ -25,28 +25,17 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require 'output_mode'
-
 module FlightJob
-  module Outputs::InfoScript
-    extend OutputMode::TLDR::Show
+  module Commands
+    class SubmitJob < Command
+      def run
+        job = Job.new(script_id: script.id)
+        job.submit
+        puts Outputs::InfoJob.build_output(**output_options).render(job)
+      end
 
-    register_attribute(header: 'ID') { |s| s.id }
-    register_attribute(header: 'Name') { |s| s.script_name }
-    register_attribute(header: 'Path') { |s| s.script_path }
-    register_attribute(header: 'Template ID') { |s| s.template_id }
-
-    # Toggle the format of the created at time
-    register_attribute(header: 'Created At', verbose: true) { |s| s.created_at }
-    register_attribute(header: 'Created At', verbose: false) do |script|
-      DateTime.rfc3339(script.created_at).strftime('%d/%m %H:%M')
-    end
-
-    def self.build_output(**opts)
-      if opts.delete(:json)
-        JSONRenderer.new(false, opts[:interactive])
-      else
-        super(**opts)
+      def script
+        @script ||= load_script(args.first)
       end
     end
   end

@@ -202,6 +202,7 @@ module FlightJob
         end
         raise InternalError, 'Unexpectedly failed to submit the job'
       end
+      script = load_script
 
       FlightJob.logger.info("Submitting Job: #{id}")
       cmd = [
@@ -222,9 +223,9 @@ module FlightJob
 
         # Set the initial state based on the exit status
         if submit_status == 0
-          self.status = 'PENDING'
+          self.state = 'PENDING'
         else
-          self.status = 'FAILED'
+          self.state = 'FAILED'
         end
 
         # Persist the current state of the job
@@ -239,7 +240,7 @@ module FlightJob
         end
 
         # Persist the updated version of the metadata
-        File.write(metadata_path, YAML.dump(to_h))
+        File.write(metadata_path, YAML.dump(metadata))
       end
 
       # TODO: Run the monitor
@@ -251,7 +252,7 @@ module FlightJob
     end
 
     def monitor
-      FlightJobScriptAPI.logger.info("Monitoring Job: #{id}")
+      FlightJob.logger.info("Monitoring Job: #{id}")
       cmd = [FlightJob.config.monitor_script_path, scheduler_id]
       execute_command(*cmd) do |status, stdout, stderr|
         process_output('monitor', status, stdout) do |data|
@@ -315,7 +316,7 @@ module FlightJob
       env = ENV.slice('PATH', 'HOME', 'USER', 'LOGNAME')
       cmd_stdout, cmd_stderr, status = Open3.capture3(env, *cmd, unsetenv_others: true, close_others: true)
 
-      FlightJobScriptAPI.logger.debug <<~DEBUG
+      FlightJob.logger.debug <<~DEBUG
         STATUS: #{status.exitstatus}
         STDOUT:
         #{cmd_stdout}

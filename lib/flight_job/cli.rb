@@ -78,7 +78,7 @@ module FlightJob
     end
 
     create_command 'copy-template', 'NAME [DEST]' do |c|
-      c.summary = 'Generate a job script from a template'
+      c.summary = 'Generate a local version of a template (Deprecated)'
     end
 
     create_command 'info-template', 'NAME' do |c|
@@ -99,8 +99,12 @@ module FlightJob
       c.slop.bool '--stdin', 'Provide the answers via STDIN as JSON'
     end
 
+    create_command 'submit-job', 'SCRIPT_ID' do |c|
+      c.summary = 'Schedule a new job to run from a script'
+    end
+
     alias_command 'create', 'create-script'
-    alias_command 'submit', 'submit-script'
+    alias_command 'submit', 'submit-job'
 
     # The following aliases are required for backwards compatibility with
     # version 1.1.X of the CLI
