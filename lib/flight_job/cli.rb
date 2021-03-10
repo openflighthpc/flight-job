@@ -128,9 +128,10 @@ module FlightJob
 
     if FlightJob.config.development
       create_command 'console' do |c|
-        c.action do
+        c.action do |args, opts|
           require_relative 'command'
-          FlightJob::Command.new().instance_exec { binding.pry }
+          require_relative '../flight_job'
+          FlightJob::Command.new(args, opts).instance_exec { binding.pry }
         end
       end
     end
