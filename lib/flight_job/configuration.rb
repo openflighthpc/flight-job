@@ -60,6 +60,7 @@ module FlightJob
               transform: relative_to(root_path)
     attribute :monitor_script_path, default: 'libexec/slurm/monitor.sh',
               transform: relative_to(root_path)
+    attribute :submission_period, default: 3600
     attribute :minimum_terminal_width, default: 80
     attribute :log_path, required: false,
               default: '~/.cache/flight/log/share/job.log',

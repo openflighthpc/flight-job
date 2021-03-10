@@ -58,6 +58,16 @@ module FlightJob
       }
     })
 
+    ACTIVE_SCHEMA = JSONSchemer.schema({
+      "type" => "object",
+      "additionalProperties" => false,
+      "required" => ["script_id", "created_at"],
+      "properties" => {
+        "script_id" => { "type" => "string" },
+        "created_at" => { "type" => "string", "format" => "date-time" },
+      }
+    })
+
     SUBMIT_RESPONSE_SCHEMA = JSONSchemer.schema({
       "type" => "object",
       "additionalProperties" => false,
@@ -96,7 +106,7 @@ module FlightJob
     end
 
     def self.load_active
-      Dir.glob(new(id: '*').metadata_path).map do |path|
+      Dir.glob(new(id: '*').active_path).map do |path|
         new(id: File.basename(File.dirname(path)))
       end
     end
@@ -164,7 +174,7 @@ module FlightJob
     # This allows jobs to be quasi-tracked even if a catastrophic failure occurs during the
     # submission that prevents the metadata file from being generated.
     def active_path
-      @active_path ||= File.join(FlightJob.config.jobs_dir, id, 'active')
+      @active_path ||= File.join(FlightJob.config.jobs_dir, id, 'active.yaml')
     end
 
     def metadata
@@ -180,7 +190,39 @@ module FlightJob
     # NOTE: This is a subset of the full metadata file which is stored in the active file
     # It stores rudimentary information about the job if the metadata file is never saved
     def active_metadata
-      metadata.slice('created_at', 'script_id')
+      metadata.is_a?(Hash) ? metadata.slice('created_at', 'script_id') : {}
+    end
+
+    # Checks it the job has got stuck in an Active state and handles it accordingly
+    # This can happen if the job is interrupted during submission
+    def transition_inactive
+      return unless File.exists? active_path
+      schema_errors = ACTIVE_SCHEMA.validate(active_metadata).to_a
+
+      if schema_errors.empty?
+        # Check if the maximum pending submission time has elapsed
+        start = DateTime.rfc3339(created_at).to_time.to_i
+        now = Time.now.to_i
+        if now - start > FlightJob.config.submission_period
+          FlightJob.logger.error <<~ERROR
+            The following job is being flaged as FAILED as it has not been submitted: #{id}
+          ERROR
+          self.state = 'FAILED'
+          self.submit_status = 126
+          self.submit_stdout = ''
+          self.submit_stderr = 'Failed to run the submission command for an unknown reason'
+          FileUtils.mkdir_p File.dirname(metadata_path)
+          File.write metadata_path, YAML.dump(metadata)
+          FileUtils.rm_f active_path
+        else
+          FlightJob.logger.info "Ignoring the following job as it is pending submission: #{id}"
+        end
+      else
+        FlightJob.logger.error <<~ERROR.chomp
+          The following active file is invalid: #{active_path}
+        ERROR
+        FileUtils.rm_f active_path
+      end
     end
 
     def load_script

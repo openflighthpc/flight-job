@@ -33,7 +33,7 @@ module FlightJob
           if job.valid?(:monitor)
             job.monitor
           else
-            # Handle jobs which are still pending submission
+            job.transition_inactive
           end
         end
       end
