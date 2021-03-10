@@ -33,9 +33,13 @@ module FlightJob
     extend OutputMode::TLDR::Index
 
     register_column(header: 'ID', row_color: :yellow) { |s| s.id }
-    register_column(header: 'Script ID') { |j| j.script_id }
-    register_column(header: 'Submitted') { |j| j.submit_status == 0 }
+    register_column(header: 'Script ID', verbose: true) { |j| j.script_id }
+    register_column(header: 'Alt. ID', verbose: true) { |j| j.scheduler_id }
     register_column(header: 'State') { |j| j.state }
+
+    # Show a boolean in the "simplified" output, and the exit code in the verbose
+    register_column(header: 'Submitted', verbose: false) { |j| j.submit_status == 0 }
+    register_column(header: 'Submit Status', verbose: true) { |j| j.submit_status }
 
     # Toggle the format of the created at time
     register_column(header: 'Created At', verbose: true) { |j| j.created_at }
@@ -55,6 +59,9 @@ module FlightJob
       next nil unless job.end_time
       DateTime.rfc3339(job.end_time).strftime('%d/%m %H:%M')
     end
+
+    register_column(header: 'StdOut Path', verbose: true) { |j| j.stdout_path }
+    register_column(header: 'StdErr Path', verbose: true) { |j| j.stderr_path }
 
     def self.build_output(**opts)
       if opts.delete(:json)

@@ -32,8 +32,8 @@ module FlightJob
     extend OutputMode::TLDR::Index
 
     register_column(header: 'ID', row_color: :yellow) { |s| s.id }
+    register_column(header: 'Template ID') { |s| s.template_id }
     register_column(header: 'Name') { |s| s.script_name }
-    register_column(header: 'Template') { |s| s.template_id }
 
     # Toggle the format of the created at time
     register_column(header: 'Created At', verbose: true) { |s| s.created_at }
@@ -50,5 +50,3 @@ module FlightJob
     end
   end
 end
-
-

@@ -49,8 +49,12 @@ module FlightJob
 
     register_attribute(section: :main, header: 'ID') { |j| j.id }
     register_attribute(section: :main, header: 'Script ID') { |j| j.script_id }
-    register_attribute(section: :main, header: 'Submitted') { |j| j.submit_status == 0 }
+    register_attribute(section: :main, header: 'Alt. ID') { |j| j.scheduler_id }
     register_attribute(section: :main, header: 'State') { |j| j.state }
+
+    # Show a boolean in the "simplified" output, and the exit code in the verbose
+    register_attribute(section: :main, header: 'Submitted', verbose: false) { |j| j.submit_status == 0 }
+    register_attribute(section: :main, header: 'Submit Status', verbose: true) { |j| j.submit_status }
 
     # Toggle the format of the created at time
     register_attribute(section: :main, header: 'Created At', verbose: true) { |j| j.created_at }
@@ -70,6 +74,9 @@ module FlightJob
       next nil unless job.end_time
       DateTime.rfc3339(job.end_time).strftime('%d/%m %H:%M')
     end
+
+    register_attribute(section: :main, header: 'StdOut Path') { |j| j.stdout_path }
+    register_attribute(section: :main, header: 'StdErr Path') { |j| j.stderr_path }
 
     register_attribute(section: :submit, header: 'Submission STDOUT', verbose: true) do |job|
       job.submit_stdout
