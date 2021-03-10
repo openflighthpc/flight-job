@@ -45,7 +45,12 @@ module FlightJob
       if opts.delete(:json)
         JSONRenderer.new(true, opts[:interactive])
       else
-        super(row_color: :cyan, header_color: :bold, **opts)
+        super(row_color: :cyan, header_color: :bold, **opts).tap do |output|
+          # NOTE: The rotate flag "hopefully" going to be a new feature to TTY::Table
+          # that stops is rotating in small terminals. OutputMode has no concept of this
+          # feature, currently
+          output.config.merge!(rotate: false) if output.is_a? OutputMode::Outputs::Tabulated
+        end
       end
     end
   end

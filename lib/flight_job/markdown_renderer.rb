@@ -25,7 +25,7 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require_relative '../patches/tty-markdown'
+require 'tty-markdown'
 require 'word_wrap'
 
 module FlightJob
