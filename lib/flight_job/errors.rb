@@ -60,4 +60,5 @@ module FlightJob
   MissingError = GeneralError.define_class(20)
   MissingTemplateError = MissingError.define_class(21)
   MissingScriptError = MissingError.define_class(22)
+  MissingJobError = MissingError.define_class(23)
 end

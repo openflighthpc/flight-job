@@ -99,8 +99,16 @@ module FlightJob
       c.slop.bool '--stdin', 'Provide the answers via STDIN as JSON'
     end
 
+    create_command 'list-jobs' do |c|
+      c.summary = 'List the previously submitted jobs'
+    end
+
     create_command 'submit-job', 'SCRIPT_ID' do |c|
       c.summary = 'Schedule a new job to run from a script'
+    end
+
+    create_command 'info-job', 'JOB_ID' do |c|
+      c.summary = 'Display details about a submitted job'
     end
 
     alias_command 'create', 'create-script'
@@ -110,7 +118,9 @@ module FlightJob
     # version 1.1.X of the CLI
     alias_command 'info',   'info-template'
     alias_command 'ls',     'list-templates'
+    alias_command 'list',   'list-templates'
     alias_command 'cp',     'copy-template'
+    alias_command 'copy',   'copy-template'
 
     if FlightJob.config.development
       create_command 'console' do |c|

@@ -107,12 +107,29 @@ module FlightJob
     end
 
     def load_script(id)
-      Script.new(id: args.first).tap do |script|
+      Script.new(id: id).tap do |script|
         unless script.exists?
           raise MissingScriptError, "Could not locate script: #{id}"
         end
         unless script.valid?(:load)
+          FlightJob.logger.error("Failed to load script: #{id}\n") do
+            script.errors.full_messages
+          end
           raise InternalError, "Unexpectedly failed to load script: #{id}"
+        end
+      end
+    end
+
+    def load_job(id)
+      Job.new(id: id).tap do |job|
+        unless job.submitted?
+          raise MissingJobError, "Could not locate job: #{id}"
+        end
+        unless job.valid?(:load)
+          FlightJob.logger.error("Failed to load job: #{id}\n") do
+            job.errors.full_messages
+          end
+          raise InternalError, "Unexpectedly failed to load job: #{id}"
         end
       end
     end

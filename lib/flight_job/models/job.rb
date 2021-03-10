@@ -81,34 +81,19 @@ module FlightJob
       }
     })
 
-    # def self.from_metadata_path(path)
-    #   unless File.exists? path
-    #     FlightJobScriptAPI.logger.error "Failed to locate job metadata path: #{path}"
-    #     return nil
-    #   end
-    #   match = match_regex.match(path)
-
-    #   if match.nil?
-    #     FlightJobScriptAPI.logger.error "Failed to parse job metadata path: #{path}"
-    #     return nil
-    #   end
-
-    #   data = (YAML.load(File.read(path)) || {}).slice(*METADATA_KEYS)
-    #   job = new(
-    #     user: match['user'],
-    #     id: match['id'],
-    #     **data.map { |k, v| [k.to_sym, v] }.to_h
-    #   )
-
-    #   # Ensure the job is valid
-    #   if job.valid?
-    #     job
-    #   else
-    #     FlightJobScriptAPI.logger.error "A validation error occurred when loading job: #{path}"
-    #     FlightJobScriptAPI.logger.debug(job.full_messages)
-    #     return nil
-    #   end
-    # end
+    def self.load_all
+      Dir.glob(new(id: '*').metadata_path).map do |path|
+        id = File.basename(File.dirname(path))
+        job = new(id: id)
+        if job.valid?(:load)
+          job
+        else
+          FlightJob.logger.error("Failed to load missing/invalid script: #{id}")
+          FlightJob.logger.debug(script.errors)
+          nil
+        end
+      end.reject(&:nil?)
+    end
 
     validate on: :load do
       unless submitted?

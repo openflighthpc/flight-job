@@ -1,5 +1,5 @@
 #==============================================================================
-# Copyright (C) 2020-present Alces Flight Ltd.
+# Copyright (C) 2021-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -27,14 +27,11 @@
 
 module FlightJob
   module Commands
-    class InfoScript < Command
+    class ListJobs < Command
       def run
-        puts Outputs::InfoScript.build_output(**output_options).render(script)
-      end
-
-      def script
-        @script ||= load_script(args.first)
+        puts Outputs::ListJobs.build_output(**output_options).render(*Job.load_all)
       end
     end
   end
 end
+
