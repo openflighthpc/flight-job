@@ -54,6 +54,8 @@ module FlightJob
               transform: relative_to(root_path)
     attribute :scripts_dir, default: '~/.local/share/flight/job/scripts',
               transform: relative_to(root_path)
+    attribute :jobs_dir, default: '~/.local/share/flight/job/jobs',
+              transform: relative_to(root_path)
     attribute :minimum_terminal_width, default: 80
     attribute :log_path, required: false,
               default: '~/.cache/flight/log/share/job.log',
