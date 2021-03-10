@@ -49,12 +49,12 @@ module FlightJob
         "state" => { "type" => "string", "enum" => STATES },
         # NOTE: In practice this will normally be an integer, however this is not
         # guaranteed. As such it must be stored as a string.
-        "scheduler_id" => { "type" => "string" },
-        "stdout_path" => { "type" => "string" },
-        "stderr_path" => { "type" => "string" },
-        "reason" => { "type" => "string" },
-        "start_time" => { "type" => "string", "format" => "date-time" },
-        "end_time" => { "type" => "string", "format" => "date-time" }
+        "scheduler_id" => { "type" => ["string", "null"] },
+        "stdout_path" => { "type" => ["string", "null"] },
+        "stderr_path" => { "type" => ["string", "null"] },
+        "reason" => { "type" => ["string", "null"] },
+        "start_time" => { "type" => ["string", "null"], "format" => "date-time" },
+        "end_time" => { "type" => ["string", "null"], "format" => "date-time" }
       }
     })
 
@@ -89,10 +89,16 @@ module FlightJob
           job
         else
           FlightJob.logger.error("Failed to load missing/invalid script: #{id}")
-          FlightJob.logger.debug(script.errors)
+          FlightJob.logger.debug(job.errors)
           nil
         end
       end.reject(&:nil?)
+    end
+
+    def self.load_active
+      Dir.glob(new(id: '*').metadata_path).map do |path|
+        new(id: File.basename(File.dirname(path)))
+      end
     end
 
     validate on: :load do
@@ -100,11 +106,28 @@ module FlightJob
         errors.add(:submitted, 'the job has not been submitted')
       end
 
-      unless (errors = SCHEMA.validate(metadata).to_a).empty?
+      unless (schema_errors = SCHEMA.validate(metadata).to_a).empty?
         FlightJob.logger.debug("The following metadata file is invalid: #{metadata_path}\n") do
-          JSON.pretty_generate(errors)
+          JSON.pretty_generate(schema_errors)
         end
         errors.add(:metadata, 'is invalid')
+      end
+    end
+
+    validate on: :monitor do
+      unless submitted?
+        errors.add(:submitted, 'the job has not been submitted')
+      end
+
+      unless (schema_errors = SCHEMA.validate(metadata).to_a).empty?
+        FlightJob.logger.debug("The following metadata file is invalid: #{metadata_path}\n") do
+          JSON.pretty_generate(schema_errors)
+        end
+        errors.add(:metadata, 'is invalid')
+      end
+
+      unless scheduler_id
+        errors.add(:scheduler_id, 'has not been set')
       end
     end
 
@@ -253,7 +276,6 @@ module FlightJob
         end
       end
     ensure
-      active_path = self.class.active_path(user, id)
       if TERMINAL_STATES.include?(self.state)
         FileUtils.rm_f active_path
       end
