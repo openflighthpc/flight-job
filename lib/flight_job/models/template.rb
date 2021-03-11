@@ -168,6 +168,10 @@ module FlightJob
       end
     end
 
+    def exists?
+      File.exists? metadata_path
+    end
+
     def metadata_path
       File.join(FlightJob.config.templates_dir, id, "metadata.yaml")
     end

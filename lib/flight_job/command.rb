@@ -71,7 +71,12 @@ module FlightJob
 
     def load_template(name_or_id)
       template = Template.new(id: name_or_id)
-      return template if template.valid?(:verbose)
+      if template.exists?
+        raise InternalError, <<~ERROR.chomp unless template.valid?(:verbose)
+          Can not load the following template as it is invalid: #{template.id}
+        ERROR
+        return template
+      end
 
       templates = Template.load_all
 
