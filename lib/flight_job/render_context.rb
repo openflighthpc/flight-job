@@ -64,7 +64,7 @@ module FlightJob
         questions = @template.generation_questions.reduce({}) do |memo, question|
           memo.merge({
             question.id => AnswerDecorator.new(question: question,
-                                               answer: @answers[question.id.to_sym])
+                                               answer: @answers[question.id])
           })
         end
         DefaultsOpenStruct.new(questions) do |h, k|
