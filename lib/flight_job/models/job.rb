@@ -152,8 +152,21 @@ module FlightJob
 
     attr_writer :id
 
+    # Implicitly generates an ID by trying to create a randomised directory
+    # This handles ID collisions if and when they occur
     def id
-      @id ||= SecureRandom.uuid
+      @id ||= begin
+        candidate = SecureRandom.urlsafe_base64(6) # NOTE: 6 bytes becomes 8 base64-chars
+        # Ensures the parent directory exists with mkdir -p
+        FileUtils.mkdir_p FlightJob.config.jobs_dir
+        # Attempt to create the directory with errors: mkdir
+        FileUtils.mkdir File.join(FlightJob.config.jobs_dir, candidate)
+        # Return the candidate
+        candidate
+      rescue Errno::EEXIST
+        FlightJob.logger.debug "Retrying after job ID collision: #{candidate}"
+        retry
+      end
     end
 
     def submitted?

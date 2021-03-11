@@ -107,8 +107,21 @@ module FlightJob
       end
     end
 
+    # Implicitly generates an ID by trying to create a randomised directory
+    # This handles ID collisions if and when they occur
     def id
-      @id ||= SecureRandom.uuid
+      @id ||= begin
+        candidate = SecureRandom.urlsafe_base64(6) # NOTE: 6 bytes becomes 8 base64-chars
+        # Ensures the parent directory exists with mkdir -p
+        FileUtils.mkdir_p FlightJob.config.scripts_dir
+        # Attempt to create the directory with errors: mkdir
+        FileUtils.mkdir File.join(FlightJob.config.scripts_dir, candidate)
+        # Return the candidate
+        candidate
+      rescue Errno::EEXIST
+        FlightJob.logger.debug "Retrying after script ID collision: #{candidate}"
+        retry
+      end
     end
 
     # NOTE: Only used for a shorthand existence check, full validation is required in
