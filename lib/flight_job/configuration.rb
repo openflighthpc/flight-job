@@ -62,6 +62,8 @@ module FlightJob
               transform: relative_to(root_path)
     attribute :submission_period, default: 3600
     attribute :minimum_terminal_width, default: 80
+    attribute :check_cron, default: 'libexec/check-cron.sh',
+              transform: relative_to(root_path)
     attribute :log_path, required: false,
               default: '~/.cache/flight/log/share/job.log',
               transform: ->(path) do

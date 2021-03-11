@@ -1,3 +1,4 @@
+#!/bin/bash
 #==============================================================================
 # Copyright (C) 2021-present Alces Flight Ltd.
 #
@@ -25,40 +26,17 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require 'open3'
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." &> /dev/null && pwd )"
+BIN="$DIR/bin/run-monitor.sh"
 
-module FlightJob
-  module Commands
-    class SubmitJob < Command
-      def run
-        check_cron
-        job = Job.new(script_id: script.id)
-        job.submit
-        puts Outputs::InfoJob.build_output(**output_options).render(job)
-      end
+if crontab -l | grep "$BIN"; then
+  exit 0
+fi
 
-      def script
-        @script ||= load_script(args.first)
-      end
+set -e
 
-      def check_cron
-        env = ENV.slice('PATH', 'HOME', 'USER', 'LOGNAME')
-        out, err, status = Open3.capture3(env, FlightJob.config.check_cron, unsetenv_others: true, close_others: true)
-        FlightJob.logger.debug <<~DEBUG
-          Result from cron-check
-          STATUS: #{status.exitstatus}
-          STDOUT:
-          #{out}
-          STDERR:
-          #{err}
-        DEBUG
-        unless status.exitstatus == 0
-          raise InternalError, <<~ERROR.chomp
-            Failed to install the job monitor!
-            Please contact your system administrator for further assistance.
-          ERROR
-        end
-      end
-    end
-  end
-end
+crontab <<-CRON
+0 * * * * $BIN
+CRON
+
+exit 0
