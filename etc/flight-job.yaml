@@ -34,12 +34,63 @@
 # templates_dir: usr/share
 
 # ==============================================================================
+# Scripts Directory
+# Specify where the scripts will be stored.
+#
+# Relative paths are expanded from the install directory.
+# ==============================================================================
+# scripts_dir: ~/.local/share/flight/job/scripts
+
+# ==============================================================================
+# Jobs Directory
+# Specify where the scripts will be stored.
+#
+# Relative paths are expanded from the install directory.
+# ==============================================================================
+# scripts_dir: ~/.local/share/flight/job/jobs
+
+# ==============================================================================
+# Submit Script Path
+# Specify the path to the script which submits jobs.
+#
+# Relative paths are expanded from the install directory.
+# ==============================================================================
+# submit_script_path: libexec/slurm/monitor.sh
+
+# ==============================================================================
+# Monitor Script Path
+# Specify the path to the script which monitors jobs.
+#
+# Relative paths are expanded from the install directory.
+# ==============================================================================
+# monitor_script_path: libexec/slurm/monitor.sh
+
+# ==============================================================================
+# Check Cron Path
+# Specify the path to the script which checks if cron is setup to run the
+# monitor.
+#
+# If cron has not been setup, it is responsible for setting the crontab to run
+# the "flight job run-monitor" command periodically.
+#
+# Relative paths are expanded from the install directory.
+# ==============================================================================
+# check_cron: libexec/check-cron.sh
+
+# ==============================================================================
 # Minimum Terminal Width
 # The minimum terminal width when wrapping output text. This prevents various
 # edge cases in small terminals. The terminal is responsible for wrapping the
 # text if its width is smaller than the minimum.
 # ==============================================================================
 # minimum_terminal_width: 80
+
+# ==============================================================================
+# Submission Period
+# The minimum amount of time to wait before a job that is "pending submission"
+# is considered failed.
+# ==============================================================================
+# submission_period: 3600
 
 # ==============================================================================
 # Log Path
