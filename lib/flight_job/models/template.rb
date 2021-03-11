@@ -149,6 +149,7 @@ module FlightJob
     validate on: :verbose do
       # Ensure the questions are sorted correctly
       begin
+        next unless errors.empty?
         sorted = QuestionSort.build(generation_questions).tsort
         unless sorted == generation_questions
           FlightJob.logger.error "The questions for template '#{id}' have not been topographically sorted! A possible sort order is:\n" do
@@ -160,6 +161,10 @@ module FlightJob
         errors.add(:questions, 'form a circular loop')
       rescue UnresolvedReference
         errors.add(:questions, "could not locate referenced question: #{$!.message}")
+      rescue
+        FlightJob.logger.error "Failed to validate the template questions due to another error: #{id}"
+        FlightJob.logger.debug("Error:\n") { $!.messages }
+        errors.add(:questions, 'could not be validated')
       end
     end
 

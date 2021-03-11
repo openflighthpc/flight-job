@@ -84,7 +84,11 @@ module FlightJob
             Could not locate a template with index: #{name_or_id}
           ERROR
         end
-        templates[index]
+        templates[index].tap do |template|
+          raise InternalError, <<~ERROR unless template.valid?(:verbose)
+            Can not load the following template as it is invalid: #{template.id}
+          ERROR
+        end
 
       else
         # Attempts a did you mean?
