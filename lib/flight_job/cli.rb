@@ -69,7 +69,8 @@ module FlightJob
       Paint.mode = 0
     end
 
-    global_slop.bool '--verbose', 'Display additional details'
+    global_slop.bool '--verbose', 'Display additional details, when supported'
+    global_slop.bool '--pretty', 'Display a human friendly output, when supported'
     global_slop.bool '--ascii', 'Display a simplified version of the output, when supported'
     global_slop.bool '--json', 'Display a JSON version of the output, when supported'
 

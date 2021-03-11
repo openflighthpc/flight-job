@@ -64,7 +64,7 @@ module FlightJob
       {
         verbose: (opts.verbose ? true : nil),
         ascii: (opts.ascii ? true : nil),
-        interactive: (opts.ascii || $stdout.tty? ? true : nil),
+        interactive: (opts.ascii || opts.pretty || $stdout.tty? ? true : nil),
         json: (opts.json ? true : nil)
       }
     end
