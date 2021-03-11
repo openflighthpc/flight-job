@@ -54,7 +54,8 @@ module FlightJob
 
     # Show a boolean in the "simplified" output, and the exit code in the verbose
     register_attribute(section: :main, header: 'Submitted', verbose: false) { |j| j.submit_status == 0 }
-    register_attribute(section: :main, header: 'Submit Status', verbose: true) { |j| j.submit_status }
+    # NOTE: There is a rendering issue of integers into the TSV output. Needs investigation
+    register_attribute(section: :main, header: 'Submit Status', verbose: true) { |j| j.submit_status.to_s }
 
     # Toggle the format of the created at time
     register_attribute(section: :main, header: 'Created At', verbose: true) { |j| j.created_at }
