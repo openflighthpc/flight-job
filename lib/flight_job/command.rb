@@ -35,10 +35,6 @@ module FlightJob
     def initialize(args, opts)
       @args = args.freeze
       @opts = opts
-
-      if opts.json && opts.ascii
-        raise InputError, "The following flags can not be used together: #{pastel.yellow('--ascii --json')}"
-      end
     end
 
     def run!
