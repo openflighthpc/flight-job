@@ -68,7 +68,7 @@ module FlightJob
               default: '~/.cache/flight/log/share/job.log',
               transform: ->(path) do
                 if path
-                  relative_to(root_path).tap do |full_path|
+                  relative_to(root_path).call(path).tap do |full_path|
                     FileUtils.mkdir_p File.dirname(full_path)
                   end
                 else
