@@ -1,6 +1,4 @@
-etc/config.*
-!etc/config.reference
+etc/flight-job.local.yaml
 var
-usr/share
 .bundle/*
 vendor
