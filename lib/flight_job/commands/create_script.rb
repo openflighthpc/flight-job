@@ -81,18 +81,22 @@ module FlightJob
           memo[question.id] = case question.format['type']
           when 'text'
             prompt.ask(question.text, default: question.default)
-          when  'multiline_text'
+          when 'multiline_text'
             # NOTE: The 'default' field does not work particularly well for multiline inputs
             # Consider replacing with $EDITOR
             lines = prompt.multiline(question.text)
             lines.empty? ? question.default : lines.join('')
-          when 'select'
+          when 'select', 'multiselect'
             opts = {}
             choices = question.format['options'].each_with_index.map do |opt, idx|
               opts[:default] = idx + 1 if opt['value'] == question.default
               { name: opt['text'], value: opt['value'] }
             end
-            prompt.select(question.text, choices, **opts)
+            if question.format['type'] == 'multiselect'
+              prompt.multi_select(question.text, choices, **opts)
+            else
+              prompt.select(question.text, choices, **opts)
+            end
           else
             raise InternalError, "Unexpectedly reached question type: #{question.format['type']}"
           end
