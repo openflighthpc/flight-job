@@ -126,12 +126,6 @@ module FlightJob
 
     alias_command 'create', 'create-script'
     alias_command 'submit', 'submit-job'
-
-    # The following aliases are required for backwards compatibility with
-    # version 1.1.X of the CLI
-    alias_command 'info',   'info-template'
-    alias_command 'ls',     'list-templates'
-    alias_command 'list',   'list-templates'
     alias_command 'cp',     'copy-template'
     alias_command 'copy',   'copy-template'
 
