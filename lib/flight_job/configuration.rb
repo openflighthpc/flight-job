@@ -75,7 +75,7 @@ module FlightJob
                   $stderr
                 end
               end
-    attribute :log_level, default: 'error'
+    attribute :log_level, default: 'warn'
     attribute :development, default: false, required: false
   end
 

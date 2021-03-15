@@ -100,6 +100,10 @@ module FlightJob
       c.slop.bool '--stdin', 'Provide the answers via STDIN as JSON'
     end
 
+    create_command 'delete-script', 'SCRIPT_ID' do |c|
+      c.summary = 'Permanently remove a script'
+    end
+
     create_command 'list-jobs' do |c|
       c.summary = 'List the previously submitted jobs'
     end
@@ -114,6 +118,10 @@ module FlightJob
 
     create_command 'info-job', 'JOB_ID' do |c|
       c.summary = 'Display details about a submitted job'
+    end
+
+    create_command 'delete-job', 'JOB_ID' do |c|
+      c.summary = 'Permanently remove a job'
     end
 
     alias_command 'create', 'create-script'

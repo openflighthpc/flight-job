@@ -106,4 +106,4 @@
 # Set at which severity the application will log
 # Valid levels: 'fatal', 'error', 'warn', 'info', 'debug'
 # ==============================================================================
-# log_level: error
+# log_level: warn
