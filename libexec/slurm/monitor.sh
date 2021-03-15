@@ -62,27 +62,48 @@ if [[ "$exit_status" -eq 0 ]]; then
   # Extract the times
   start_time=$(echo "$control" | grep -E ".*StartTime=" | sed "s/.*StartTime=\([^ ]*\).*/\1/g" )
   end_time=$(echo "$control" | grep -E ".*EndTime=" | sed "s/.*EndTime=\([^ ]*\).*/\1/g" )
-
-  # Confirm times are in the right format and reject Unknown
-  format='^\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d$'
-  if echo "$start_time" | grep -P "$format" ; then
-    start_time="$start_time$(date +%:z)"
-  else
-    start_time=""
-  fi
-  if echo "$end_time" | grep -P "$format" ; then
-    end_time="$end_time$(date +%:z)"
-  else
-    end_time=""
-  fi
 elif [[ "$control" == "slurm_load_jobs error: Invalid job id specified" ]]; then
-  state="UNKNOWN"
-  start_time=''
-  end_time=''
-  reason=''
+  # Fallback to sacct if scontrol does not recognise the ID
+  acct=$(sacct --noheader --parsable --jobs "$1" --format State,Reason,START,END  | head -n1)
+  exit_status="$?"
+
+  # Transition the job to "UNKNOWN" is sacct has no record of it
+  if [[ "$exit_status" -eq 0 ]] && [ -z "$acct" ]; then
+    state="UNKNOWN"
+    start_time=''
+    end_time=''
+    reason=''
+
+  # Extract the output from sacct
+  elif [[ "$exit_status" -eq 0 ]]; then
+    state=$(echo "$acct" | cut -d'|' -f1)
+    reason=$(echo "$acct" | cut -d'|' -f2)
+    start_time=$(echo "$acct" | cut -d'|' -f3)
+    end_time=$(echo "$acct" | cut -d'|' -f4)
+
+  # Exit the monitor process if sacct fails to prevent the job being updated
+  else
+    echo "$sacct" >&3
+    exit "$exit_status"
+  fi
 else
+  # Exit the monitor process if scontrol fails to prevent the job being updated
   echo "$control" >&2
   exit "$exit_status"
+fi
+
+# Confirm times are in the right format and reject Unknown
+# NOTE: This replaces "Unknown" times with empty string and converts times into RFC3339
+format='^\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d$'
+if echo "$start_time" | grep -P "$format" ; then
+  start_time="$start_time$(date +%:z)"
+else
+  start_time=""
+fi
+if echo "$end_time" | grep -P "$format" ; then
+  end_time="$end_time$(date +%:z)"
+else
+  end_time=""
 fi
 
 # Render and return the payload
