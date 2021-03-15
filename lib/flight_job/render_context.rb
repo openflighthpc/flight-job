@@ -37,10 +37,6 @@ module FlightJob
         @answer || @question.default
       end
 
-      def answered?
-        !@answer.nil?
-      end
-
       def default
         @question.default
       end

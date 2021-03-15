@@ -19,17 +19,14 @@
 #=====================
 #  Working directory
 #---------------------
-# By default, your job will be executed in the directory from which
-# you submitted the job.
+# The following directive overrides the jobs working directory to the
+# specified location.
 #
-# Alternatively, if you need to specify an explicit working
-# directory for your job set a location here.
+# Alternatively, adding an additional comment marker will disable the
+# override. Your job will then be executed in the directory from which
+# it was submitted.
 #
-<% if questions.working_dir.answered? -%>
-#SBATCH -D questions.working_dir.answer
-<% else -%>
-##SBATCH -D /home/%u/sharedscratch/
-<% end -%>
+#SBATCH -D <%= questions.working_dir.answer %>
 
 #=========================
 #  Environment variables
