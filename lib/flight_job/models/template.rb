@@ -203,7 +203,10 @@ module FlightJob
     end
 
     def serializable_hash
-      { 'id' => id }.merge(metadata)
+      {
+        'id' => id,
+        'path' => template_path,
+      }.merge(metadata)
     end
 
     def questions_data

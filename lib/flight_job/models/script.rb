@@ -145,6 +145,7 @@ module FlightJob
         @script_path = File.join(FlightJob.config.scripts_dir, id, script_name)
       else
         @errors.add(:script_path, 'can not be determined')
+        @script_path = false
       end
     end
 
@@ -165,6 +166,7 @@ module FlightJob
     end
 
     def script_name=(name)
+      @script_path = nil
       metadata['script_name'] = name
     end
 
@@ -199,7 +201,10 @@ module FlightJob
     end
 
     def serializable_hash
-      { "id" => id }.merge(metadata)
+      {
+        "id" => id,
+        "path" => script_path
+      }.merge(metadata)
     end
 
     private
