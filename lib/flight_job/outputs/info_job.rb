@@ -79,22 +79,30 @@ module FlightJob
     register_attribute(section: :main, header: 'StdOut Path') { |j| j.stdout_path }
     register_attribute(section: :main, header: 'StdErr Path') { |j| j.stderr_path }
 
-    register_attribute(section: :submit, header: 'Submission STDOUT', verbose: true) do |job|
+    register_attribute(section: :submit, header: 'Submission STDOUT') do |job|
       job.submit_stdout
     end
-    register_attribute(section: :submit, header: 'Submission STOUT', verbose: true) do |job|
+    register_attribute(section: :submit, header: 'Submission STOUT') do |job|
       job.submit_stderr
     end
 
     def self.build_output(**opts)
+      submit = opts.delete(:submit)
       if opts.delete(:json)
         JSONRenderer.new(false, opts[:interactive])
       else
         super(template: TEMPLATE, **opts).tap do |output|
           # OutputMode currently doesn't properly support escaping of the newlines
           # due to how it has wrapped the underlying CSV library
-          if output.is_a? OutputMode::Outputs::Delimited
+          case output
+          when OutputMode::Outputs::Delimited
             output.config.merge! write_converters: [->(f) { f.to_s.dump.sub(/\A"/, '').sub(/"\Z/, '') }]
+
+          # Toggles the STDOUT/STDERR display based on verbosity or if explicitly flagged
+          when OutputMode::Outputs::Templated
+            if !(opts[:verbose] || submit)
+              output.procs.reject! { |c| c.config[:section] == :submit }
+            end
           end
         end
       end
