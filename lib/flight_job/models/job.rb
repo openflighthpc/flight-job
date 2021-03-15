@@ -156,7 +156,12 @@ module FlightJob
     # This handles ID collisions if and when they occur
     def id
       @id ||= begin
-        candidate = SecureRandom.urlsafe_base64(6) # NOTE: 6 bytes becomes 8 base64-chars
+        candidate = '-'
+        while candidate[0] == '-' do
+          # Generate a 8 byte base64 string that does not start with: '-'
+          # NOTE: 6 bytes of randomness becomes 8 base64-chars
+          candidate = SecureRandom.urlsafe_base64(6)
+        end
         # Ensures the parent directory exists with mkdir -p
         FileUtils.mkdir_p FlightJob.config.jobs_dir
         # Attempt to create the directory with errors: mkdir
