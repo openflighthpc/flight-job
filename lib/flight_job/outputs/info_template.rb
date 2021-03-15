@@ -39,11 +39,11 @@ module FlightJob
 
       ## LICENSE
 
-      This work is licensed under a <%#= license -%> License.
+      This work is licensed under a <%= metadata['license'] -%> License.
 
       ## COPYRIGHT
 
-      <%#= copyright -%>
+      <%= metadata['copyright'] -%>
     ERB
 
     def self.build_output(**opts)

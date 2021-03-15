@@ -90,9 +90,11 @@ module FlightJob
     SCHEMA = JSONSchemer.schema({
       "type" => "object",
       "additionalProperties" => false,
-      "required" => ['synopsis', 'version', 'generation_questions', 'name'],
+      "required" => ['synopsis', 'version', 'generation_questions', 'name', 'copyright', 'license'],
       "properties" => {
         'name' => { "type" => 'string' },
+        'license' => { "type" => "string" },
+        'copyright' => { "type" => "string" },
         'script_template' => { "type" => 'string' },
         'synopsis' => { "type" => 'string' },
         'description' => { "type" => 'string' },

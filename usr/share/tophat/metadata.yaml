@@ -1,5 +1,7 @@
 # Intentionally has a different name to the directory
 name: tophat-demo
+copyright: Copyright (C) 2021 Alces Flight Ltd.
+license: Creative Commons Attribution-ShareAlike 4.0 International
 script_template: tophat.sh
 version: 0
 synopsis: Tophat v2.1.0
