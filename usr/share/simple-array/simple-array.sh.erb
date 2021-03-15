@@ -93,7 +93,7 @@
 # If not specified, will send mail if the job is aborted.
 #
 <% if questions.notification_wanted.answer == 'yes' -%>
-#SBATCH --mail-type <%= questions.notification_events.answer %>
+#SBATCH --mail-type <%= questions.notification_events.answer.join(',') %>
 <% else -%>
 ##SBATCH --mail-type <%= questions.notification_events.default %>
 <% end -%>
