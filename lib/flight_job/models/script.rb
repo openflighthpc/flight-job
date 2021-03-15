@@ -180,7 +180,7 @@ module FlightJob
       Template.new(id: template_id)
     end
 
-    # XXX: Eventually the answers will likely be saved with the script
+    # NOTE: This method is used to generate a rendered template without saving
     def render(**answers)
       # Ensure the script is in a valid state
       unless valid?(:render)
@@ -191,9 +191,14 @@ module FlightJob
       end
 
       # Render the content
-      content = FlightJob::RenderContext.new(
+      FlightJob::RenderContext.new(
         template: load_template, answers: answers
       ).render
+    end
+
+    # XXX: Eventually the answers will likely be saved with the script
+    def render_and_save(**answers)
+      content = render(**answers)
 
       # Writes the data to disk
       FileUtils.mkdir_p File.dirname(metadata_path)
