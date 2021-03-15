@@ -29,7 +29,15 @@ module FlightJob
   module Commands
     class ListScripts < Command
       def run
-        puts Outputs::ListScripts.build_output(**output_options).render(*Script.load_all)
+        if scripts.empty?
+          $stderr.puts 'Nothing To Display'
+        else
+          puts Outputs::ListScripts.build_output(**output_options).render(*scripts)
+        end
+      end
+
+      def scripts
+        @scripts ||= Script.load_all
       end
     end
   end
