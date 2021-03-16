@@ -57,7 +57,7 @@ module FlightJob
 
     program :name,         ENV.fetch('FLIGHT_PROGRAM_NAME') { 'bin/job' }
     program :application,  'Flight Job'
-    program :description,  'Generate a job script from a predefined template'
+    program :description,  'Generate and submit jobs from predefined templates'
     program :version, "v#{FlightJob::VERSION}"
     program :help_paging, false
 
@@ -87,7 +87,7 @@ module FlightJob
     end
 
     create_command 'list-scripts' do |c|
-      c.summary = 'List the rendered scripts'
+      c.summary = 'List your rendered scripts'
     end
 
     create_command 'info-script', 'SCRIPT_ID' do |c|
@@ -105,7 +105,7 @@ module FlightJob
     end
 
     create_command 'list-jobs' do |c|
-      c.summary = 'List the previously submitted jobs'
+      c.summary = 'List your previously submitted jobs'
     end
 
     create_command 'run-monitor' do |c|
