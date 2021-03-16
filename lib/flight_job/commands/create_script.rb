@@ -31,7 +31,7 @@ require 'tty-prompt'
 module FlightJob
   module Commands
     class CreateScript < Command
-      MAX_STDIN_SIZE = 1*1024*024
+      MAX_STDIN_SIZE = 1*1024*1024
 
       def run
         answers = opts.stdin ? stdin_answers : prompt_answers
@@ -86,17 +86,20 @@ module FlightJob
             # Consider replacing with $EDITOR
             lines = prompt.multiline(question.text)
             lines.empty? ? question.default : lines.join('')
-          when 'select', 'multiselect'
+          when 'select'
             opts = {}
             choices = question.format['options'].each_with_index.map do |opt, idx|
               opts[:default] = idx + 1 if opt['value'] == question.default
               { name: opt['text'], value: opt['value'] }
             end
-            if question.format['type'] == 'multiselect'
-              prompt.multi_select(question.text, choices, **opts)
-            else
-              prompt.select(question.text, choices, **opts)
+            prompt.select(question.text, choices, **opts)
+          when 'multiselect'
+            opts = {}
+            choices = question.format['options'].each_with_index.map do |opt, idx|
+              opts[:default] = idx + 1 if question.default.include?(opt['value'])
+              { name: opt['text'], value: opt['value'] }
             end
+            prompt.multi_select(question.text, choices, **opts)
           else
             raise InternalError, "Unexpectedly reached question type: #{question.format['type']}"
           end
