@@ -35,7 +35,7 @@
 
 # Ensure jq is on the path
 set -e
-which "jq"
+which "jq" >/dev/null
 set +e
 
 # Specify the template for the JSON response

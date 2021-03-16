@@ -38,7 +38,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 # Ensure jq is on the path
 set -e
-which "jq"
+which "jq" >/dev/null
 
 # Specify the template for the JSON response
 read -r -d '' template <<'TEMPLATE' || true
