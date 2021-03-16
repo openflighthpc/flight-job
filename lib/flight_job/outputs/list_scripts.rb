@@ -41,6 +41,8 @@ module FlightJob
       DateTime.rfc3339(script.created_at).strftime('%d/%m %H:%M')
     end
 
+    register_column(header: 'Path', verbose: true) { |s| s.script_path }
+
     def self.build_output(**opts)
       if opts.delete(:json)
         JSONRenderer.new(true, opts[:interactive])
