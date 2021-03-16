@@ -60,7 +60,7 @@ module FlightJob
     # Toggle the format of the created at time
     register_attribute(section: :main, header: 'Created At', verbose: true) { |j| j.created_at }
     register_attribute(section: :main, header: 'Created At', verbose: false) do |job|
-      DateTime.rfc3339(job.created_at).strftime('%d/%m %H:%M')
+      DateTime.rfc3339(job.created_at).strftime('%d/%m/%y %H:%M')
     end
 
     # NOTE: These could be the predicted times instead of the actual, consider
@@ -68,12 +68,12 @@ module FlightJob
     register_attribute(section: :main, header: 'Start Time', verbose: true) { |j| j.start_time }
     register_attribute(section: :main, header: 'Start Time', verbose: false) do |job|
       next nil unless job.start_time
-      DateTime.rfc3339(job.start_time).strftime('%d/%m %H:%M')
+      DateTime.rfc3339(job.start_time).strftime('%d/%m/%y %H:%M')
     end
     register_attribute(section: :main, header: 'End Time', verbose: true) { |j| j.end_time }
     register_attribute(section: :main, header: 'End Time', verbose: false) do |job|
       next nil unless job.end_time
-      DateTime.rfc3339(job.end_time).strftime('%d/%m %H:%M')
+      DateTime.rfc3339(job.end_time).strftime('%d/%m/%y %H:%M')
     end
 
     register_attribute(section: :main, header: 'StdOut Path') { |j| j.stdout_path }

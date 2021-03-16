@@ -38,7 +38,7 @@ module FlightJob
     # Toggle the format of the created at time
     register_column(header: 'Created At', verbose: true) { |s| s.created_at }
     register_column(header: 'Created At', verbose: false) do |script|
-      DateTime.rfc3339(script.created_at).strftime('%d/%m %H:%M')
+      DateTime.rfc3339(script.created_at).strftime('%d/%m/%y %H:%M')
     end
 
     register_column(header: 'Path', verbose: true) { |s| s.script_path }

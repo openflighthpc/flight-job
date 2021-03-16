@@ -39,7 +39,7 @@ module FlightJob
     # Toggle the format of the created at time
     register_attribute(header: 'Created At', verbose: true) { |s| s.created_at }
     register_attribute(header: 'Created At', verbose: false) do |script|
-      DateTime.rfc3339(script.created_at).strftime('%d/%m %H:%M')
+      DateTime.rfc3339(script.created_at).strftime('%d/%m/%y %H:%M')
     end
 
     def self.build_output(**opts)
