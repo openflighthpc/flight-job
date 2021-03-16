@@ -94,7 +94,7 @@ generation_questions:
     text: When should notifications be sent?
     description: >
       Set the conditions under which you wish to be notified.
-    default: 'ALL'
+    default: ['ALL']
     format:
       type: multiselect
       options:

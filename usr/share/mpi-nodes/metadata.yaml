@@ -9,7 +9,7 @@ description: |
   to run an MPI application. This method is often used for MPI jobs where you
   need to specify the number of processes, machine file and process allocation
   manually, rather than leave this up to the scheduler.
-  
+
   Your job will be allocated the requested number of empty nodes. This method
   should not be used for SMP (OpenMP) jobs. Only use this method if you need
   exclusive use of each node allocated; prefer a multiple slot job for a
@@ -99,7 +99,7 @@ generation_questions:
     text: When should notifications be sent?
     description: >
       Set the conditions under which you wish to be notified.
-    default: 'ALL'
+    default: ['ALL']
     format:
       type: multiselect
       options:

@@ -80,10 +80,21 @@ module FlightJob
           # NOTE' => Forcing the default to be a string is a stop-gap measure
           # It keeps the initial implementation simple as everything is a strings
           # Eventually multiple formats will be supported
-          'default' => { 'type' => 'string' },
+          'default' => {},
           'format' => FORMAT_SPEC,
           'ask_when' => ASK_WHEN_SPEC
-        }
+        },
+        "if" => { "properties" => { "format" => {
+          "type" => "object",
+          # NOTE: The following "type" is the name of the property NOT a declaration
+          "properties" => { "type" => { "const" => "multiselect" } }
+        } } },
+        "then" => { "properties" => {
+          "default" => { "type" => "array", "items" => { "type" => "string" } }
+        } },
+        "else" => { "properties" => {
+          "default" => { "type" => "string" }
+        } }
       }
     }
 

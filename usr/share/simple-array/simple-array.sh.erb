@@ -95,7 +95,7 @@
 <% if questions.notification_wanted.answer == 'yes' -%>
 #SBATCH --mail-type <%= questions.notification_events.answer.join(',') %>
 <% else -%>
-##SBATCH --mail-type <%= questions.notification_events.default %>
+##SBATCH --mail-type <%= questions.notification_events.default.join(',') %>
 <% end -%>
 
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
