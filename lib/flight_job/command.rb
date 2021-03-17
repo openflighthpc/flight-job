@@ -73,7 +73,7 @@ module FlightJob
       template = Template.new(id: name_or_id)
       if template.exists?
         raise InternalError, <<~ERROR.chomp unless template.valid?(:verbose)
-          Can not load the following template as it is invalid: #{template.id}
+          Cannot load the following template as it is invalid: #{template.id}
         ERROR
         return template
       end
@@ -91,7 +91,7 @@ module FlightJob
         end
         templates[index].tap do |template|
           raise InternalError, <<~ERROR unless template.valid?(:verbose)
-            Can not load the following template as it is invalid: #{template.id}
+            Cannot load the following template as it is invalid: #{template.id}
           ERROR
         end
 

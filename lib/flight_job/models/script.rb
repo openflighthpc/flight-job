@@ -149,7 +149,7 @@ module FlightJob
       elsif id && script_name
         @script_path = File.join(FlightJob.config.scripts_dir, id, script_name)
       else
-        @errors.add(:script_path, 'can not be determined')
+        @errors.add(:script_path, 'cannot be determined')
         @script_path = false
       end
     end
