@@ -87,14 +87,14 @@ module FlightJob
             lines = prompt.multiline(question.text)
             lines.empty? ? question.default : lines.join('')
           when 'select'
-            opts = {}
+            opts = { show_help: :always }
             choices = question.format['options'].each_with_index.map do |opt, idx|
               opts[:default] = idx + 1 if opt['value'] == question.default
               { name: opt['text'], value: opt['value'] }
             end
             prompt.select(question.text, choices, **opts)
           when 'multiselect'
-            opts = {}
+            opts = { show_help: :always}
             choices = question.format['options'].each_with_index.map do |opt, idx|
               opts[:default] = idx + 1 if question.default.include?(opt['value'])
               { name: opt['text'], value: opt['value'] }
@@ -107,7 +107,7 @@ module FlightJob
       end
 
       def prompt
-        @prompt = TTY::Prompt.new
+        @prompt = TTY::Prompt.new(help_color: :yellow)
       end
     end
   end
