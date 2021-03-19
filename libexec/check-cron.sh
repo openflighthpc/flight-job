@@ -35,8 +35,17 @@ fi
 
 set -e
 
+# NOTE: The cron-step notation (e.g. 0/5) is non-standard and does not work reliable
+# It has been confirmed incompatible with cronie-1.4.11-23.el7.x86_64 on a base
+# centos7 install
+offset=$(($RANDOM % 5))
+spec="$offset"
+for index in {1..11}; do
+  spec="$spec,$(($offset + $index * 5))"
+done
+
 crontab <<-CRON
-$(($RANDOM % 5))/5 * * * * $BIN
+$spec * * * * $BIN
 CRON
 
 exit 0
