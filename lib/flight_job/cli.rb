@@ -79,7 +79,7 @@ module FlightJob
     end
 
     create_command 'copy-template', 'NAME [DEST]' do |c|
-      c.summary = 'Generate a local version of a template (Deprecated)'
+      c.summary = 'Generate a local version of a template'
     end
 
     create_command 'info-template', 'NAME' do |c|
