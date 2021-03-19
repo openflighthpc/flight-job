@@ -71,6 +71,19 @@ module FlightJob
     end
   end
 
+  # This object is used to provide nice answer handling for missing questions so that:
+  # questions.missing.answer # => nil (Instead of raising NoMethodError)
+  #
+  # It essentially reimplements the OpenStruct initializer to support defaults handling
+  # in a similar manner to Hash.
+  #
+  # The key? method must always return 'true' to denote that the OpenStruct responds
+  # to all keys. Changing this has undefined behaviour
+  #
+  # Consider refactoring
+  #
+  # For full details see:
+  # https://github.com/openflighthpc/flight-job/pull/3#discussion_r597600201
   class DefaultsOpenStruct < OpenStruct
     def initialize(opts = {}, &b)
       if b
