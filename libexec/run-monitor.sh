@@ -26,5 +26,16 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+# NOTE: This script will likely not work out of the box on most installations
+# due to ruby not being on the PATH. This scripts purpose is to be a guide on
+# how the cron job integrates with the application.
+#
+# Please reconfigure this script on a per installation basis.
+
+if which ruby >/dev/null; then
+  echo "Ruby is not on the PATH! Can not run the monitor" >&2
+  exit 1
+fi
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 "$DIR"/job run-monitor

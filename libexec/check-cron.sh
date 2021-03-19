@@ -26,8 +26,8 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." &> /dev/null && pwd )"
-BIN="$DIR/bin/run-monitor.sh"
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+BIN="$DIR/run-monitor.sh"
 
 if crontab -l | grep "$BIN"; then
   exit 0
@@ -36,7 +36,7 @@ fi
 set -e
 
 crontab <<-CRON
-0 * * * * $BIN
+$(($RANDOM % 5))/5 * * * * $BIN
 CRON
 
 exit 0
