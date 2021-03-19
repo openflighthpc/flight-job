@@ -1,7 +1,7 @@
 GIT
   remote: https://github.com/openflighthpc/flight_configuration.git
-  revision: 24928260e542768f13cc513a3a08af69f690dfbc
-  branch: 24928260e542768f13cc513a3a08af69f690dfbc
+  revision: 85905e36d2db793587bf10b17734a36b6e9197f2
+  branch: 85905e36d2db793587bf10b17734a36b6e9197f2
   specs:
     flight_configuration (0.1.0)
 
@@ -101,7 +101,6 @@ PLATFORMS
 
 DEPENDENCIES
   activemodel
-  activesupport
   commander-openflighthpc (~> 2.1)
   flight_configuration!
   json_schemer

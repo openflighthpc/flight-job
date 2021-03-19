@@ -25,8 +25,6 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-# NOTE: Remove this line once deep_transform_keys is removed from flight_configuration
-require 'active_support/core_ext/hash/keys'
 require 'logger'
 
 require 'flight_configuration'
