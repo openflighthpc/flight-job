@@ -86,8 +86,8 @@ module FlightJob
       "properties" => {
         "state" => { "type" => "string" },
         "reason" => { "type" => ["string", "null"] },
-        "start_time" => { "type" => ["string", "null"], "format" => "date-time" },
-        "end_time" => { "type" => ["string", "null"], "format" => "date-time" }
+        "start_time" => { "type" => ["string", "null"] },
+        "end_time" => { "type" => ["string", "null"] }
       }
     })
 
@@ -325,8 +325,33 @@ module FlightJob
       execute_command(*cmd) do |status, stdout, stderr|
         process_output('monitor', status, stdout) do |data|
           self.state = data['state']
-          self.start_time = data['start_time'] if data['start_time']
-          self.end_time = data['end_time'] if data['end_time']
+
+          # Update the start_time
+          if ['', nil].include? data['start_time']
+            self.start_time = nil
+          else
+            begin
+              self.start_time = DateTime.parse(data['start_time']).rfc3339
+            rescue ArgumentError
+              FlightJob.logger.error "Failed to parse start_time: #{data['start_time']}"
+              FlightJob.logger.debug $!.full_message
+              raise_command_error
+            end
+          end
+
+          # Update the end_time
+          if ['', nil].include? data['end_time']
+            self.end_time = nil
+          else
+            begin
+              self.end_time = DateTime.parse(data['end_time']).rfc3339
+            rescue ArgumentError
+              FlightJob.logger.error "Failed to parse end_time: #{data['end_time']}"
+              FlightJob.logger.debug $!.full_message
+              raise_command_error
+            end
+          end
+
           if data['reason'] == ''
             self.reason = nil
           elsif data['reason']
@@ -335,7 +360,9 @@ module FlightJob
           File.write(metadata_path, YAML.dump(metadata))
         end
       end
-    ensure
+
+      # Only preform the active_path removal if the command exists
+      # successfully
       if TERMINAL_STATES.include?(self.state)
         FileUtils.rm_f active_path
       end

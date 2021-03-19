@@ -92,17 +92,11 @@ else
   exit "$exit_status"
 fi
 
-# Confirm times are in the right format and reject Unknown
-# NOTE: This replaces "Unknown" times with empty string and converts times into RFC3339
-format='^\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d$'
-if echo "$start_time" | grep -P "$format" ; then
-  start_time="$start_time$(date +%:z)"
-else
+# Convert "Unknown" times to empty string
+if [[ "$start_time" == "Unknown" ]] ; then
   start_time=""
 fi
-if echo "$end_time" | grep -P "$format" ; then
-  end_time="$end_time$(date +%:z)"
-else
+if [[ "$end_time" == "Unknown" ]] ; then
   end_time=""
 fi
 
