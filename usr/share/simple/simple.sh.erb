@@ -26,7 +26,7 @@
 # override. Your job will then be executed in the directory from which
 # it was submitted.
 #
-#SBATCH -D <%= questions.working_dir.answer %>
+#SBATCH -D <%= File.expand_path questions.working_dir.answer %>
 
 #=========================
 #  Environment variables

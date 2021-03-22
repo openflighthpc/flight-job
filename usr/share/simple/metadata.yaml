@@ -13,7 +13,7 @@ generation_questions:
     description: >
       Set the working directory your job will be executed in.  By default,
       this will be your home directory.
-    default: '/home/%u'
+    default: '~'
     format:
       type: text
 
