@@ -50,7 +50,7 @@ read -r -d '' template <<'TEMPLATE' || true
 TEMPLATE
 
 # Submit the job to the scheduler
-output=$($DIR/sbatch.sh "$1")
+output=$($DIR/sbatch-wrapper.sh "$1")
 if [[ $? -ne 0 ]]; then
   exit $?
 fi
