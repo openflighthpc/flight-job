@@ -9,7 +9,7 @@
 #==============================================================================
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 #                        SLURM SUBMISSION SCRIPT
-#                        AVERAGE QUEUE TIME: Long
+#                       AVERAGE QUEUE TIME: Medium
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
@@ -130,8 +130,9 @@
 #
 # Note that:
 #
-#  1. For this type of job you would usually request all available
-#     memory of a node in order to prevent the job being terminated.
+#  1. You may specify a total amount of memory for the job using
+#     `--mem`, or an amount of memory per CPU by specifying
+#     `--mem-per-cpu`.
 #
 #  2. This setting is specified in megabytes. e.g. specify `2048` for
 #     2 gigabytes.
@@ -148,12 +149,13 @@
 # that requesting a larger number of slots will mean that your job
 # could take longer to launch.
 #
-# You should request the number of nodes required using the `--nodes`
-# parameter.  You will receive access to all the available cores on
-# each allocated node.
+# You can use a combination of `--ntasks` and `--nodes` to specify the
+# total number of tasks to be requested and the maximum/minimum number
+# of nodes to use.  For example `--nodes=2 --ntasks=16` will request
+# 16 cores across 2 compute nodes.
 #
 #SBATCH --nodes=<%= questions.number_of_nodes.answer %>
-
+#SBATCH --ntasks=<%= questions.number_of_slots.answer %>
 
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 #  >>>> SET TASK ENVIRONMENT VARIABLES
@@ -195,8 +197,8 @@ echo "Executing job commands, current working directory is $(pwd)"
 # REPLACE THE FOLLOWING WITH YOUR APPLICATION COMMANDS
 
 echo "Hello, <%= questions.workload.answer %>!" > $OUTPUT_PATH/test.output
-echo "This is an example job. It was allocated $SLURM_NTASKS slot(s) across $SLURM_JOB_NUM_NODES node(s). The master process ran on `hostname -s` (as `whoami`)." >> $OUTPUT_PATH/test.output
-mpirun -np $SLURM_JOB_NUM_NODES -npernode 1 \
+echo "This is an example job. It was allocated $SLURM_NTASKS slot(s) across $SLURM_JOB_NUM_NODES node(s). The master process ran on `hostname -s` (as `whoami`)." > $OUTPUT_PATH/test.output
+mpirun \
     /bin/bash -c \
     'echo "This process was executed on `hostname -s` with rank $OMPI_COMM_WORLD_RANK."' \
     >> $OUTPUT_PATH/test.output
