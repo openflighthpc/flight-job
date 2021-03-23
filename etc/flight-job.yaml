@@ -1,0 +1,109 @@
+#==============================================================================
+# Copyright (C) 2021-present Alces Flight Ltd.
+#
+# This file is part of Flight Job.
+#
+# This program and the accompanying materials are made available under
+# the terms of the Eclipse Public License 2.0 which is available at
+# <https://www.eclipse.org/legal/epl-2.0>, or alternative license
+# terms made available by Alces Flight Ltd - please direct inquiries
+# about licensing to licensing@alces-flight.com.
+#
+# Flight Job is distributed in the hope that it will be useful, but
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR
+# IMPLIED INCLUDING, WITHOUT LIMITATION, ANY WARRANTIES OR CONDITIONS
+# OF TITLE, NON-INFRINGEMENT, MERCHANTABILITY OR FITNESS FOR A
+# PARTICULAR PURPOSE. See the Eclipse Public License 2.0 for more
+# details.
+#
+# You should have received a copy of the Eclipse Public License 2.0
+# along with Flight Job. If not, see:
+#
+#  https://opensource.org/licenses/EPL-2.0
+#
+# For more information on Flight Job, please visit:
+# https://github.com/openflighthpc/flight-job
+#==============================================================================
+
+# ==============================================================================
+# Templates Directory
+# Specify where the templates will be stored.
+#
+# Relative paths are expanded from the install directory.
+# ==============================================================================
+# templates_dir: usr/share
+
+# ==============================================================================
+# Scripts Directory
+# Specify where the scripts will be stored.
+#
+# Relative paths are expanded from the install directory.
+# ==============================================================================
+# scripts_dir: ~/.local/share/flight/job/scripts
+
+# ==============================================================================
+# Jobs Directory
+# Specify where the scripts will be stored.
+#
+# Relative paths are expanded from the install directory.
+# ==============================================================================
+# scripts_dir: ~/.local/share/flight/job/jobs
+
+# ==============================================================================
+# Submit Script Path
+# Specify the path to the script which submits jobs.
+#
+# Relative paths are expanded from the install directory.
+# ==============================================================================
+# submit_script_path: libexec/slurm/monitor.sh
+
+# ==============================================================================
+# Monitor Script Path
+# Specify the path to the script which monitors jobs.
+#
+# Relative paths are expanded from the install directory.
+# ==============================================================================
+# monitor_script_path: libexec/slurm/monitor.sh
+
+# ==============================================================================
+# Check Cron Path
+# Specify the path to the script which checks if cron is setup to run the
+# monitor.
+#
+# If cron has not been setup, it is responsible for setting the crontab to run
+# the "flight job run-monitor" command periodically.
+#
+# Relative paths are expanded from the install directory.
+# ==============================================================================
+# check_cron: libexec/check-cron.sh
+
+# ==============================================================================
+# Minimum Terminal Width
+# The minimum terminal width when wrapping output text. This prevents various
+# edge cases in small terminals. The terminal is responsible for wrapping the
+# text if its width is smaller than the minimum.
+# ==============================================================================
+# minimum_terminal_width: 80
+
+# ==============================================================================
+# Submission Period
+# The minimum amount of time to wait before a job that is "pending submission"
+# is considered failed.
+# ==============================================================================
+# submission_period: 3600
+
+# ==============================================================================
+# Log Path
+# The file the logger will write to. It will write to standard error if
+# omitted.
+#
+# Relative paths are expanded from the install directory.
+# ==============================================================================
+# log_path: ~/.cache/flight/log/share/job.log
+
+# ==============================================================================
+# Log level
+# Set at which severity the application will log
+# Valid levels: 'fatal', 'error', 'warn', 'info', 'debug'
+# ==============================================================================
+# log_level: warn

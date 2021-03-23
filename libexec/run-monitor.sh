@@ -1,6 +1,6 @@
-#!/usr/bin/env ruby
+#!/bin/bash
 #==============================================================================
-# Copyright (C) 2020-present Alces Flight Ltd.
+# Copyright (C) 2021-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -26,42 +26,16 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-begin
-  # Reads the environment setup
-  ENV['BUNDLE_GEMFILE'] ||= File.join(__FILE__, '../../Gemfile')
+# NOTE: This script will likely not work out of the box on most installations
+# due to ruby not being on the PATH. This scripts purpose is to be a guide on
+# how the cron job integrates with the application.
+#
+# Please reconfigure this script on a per installation basis.
 
-  require 'rubygems'
-  require 'bundler'
-  Bundler.setup(:default)
+if which ruby >/dev/null; then
+  echo "Ruby is not on the PATH! Can not run the monitor" >&2
+  exit 1
+fi
 
-  # Loads the config
-  require_relative '../lib/flight_job/configuration'
-
-  # Attempt to enable development mode if requested
-  if FlightJob.config.development
-    begin
-      Bundler.setup(:default, :development)
-      require 'pry'
-      require 'pry-byebug'
-    rescue StandardError, LoadError
-      Bundler.setup(:default)
-      FlightJob.logger.warn "An error occurred when enabling development mode!"
-    end
-  end
-
-  # Builds and runs the CLI
-  require_relative '../lib/flight_job/cli'
-
-  # Runs the command within the original directory
-  Dir.chdir(ENV.fetch('FLIGHT_CWD', '.')) do
-    OpenFlight.set_standard_env rescue nil
-    FlightJob::CLI.run!(*ARGV)
-  end
-rescue Interrupt
-  if Kernel.const_defined?(:Paint)
-    $stderr.puts "\n#{Paint['WARNING', :underline, :yellow]}: Cancelled by user"
-  else
-    $stderr.puts "\nWARNING: Cancelled by user"
-  end
-  exit(130)
-end
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+"$DIR"/job run-monitor

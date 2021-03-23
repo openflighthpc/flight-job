@@ -1,0 +1,146 @@
+name: Simple serial
+copyright: Copyright (C) 2021 Alces Flight Ltd.
+license: Creative Commons Attribution-ShareAlike 4.0 International
+script_template: simple.sh
+version: 0
+synopsis: Submit a single job.
+description: |
+  Your job will be allocated a single core on the first available node.
+
+generation_questions:
+  - id: working_dir
+    text: "Working directory"
+    description: >
+      Set the working directory your job will be executed in.  By default,
+      this will be your home directory.
+    default: '~'
+    format:
+      type: text
+
+  - id: stdout_file
+    text: "Set an output file for STDOUT"
+    description: >
+      Specify a path to a file to contain the output from the standard output
+      stream of your job script.
+    default: job-%j.output
+    format:
+      type: text
+
+  - id: merge_stderr_with_stdout
+    text: "Merge STDERR into STDOUT"
+    description: >
+      Enable this option to merge the standard error output stream into
+      standard output - this is usually the best option unless you have a
+      specific need to keep the output streams separated.
+    default: 'yes'
+    format:
+      type: select
+      options:
+        - text: 'Yes'
+          value: 'yes'
+        - text: 'No'
+          value: 'no'
+
+  - id: stderr_file
+    text: "Set an output file for STDERR"
+    description: >
+      Specify a path to a file to contain the output from the standard error
+      stream of your job script.
+    default: job-%j.error
+    format:
+      type: text
+    ask_when:
+      value: question.merge_stderr_with_stdout.answer
+      eq: 'no'
+
+  - id: job_name
+    text: "Set the name of your job"
+    description: >
+      This will be shown in the process queue and by default used in the name
+      of the output files.
+    default: 'simple.sh'
+    format:
+      type: text
+
+  - id: notification_wanted
+    text: Do you want email notifications for this job?
+    description: >
+      If yes, you will be able to select the events for which you want to be
+      notified.
+    default: 'yes'
+    format:
+      type: select
+      options:
+        - text: 'Yes'
+          value: 'yes'
+        - text: 'No'
+          value: 'no'
+
+  - id: notification_address
+    text: Notification email address.
+    description: >
+      What email address should the notifications be sent to?
+    default: 'your.email@example.com'
+    format:
+      type: text
+    ask_when:
+      value: question.notification_wanted.answer
+      eq: 'yes'
+
+  - id: notification_events
+    text: When should notifications be sent?
+    description: >
+      Set the conditions under which you wish to be notified.
+    default: ['ALL']
+    format:
+      type: multiselect
+      options:
+        - text: 'Started'
+          value: 'BEGIN'
+        - text: 'Finished'
+          value: 'END'
+        - text: 'Failed'
+          value: 'FAIL'
+        - text: 'All'
+          value: 'ALL'
+    ask_when:
+      value: question.notification_wanted.answer
+      eq: 'yes'
+
+  - id: max_runtime
+    text: Expected RUNTIME
+    description: >
+      Enter the expected runtime for your job.  Specification of a shorter
+      runtime will cause the scheduler to be more likely to schedule your job
+      sooner, but note that your job **will be terminated if it is still
+      executing after the time specified**.
+
+      A time limit of zero requests that no time limit be imposed.  The format
+      is one of "minutes", "minutes:seconds", "hours:minutes:seconds",
+      "days-hours", "days-hours:minutes" and "days-hours:minutes:seconds".
+      e.g. `3-0` for 3 days.
+    default: '3-0'
+    format:
+      type: text
+
+  - id: memory_limit
+    text: Expected hard memory limit
+    description: >
+      Enter the expected memory usage of your job.  Specification of a smaller
+      memory requirement will cause the scheduler to be more likely to
+      schedule your job sooner, but note that your job **may be terminated if
+      it exceeds the specified allocation**.
+      
+      Note that this setting is specified in megabytes.  e.g. specify `1024`
+      for 1 gigabyte.
+    default: '1024'
+    format:
+      type: text
+
+  - id: workload
+    text: "Who, or what, should we greet"
+    description: >
+      Who, or what, should we say hello to when your script is ran.
+    default: "World"
+    format:
+      type: text

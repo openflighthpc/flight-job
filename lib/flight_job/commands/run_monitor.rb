@@ -1,6 +1,5 @@
-#!/usr/bin/env ruby
 #==============================================================================
-# Copyright (C) 2020-present Alces Flight Ltd.
+# Copyright (C) 2021-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -26,42 +25,18 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-begin
-  # Reads the environment setup
-  ENV['BUNDLE_GEMFILE'] ||= File.join(__FILE__, '../../Gemfile')
-
-  require 'rubygems'
-  require 'bundler'
-  Bundler.setup(:default)
-
-  # Loads the config
-  require_relative '../lib/flight_job/configuration'
-
-  # Attempt to enable development mode if requested
-  if FlightJob.config.development
-    begin
-      Bundler.setup(:default, :development)
-      require 'pry'
-      require 'pry-byebug'
-    rescue StandardError, LoadError
-      Bundler.setup(:default)
-      FlightJob.logger.warn "An error occurred when enabling development mode!"
+module FlightJob
+  module Commands
+    class RunMonitor < Command
+      def run
+        Job.load_active.each do |job|
+          if job.valid?(:monitor)
+            job.monitor
+          else
+            job.transition_inactive
+          end
+        end
+      end
     end
   end
-
-  # Builds and runs the CLI
-  require_relative '../lib/flight_job/cli'
-
-  # Runs the command within the original directory
-  Dir.chdir(ENV.fetch('FLIGHT_CWD', '.')) do
-    OpenFlight.set_standard_env rescue nil
-    FlightJob::CLI.run!(*ARGV)
-  end
-rescue Interrupt
-  if Kernel.const_defined?(:Paint)
-    $stderr.puts "\n#{Paint['WARNING', :underline, :yellow]}: Cancelled by user"
-  else
-    $stderr.puts "\nWARNING: Cancelled by user"
-  end
-  exit(130)
 end

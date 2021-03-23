@@ -1,5 +1,5 @@
 #==============================================================================
-# Copyright (C) 2020-present Alces Flight Ltd.
+# Copyright (C) 2021-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -25,12 +25,16 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+
 module FlightJob
-  module Commands
-    class List < Command
-      def run
-        puts list_output.render(*Template.load_all)
+  JSONRenderer = Struct.new(:array, :interactive) do
+    def render(*objects)
+      data = if array
+        objects.map(&:serializable_hash)
+      else
+        objects.first.serializable_hash
       end
+      interactive ? JSON.pretty_generate(data) : JSON.dump(data)
     end
   end
 end

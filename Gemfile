@@ -28,10 +28,13 @@
 source 'https://rubygems.org'
 
 gem 'commander-openflighthpc', '~> 2.1'
-gem 'hashie'
-gem 'xdg'
+gem 'activemodel'
+gem 'flight_configuration', github: 'openflighthpc/flight_configuration', branch: '85905e36d2db793587bf10b17734a36b6e9197f2'
+gem 'json_schemer'
 gem 'output_mode'
-gem 'tty-markdown', '~> 0.6.0'
+gem 'tty-markdown'
+gem 'tty-table', github: 'openflighthpc/tty-table', branch: '9b326fcbe04968463da58c000fbb1dd5ce178243'
+gem 'tty-prompt'
 gem 'word_wrap'
 
 group :development do

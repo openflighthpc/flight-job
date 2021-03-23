@@ -1,6 +1,6 @@
-#!/usr/bin/env ruby
+#!/bin/bash
 #==============================================================================
-# Copyright (C) 2020-present Alces Flight Ltd.
+# Copyright (C) 2021-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -26,42 +26,26 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-begin
-  # Reads the environment setup
-  ENV['BUNDLE_GEMFILE'] ||= File.join(__FILE__, '../../Gemfile')
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+BIN="$DIR/run-monitor.sh"
 
-  require 'rubygems'
-  require 'bundler'
-  Bundler.setup(:default)
+if crontab -l | grep "$BIN"; then
+  exit 0
+fi
 
-  # Loads the config
-  require_relative '../lib/flight_job/configuration'
+set -e
 
-  # Attempt to enable development mode if requested
-  if FlightJob.config.development
-    begin
-      Bundler.setup(:default, :development)
-      require 'pry'
-      require 'pry-byebug'
-    rescue StandardError, LoadError
-      Bundler.setup(:default)
-      FlightJob.logger.warn "An error occurred when enabling development mode!"
-    end
-  end
+# NOTE: The cron-step notation (e.g. 0/5) is non-standard and does not work reliable
+# It has been confirmed incompatible with cronie-1.4.11-23.el7.x86_64 on a base
+# centos7 install
+offset=$(($RANDOM % 5))
+spec="$offset"
+for index in {1..11}; do
+  spec="$spec,$(($offset + $index * 5))"
+done
 
-  # Builds and runs the CLI
-  require_relative '../lib/flight_job/cli'
+crontab <<-CRON
+$spec * * * * $BIN
+CRON
 
-  # Runs the command within the original directory
-  Dir.chdir(ENV.fetch('FLIGHT_CWD', '.')) do
-    OpenFlight.set_standard_env rescue nil
-    FlightJob::CLI.run!(*ARGV)
-  end
-rescue Interrupt
-  if Kernel.const_defined?(:Paint)
-    $stderr.puts "\n#{Paint['WARNING', :underline, :yellow]}: Cancelled by user"
-  else
-    $stderr.puts "\nWARNING: Cancelled by user"
-  end
-  exit(130)
-end
+exit 0

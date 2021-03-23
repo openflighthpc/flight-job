@@ -27,17 +27,18 @@
 
 module FlightJob
   module Commands
-    class Copy < Command
+    class CopyTemplate < Command
       def run
+        content = render_content
         FileUtils.mkdir_p File.dirname(dst_path)
-        FileUtils.cp template.path, dst_path
+        File.write(dst_path, content)
         $stderr.puts <<~INFO.chomp
           Successfully copied the template to: #{dst_path}
         INFO
       end
 
       def dst_name
-        args.length > 1 ? args[1] : template.name
+        args.length > 1 ? args[1] : template.script_template_name
       end
 
       def dst_path
@@ -46,7 +47,7 @@ module FlightJob
           path = File.expand_path(dst_name)
 
           # Allow copies to a directory with the original filename
-          path = File.join(path, template.name) if Dir.exists?(path)
+          path = File.join(path, template.script_template_name) if Dir.exists?(path)
 
           if File.exists?(path)
             # Identifies the used copy indices
@@ -72,6 +73,10 @@ module FlightJob
 
       def template
         @template ||= load_template(args.first)
+      end
+
+      def render_content
+        Script.new(template_id: template.id, script_name: template.script_template_name).render
       end
     end
   end

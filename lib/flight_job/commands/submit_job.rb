@@ -1,5 +1,5 @@
 #==============================================================================
-# Copyright (C) 2020-present Alces Flight Ltd.
+# Copyright (C) 2021-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -25,24 +25,40 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require_relative 'command'
+require 'open3'
 
 module FlightJob
   module Commands
-    def self.constantize(sym)
-      sym.to_s.dup.split(/[-_]/).each { |c| c[0] = c[0].upcase }.join
-    end
+    class SubmitJob < Command
+      def run
+        check_cron
+        job = Job.new(script_id: script.id)
+        job.submit
+        puts Outputs::InfoJob.build_output(submit: true, **output_options).render(job)
+      end
 
-    def self.build(s, *args, **opts)
-      const_string = constantize(s)
-      const_get(const_string).new(*args, **opts)
-    rescue NameError
-      Config::CACHE.logger.fatal "Command class not defined (maybe?): #{self}::#{const_string}"
-      raise InternalError.define_class(127), 'Command Not Found!'
-    end
+      def script
+        @script ||= load_script(args.first)
+      end
 
-    Dir.glob(File.expand_path('commands/*.rb', __dir__)).each do |file|
-      autoload constantize(File.basename(file, '.*')), file
+      def check_cron
+        env = ENV.slice('PATH', 'HOME', 'USER', 'LOGNAME')
+        out, err, status = Open3.capture3(env, FlightJob.config.check_cron, unsetenv_others: true, close_others: true)
+        FlightJob.logger.debug <<~DEBUG
+          Result from cron-check
+          STATUS: #{status.exitstatus}
+          STDOUT:
+          #{out}
+          STDERR:
+          #{err}
+        DEBUG
+        unless status.exitstatus == 0
+          raise InternalError, <<~ERROR.chomp
+            Failed to install the job monitor!
+            Please contact your system administrator for further assistance.
+          ERROR
+        end
+      end
     end
   end
 end

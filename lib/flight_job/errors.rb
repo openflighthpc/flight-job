@@ -47,6 +47,7 @@ module FlightJob
   InternalError = Error.define_class(1)
   GeneralError = Error.define_class(2)
   InputError = GeneralError.define_class(3)
+  CommandError = GeneralError.define_class(6)
 
   class InteractiveOnly < InputError
     MSG = 'This command requires an interactive terminal'
@@ -57,4 +58,7 @@ module FlightJob
   end
 
   MissingError = GeneralError.define_class(20)
+  MissingTemplateError = MissingError.define_class(21)
+  MissingScriptError = MissingError.define_class(22)
+  MissingJobError = MissingError.define_class(23)
 end

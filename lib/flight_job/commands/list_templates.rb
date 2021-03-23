@@ -25,39 +25,20 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require 'ostruct'
-require 'erb'
-require_relative '../markdown_renderer'
-
 module FlightJob
   module Commands
-    class Info < Command
-      TEMPLATE = <<~ERB
-        # <%= filename -%> -- <%= name %>
-
-        ## DESCRIPTION
-
-        <%= desc %>
-        <%= extended_desc -%><%= "\n" if extended_desc -%>
-
-        ## LICENSE
-
-        This work is licensed under a <%= license -%> License.
-
-        ## COPYRIGHT
-
-        <%= copyright -%>
-      ERB
-      ERB_TEMPLATE = ERB.new(TEMPLATE, nil, '-')
-
+    class ListTemplates < Command
       def run
-        bind = OpenStruct.new(template.metadata).instance_exec { self.binding }
-        rendered = ERB_TEMPLATE.result(bind)
-        puts MarkdownRenderer.new(rendered).wrap_markdown
+        if templates.empty?
+          $stderr.puts 'Nothing To Display'
+        else
+          puts Outputs::ListTemplates.build_output(**output_options)
+                                     .render(*templates)
+        end
       end
 
-      def template
-        @template ||= load_template(args.first)
+      def templates
+        @templates ||= Template.load_all
       end
     end
   end

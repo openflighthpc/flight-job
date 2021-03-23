@@ -25,30 +25,30 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require_relative 'template'
-require_relative 'list_output'
+require 'ostruct'
+require 'pastel'
 
 module FlightJob
   class Command
     attr_accessor :args, :opts
 
-    def initialize(*args, **opts)
+    def initialize(args, opts)
       @args = args.freeze
-      @opts = Hashie::Mash.new(opts)
+      @opts = opts
     end
 
     def run!
-      Config::CACHE.logger.info "Running: #{self.class}"
+      FlightJob.logger.info "Running: #{self.class}"
       run
-      Config::CACHE.logger.info 'Exited: 0'
+      FlightJob.logger.info 'Exited: 0'
     rescue => e
       if e.respond_to? :exit_code
-        Config::CACHE.logger.fatal "Exited: #{e.exit_code}"
+        FlightJob.logger.fatal "Exited: #{e.exit_code}"
       else
-        Config::CACHE.logger.fatal 'Exited non-zero'
+        FlightJob.logger.fatal 'Exited non-zero'
       end
-      Config::CACHE.logger.debug e.backtrace.reverse.join("\n")
-      Config::CACHE.logger.error "(#{e.class}) #{e.message}"
+      FlightJob.logger.debug e.backtrace.reverse.join("\n")
+      FlightJob.logger.error "(#{e.class}) #{e.message}"
       raise e
     end
 
@@ -56,11 +56,28 @@ module FlightJob
       raise NotImplementedError
     end
 
-    def list_output
-      @list_output ||= ListOutput.build_output(verbose: opts.verbose)
+    def pastel
+      @pastel ||= Pastel.new
+    end
+
+    def output_options
+      {
+        verbose: (opts.verbose ? true : nil),
+        ascii: (opts.ascii ? true : nil),
+        interactive: (opts.ascii || opts.pretty || $stdout.tty? ? true : nil),
+        json: (opts.json ? true : nil)
+      }
     end
 
     def load_template(name_or_id)
+      template = Template.new(id: name_or_id)
+      if template.exists?
+        raise InternalError, <<~ERROR.chomp unless template.valid?(:verbose)
+          Cannot load the following template as it is invalid: #{template.id}
+        ERROR
+        return template
+      end
+
       templates = Template.load_all
 
       # Finds by ID if there is a single integer argument
@@ -68,27 +85,56 @@ module FlightJob
         # Corrects for the 1-based numbering
         index = name_or_id.to_i - 1
         if index < 0 || index >= templates.length
-          raise MissingError, <<~ERROR.chomp
+          raise MissingTemplateError, <<~ERROR.chomp
             Could not locate a template with index: #{name_or_id}
           ERROR
         end
-        templates[index]
-
-      # Handles an exact match
-      elsif match = templates.find { |t| t.name == name_or_id }
-        match
+        templates[index].tap do |template|
+          raise InternalError, <<~ERROR unless template.valid?(:verbose)
+            Cannot load the following template as it is invalid: #{template.id}
+          ERROR
+        end
 
       else
         # Attempts a did you mean?
         regex = /#{name_or_id}/
-        matches = templates.select { |t| regex.match?(t.name) }
+        matches = templates.select { |t| regex.match?(t.id) }
         if matches.empty?
           raise MissingError, "Could not locate: #{name_or_id}"
         else
+          output = Outputs::ListTemplates.build_output(**output_options).render(*matches)
           raise MissingError, <<~ERROR.chomp
             Could not locate: #{name_or_id}. Did you mean one of the following?
-            #{Paint[list_output.render(*matches), :reset]}
+            #{Paint[output, :reset]}
           ERROR
+        end
+      end
+    end
+
+    def load_script(id)
+      Script.new(id: id).tap do |script|
+        unless script.exists?
+          raise MissingScriptError, "Could not locate script: #{id}"
+        end
+        unless script.valid?(:load)
+          FlightJob.logger.error("Failed to load script: #{id}\n") do
+            script.errors.full_messages
+          end
+          raise InternalError, "Unexpectedly failed to load script: #{id}"
+        end
+      end
+    end
+
+    def load_job(id)
+      Job.new(id: id).tap do |job|
+        unless job.submitted?
+          raise MissingJobError, "Could not locate job: #{id}"
+        end
+        unless job.valid?(:load)
+          FlightJob.logger.error("Failed to load job: #{id}\n") do
+            job.errors.full_messages
+          end
+          raise InternalError, "Unexpectedly failed to load job: #{id}"
         end
       end
     end

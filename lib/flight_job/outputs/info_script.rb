@@ -1,6 +1,5 @@
-#!/usr/bin/env ruby
 #==============================================================================
-# Copyright (C) 2020-present Alces Flight Ltd.
+# Copyright (C) 2021-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -26,42 +25,29 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-begin
-  # Reads the environment setup
-  ENV['BUNDLE_GEMFILE'] ||= File.join(__FILE__, '../../Gemfile')
+require 'output_mode'
 
-  require 'rubygems'
-  require 'bundler'
-  Bundler.setup(:default)
+module FlightJob
+  module Outputs::InfoScript
+    extend OutputMode::TLDR::Show
 
-  # Loads the config
-  require_relative '../lib/flight_job/configuration'
+    register_attribute(header: 'ID') { |s| s.id }
+    register_attribute(header: 'Template ID') { |s| s.template_id }
+    register_attribute(header: 'Name') { |s| s.script_name }
+    register_attribute(header: 'Path') { |s| s.script_path }
 
-  # Attempt to enable development mode if requested
-  if FlightJob.config.development
-    begin
-      Bundler.setup(:default, :development)
-      require 'pry'
-      require 'pry-byebug'
-    rescue StandardError, LoadError
-      Bundler.setup(:default)
-      FlightJob.logger.warn "An error occurred when enabling development mode!"
+    # Toggle the format of the created at time
+    register_attribute(header: 'Created At', verbose: true) { |s| s.created_at }
+    register_attribute(header: 'Created At', verbose: false) do |script|
+      DateTime.rfc3339(script.created_at).strftime('%d/%m/%y %H:%M')
+    end
+
+    def self.build_output(**opts)
+      if opts.delete(:json)
+        JSONRenderer.new(false, opts[:interactive])
+      else
+        super(**opts)
+      end
     end
   end
-
-  # Builds and runs the CLI
-  require_relative '../lib/flight_job/cli'
-
-  # Runs the command within the original directory
-  Dir.chdir(ENV.fetch('FLIGHT_CWD', '.')) do
-    OpenFlight.set_standard_env rescue nil
-    FlightJob::CLI.run!(*ARGV)
-  end
-rescue Interrupt
-  if Kernel.const_defined?(:Paint)
-    $stderr.puts "\n#{Paint['WARNING', :underline, :yellow]}: Cancelled by user"
-  else
-    $stderr.puts "\nWARNING: Cancelled by user"
-  end
-  exit(130)
 end

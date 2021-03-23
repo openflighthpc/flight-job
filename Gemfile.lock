@@ -1,25 +1,59 @@
+GIT
+  remote: https://github.com/openflighthpc/flight_configuration.git
+  revision: 85905e36d2db793587bf10b17734a36b6e9197f2
+  branch: 85905e36d2db793587bf10b17734a36b6e9197f2
+  specs:
+    flight_configuration (0.1.0)
+
+GIT
+  remote: https://github.com/openflighthpc/tty-table.git
+  revision: 9b326fcbe04968463da58c000fbb1dd5ce178243
+  branch: 9b326fcbe04968463da58c000fbb1dd5ce178243
+  specs:
+    tty-table (0.12.0)
+      pastel (~> 0.8)
+      strings (~> 0.2.0)
+      tty-screen (~> 0.8)
+
 GEM
   remote: https://rubygems.org/
   specs:
+    activemodel (6.1.3)
+      activesupport (= 6.1.3)
+    activesupport (6.1.3)
+      concurrent-ruby (~> 1.0, >= 1.0.2)
+      i18n (>= 1.6, < 2)
+      minitest (>= 5.1)
+      tzinfo (~> 2.0)
+      zeitwerk (~> 2.3)
     byebug (11.1.3)
     coderay (1.1.3)
     commander-openflighthpc (2.2.0)
       highline (> 1.7.2)
       paint (~> 2.1.0)
       slop (~> 4.8)
-    equatable (0.6.1)
-    hashie (4.1.0)
+    concurrent-ruby (1.1.8)
+    ecma-re-validator (0.3.0)
+      regexp_parser (~> 2.0)
+    hana (1.3.7)
     highline (2.0.3)
-    kramdown (1.16.2)
+    i18n (1.8.9)
+      concurrent-ruby (~> 1.0)
+    json_schemer (0.2.18)
+      ecma-re-validator (~> 0.3)
+      hana (~> 1.3)
+      regexp_parser (~> 2.0)
+      uri_template (~> 0.7)
+    kramdown (2.3.0)
+      rexml
     method_source (1.0.0)
-    necromancer (0.6.0)
-    output_mode (1.0.0)
-      pastel (~> 0.7)
-      tty-color (~> 0.5)
-      tty-table (~> 0.11)
+    minitest (5.14.4)
+    output_mode (1.4.0)
+      pastel (>= 0.7)
+      tty-color (>= 0.5)
+      tty-table (>= 0.11)
     paint (2.1.1)
-    pastel (0.7.4)
-      equatable (~> 0.6)
+    pastel (0.8.0)
       tty-color (~> 0.5)
     pry (0.13.1)
       coderay (~> 1.1)
@@ -27,45 +61,56 @@ GEM
     pry-byebug (3.9.0)
       byebug (~> 11.0)
       pry (~> 0.13.0)
-    rouge (3.22.0)
+    regexp_parser (2.1.1)
+    rexml (3.2.4)
+    rouge (3.26.0)
     slop (4.8.2)
-    strings (0.1.8)
-      strings-ansi (~> 0.1)
-      unicode-display_width (~> 1.5)
+    strings (0.2.1)
+      strings-ansi (~> 0.2)
+      unicode-display_width (>= 1.5, < 3.0)
       unicode_utils (~> 1.4)
     strings-ansi (0.2.0)
-    tty-color (0.5.2)
-    tty-markdown (0.6.0)
-      kramdown (~> 1.16.2)
-      pastel (~> 0.7.2)
-      rouge (~> 3.3)
-      strings (~> 0.1.4)
-      tty-color (~> 0.4)
-      tty-screen (~> 0.6)
+    tty-color (0.6.0)
+    tty-cursor (0.7.1)
+    tty-markdown (0.7.0)
+      kramdown (>= 1.16.2, < 3.0)
+      pastel (~> 0.8)
+      rouge (~> 3.14)
+      strings (~> 0.2.0)
+      tty-color (~> 0.5)
+      tty-screen (~> 0.8)
+    tty-prompt (0.23.0)
+      pastel (~> 0.8)
+      tty-reader (~> 0.8)
+    tty-reader (0.9.0)
+      tty-cursor (~> 0.7)
+      tty-screen (~> 0.8)
+      wisper (~> 2.0)
     tty-screen (0.8.1)
-    tty-table (0.11.0)
-      equatable (~> 0.6)
-      necromancer (~> 0.5)
-      pastel (~> 0.7.2)
-      strings (~> 0.1.5)
-      tty-screen (~> 0.7)
-    unicode-display_width (1.7.0)
+    tzinfo (2.0.4)
+      concurrent-ruby (~> 1.0)
+    unicode-display_width (2.0.0)
     unicode_utils (1.4.0)
+    uri_template (0.7.0)
+    wisper (2.0.1)
     word_wrap (1.0.0)
-    xdg (4.2.0)
+    zeitwerk (2.4.2)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
+  activemodel
   commander-openflighthpc (~> 2.1)
-  hashie
+  flight_configuration!
+  json_schemer
   output_mode
   pry
   pry-byebug
-  tty-markdown (~> 0.6.0)
+  tty-markdown
+  tty-prompt
+  tty-table!
   word_wrap
-  xdg
 
 BUNDLED WITH
    2.1.4

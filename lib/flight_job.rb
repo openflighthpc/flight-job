@@ -1,6 +1,6 @@
-#!/usr/bin/env ruby
+# frozen_string_literal: true
 #==============================================================================
-# Copyright (C) 2020-present Alces Flight Ltd.
+# Copyright (C) 2021-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -26,42 +26,32 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-begin
-  # Reads the environment setup
-  ENV['BUNDLE_GEMFILE'] ||= File.join(__FILE__, '../../Gemfile')
+require_relative 'flight_job/configuration'
+require_relative 'flight_job/command'
 
-  require 'rubygems'
-  require 'bundler'
-  Bundler.setup(:default)
+module FlightJob
+  def self.constantize(sym)
+    sym.to_s.dup.split(/[-_]/).each { |c| c[0] = c[0].upcase }.join
+  end
 
-  # Loads the config
-  require_relative '../lib/flight_job/configuration'
-
-  # Attempt to enable development mode if requested
-  if FlightJob.config.development
-    begin
-      Bundler.setup(:default, :development)
-      require 'pry'
-      require 'pry-byebug'
-    rescue StandardError, LoadError
-      Bundler.setup(:default)
-      FlightJob.logger.warn "An error occurred when enabling development mode!"
+  # Setup the autoloads for the commands
+  module Commands
+    Dir.glob(File.expand_path('flight_job/commands/*', __dir__)).each do |path|
+      autoload FlightJob.constantize(File.basename(path, '.*')), path
     end
   end
 
-  # Builds and runs the CLI
-  require_relative '../lib/flight_job/cli'
+  # Setup the autoloads for models
+  Dir.glob(File.expand_path('flight_job/models/*', __dir__)).each do |path|
+    autoload FlightJob.constantize(File.basename(path, '.*')), path
+  end
 
-  # Runs the command within the original directory
-  Dir.chdir(ENV.fetch('FLIGHT_CWD', '.')) do
-    OpenFlight.set_standard_env rescue nil
-    FlightJob::CLI.run!(*ARGV)
+  # Setup the autoloads for outputs
+  autoload(:JSONRenderer, File.expand_path('flight_job/json_renderer', __dir__))
+  module Outputs
+    Dir.glob(File.expand_path('flight_job/outputs/*', __dir__)).each do |path|
+      autoload FlightJob.constantize(File.basename(path, '.*')), path
+    end
   end
-rescue Interrupt
-  if Kernel.const_defined?(:Paint)
-    $stderr.puts "\n#{Paint['WARNING', :underline, :yellow]}: Cancelled by user"
-  else
-    $stderr.puts "\nWARNING: Cancelled by user"
-  end
-  exit(130)
 end
+

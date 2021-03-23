@@ -1,6 +1,5 @@
-#!/usr/bin/env ruby
 #==============================================================================
-# Copyright (C) 2020-present Alces Flight Ltd.
+# Copyright (C) 2021-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -26,42 +25,43 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-begin
-  # Reads the environment setup
-  ENV['BUNDLE_GEMFILE'] ||= File.join(__FILE__, '../../Gemfile')
+require_relative '../markdown_renderer'
 
-  require 'rubygems'
-  require 'bundler'
-  Bundler.setup(:default)
+module FlightJob
+  class Outputs::InfoTemplate
+    TEMPLATE = ERB.new(<<~ERB, nil, '-')
+      # <%= template_path -%> -- <%= id %>
 
-  # Loads the config
-  require_relative '../lib/flight_job/configuration'
+      ## DESCRIPTION
 
-  # Attempt to enable development mode if requested
-  if FlightJob.config.development
-    begin
-      Bundler.setup(:default, :development)
-      require 'pry'
-      require 'pry-byebug'
-    rescue StandardError, LoadError
-      Bundler.setup(:default)
-      FlightJob.logger.warn "An error occurred when enabling development mode!"
+      <%= metadata['synopsis'] %>
+      <%= metadata['description'] -%><%= "\n" if metadata['description'] -%>
+
+      ## LICENSE
+
+      This work is licensed under a <%= metadata['license'] -%> License.
+
+      ## COPYRIGHT
+
+      <%= metadata['copyright'] -%>
+    ERB
+
+    def self.build_output(**opts)
+      new(**opts)
+    end
+
+    def initialize(**opts)
+      @opts = opts
+    end
+
+    def render(template)
+      if @opts[:json]
+        JSONRenderer.new(false, @opts[:interactive]).render(template)
+      else
+        bind = nil
+        template.instance_exec { bind = self.binding }
+        MarkdownRenderer.new(TEMPLATE.result(bind)).wrap_markdown
+      end
     end
   end
-
-  # Builds and runs the CLI
-  require_relative '../lib/flight_job/cli'
-
-  # Runs the command within the original directory
-  Dir.chdir(ENV.fetch('FLIGHT_CWD', '.')) do
-    OpenFlight.set_standard_env rescue nil
-    FlightJob::CLI.run!(*ARGV)
-  end
-rescue Interrupt
-  if Kernel.const_defined?(:Paint)
-    $stderr.puts "\n#{Paint['WARNING', :underline, :yellow]}: Cancelled by user"
-  else
-    $stderr.puts "\nWARNING: Cancelled by user"
-  end
-  exit(130)
 end

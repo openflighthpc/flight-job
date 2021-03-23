@@ -25,7 +25,7 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require_relative '../patches/tty-markdown'
+require 'tty-markdown'
 require 'word_wrap'
 
 module FlightJob
@@ -35,7 +35,7 @@ module FlightJob
     def initialize(*_)
       super
       self.width ||= TTY::Screen.width
-      self.width = Config::CACHE.minimum_terminal_width if self.width < Config::CACHE.minimum_terminal_width
+      self.width = FlightJob.config.minimum_terminal_width if self.width < FlightJob.config.minimum_terminal_width
       @colors = 256 # Attempt to use 256-color initially
     end
 
