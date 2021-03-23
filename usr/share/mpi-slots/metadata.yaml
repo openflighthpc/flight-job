@@ -67,7 +67,7 @@ generation_questions:
     description: >
       This will be shown in the process queue and by default used in the name
       of the output files.
-    default: 'multinode.sh'
+    default: 'multislot.sh'
     format:
       type: text
 
@@ -155,6 +155,14 @@ generation_questions:
       (or process) that your script and/or application executes.  Note
       that requesting a larger number of slots will mean that your job
       could take longer to launch.
+    default: '2'
+    format:
+      type: text
+
+  - id: number_of_nodes
+    text: Nodes requirements
+    description: >
+      Specify the number of nodes the processes should be spread over
     default: '2'
     format:
       type: text

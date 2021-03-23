@@ -63,7 +63,7 @@ generation_questions:
     description: >
       This will be shown in the process queue and by default used in the name
       of the output files.
-    default: 'multinode.sh'
+    default: 'smp.sh'
     format:
       type: text
 
