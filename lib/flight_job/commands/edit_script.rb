@@ -54,10 +54,12 @@ module FlightJob
 
     # Determine which line to open the script on
     def start_line
-      _, idx = File.open(script.script_path).each_line.each_with_index.find do |line, _|
-        /[=_-]{4,}>><<[=_-]{4,}/.match?(line)
+      File.open(script.script_path) do |file|
+        _, idx = file.each_line.each_with_index.find do |line, _|
+          />{4,}.*<{4,}/.match?(line)
+        end
+        return idx ? idx + 1 : nil
       end
-      idx ? idx + 1 : nil
     end
 
     def editor
