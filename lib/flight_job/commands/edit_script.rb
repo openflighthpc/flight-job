@@ -33,8 +33,8 @@ module FlightJob
       # Ensure the script exists up front
       script
 
-      # Opens vim/emacs commands at the start line, else use the regular editor
-      cmd = if ['vi', 'vim', 'nvim', 'emacs'].include?(editor)
+      # Opens vim/emacs/nano commands at the start line, else use the regular editor
+      cmd = if ['vi', 'vim', 'nvim', 'emacs', 'nano'].include?(editor)
               if start_line
                 "#{editor} +#{start_line}"
               else
