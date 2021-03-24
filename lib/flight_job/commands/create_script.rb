@@ -38,6 +38,11 @@ module FlightJob
 
         # Render the script
         script = Script.new(template_id: template.id, script_name: template.script_template_name, answers: answers)
+
+        # Apply the identity_name
+        script.identity_name = args[1] if args.length > 1
+
+        # Save the script
         script.render_and_save
 
         # Render the script output

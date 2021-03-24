@@ -41,6 +41,7 @@ module FlightJob
         'created_at' => { 'type' => 'string', 'format' => 'date-time' },
         'template_id' => { 'type' => 'string' },
         'script_name' => { 'type' => 'string' },
+        'identity_name' => { 'type' => 'string' },
         'answers' => { 'type' => 'object' }
       }
     })
@@ -181,11 +182,11 @@ module FlightJob
     # 1. It is not guaranteed to be unique,
     # 2. How it is being set is still volatile
     def identity_name
-      @identity_name || answers['job_name'] || script_name
+      metadata['identity_name'] || answers['job_name'] || script_name
     end
 
     def identity_name=(name)
-      @identity_name ||= name
+      metadata['identity_name'] = name
     end
 
     # NOTE: For backwards compatibility, the 'answers' are not strictly required
