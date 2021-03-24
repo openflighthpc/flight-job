@@ -226,10 +226,7 @@ module FlightJob
       save_metadata
       save_notes
       File.write(script_path, content)
-
-      # Makes the script executable and metadata read/write
       FileUtils.chmod(0700, script_path)
-      FileUtils.chmod(0600, metadata_path)
     end
 
     def save_metadata

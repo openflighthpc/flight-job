@@ -139,6 +139,10 @@ module FlightJob
       MSG
     end
 
+    create_command 'rename-script', 'SCRIPT_ID SCRIPT_NAME' do |c|
+      c.summary = 'Rename a script given by its ID'
+    end
+
     create_command 'delete-script', 'SCRIPT_ID' do |c|
       c.summary = 'Permanently remove a script'
     end
