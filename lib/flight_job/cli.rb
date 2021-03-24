@@ -90,6 +90,10 @@ module FlightJob
       c.summary = 'List your rendered scripts'
     end
 
+    create_command 'view-script', 'SCRIPT_ID' do |c|
+      c.summary = 'View the content of a script'
+    end
+
     create_command 'info-script', 'SCRIPT_ID' do |c|
       c.summary = 'Display details about a rendered script'
     end
