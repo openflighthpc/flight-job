@@ -34,7 +34,8 @@ module FlightJob
       script
 
       # Opens vim/emacs/nano commands at the start line, else use the regular editor
-      cmd = if ['vi', 'vim', 'nvim', 'emacs', 'nano'].include?(editor)
+      # NOTE: gedit needs x-forwarding over ssh, but it also supports the +line
+      cmd = if ['vi', 'vim', 'nvim', 'emacs', 'nano', 'gedit'].include?(editor)
               if start_line
                 "#{editor} +#{start_line}"
               else
