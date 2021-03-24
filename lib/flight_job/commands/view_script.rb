@@ -1,4 +1,3 @@
-# frozen_string_literal: true
 #==============================================================================
 # Copyright (C) 2020-present Alces Flight Ltd.
 #
@@ -25,22 +24,19 @@
 # For more information on Flight Job, please visit:
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
-source 'https://rubygems.org'
 
-gem 'commander-openflighthpc', '~> 2.1'
-gem 'activemodel'
-gem 'flight_configuration', github: 'openflighthpc/flight_configuration', branch: '85905e36d2db793587bf10b17734a36b6e9197f2'
-gem 'json_schemer'
-gem 'output_mode'
-gem 'pastel'
-gem 'tty-markdown'
-gem 'tty-table', github: 'openflighthpc/tty-table', branch: '9b326fcbe04968463da58c000fbb1dd5ce178243'
-gem 'tty-prompt'
-gem 'tty-editor'
-gem 'tty-pager'
-gem 'word_wrap'
+require 'tty-pager'
 
-group :development do
-  gem 'pry'
-  gem 'pry-byebug'
+module FlightJob
+  module Commands
+    class ViewScript < Command
+      def run
+        TTY::Pager.new(commnad: 'less -SFRX').page(File.read script.script_path)
+      end
+
+      def script
+        @script ||= load_script(args.first)
+      end
+    end
+  end
 end
