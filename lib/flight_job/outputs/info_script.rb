@@ -32,8 +32,10 @@ module FlightJob
     extend OutputMode::TLDR::Show
 
     register_attribute(header: 'ID') { |s| s.id }
+    # NOTE: The verbose output is at the end to avoid the order changing
+    register_attribute(header: 'Name', verbose: false) { |s| s.identity_name }
     register_attribute(header: 'Template ID') { |s| s.template_id }
-    register_attribute(header: 'Name') { |s| s.script_name }
+    register_attribute(header: 'File Name') { |s| s.script_name }
     register_attribute(header: 'Path') { |s| s.script_path }
 
     # Toggle the format of the created at time
@@ -41,6 +43,9 @@ module FlightJob
     register_attribute(header: 'Created At', verbose: false) do |script|
       DateTime.rfc3339(script.created_at).strftime('%d/%m/%y %H:%M')
     end
+
+    # NOTE: The following is at the end to preserve the order of the verbose output
+    register_attribute(header: 'Name', verbose: true) { |s| s.identity_name }
 
     def self.build_output(**opts)
       if opts.delete(:json)

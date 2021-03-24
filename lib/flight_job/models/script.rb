@@ -167,6 +167,7 @@ module FlightJob
       metadata['template_id'] = id
     end
 
+    # NOTE: This is a misnomer, it is actually the filename of the script
     def script_name
       metadata['script_name']
     end
@@ -174,6 +175,17 @@ module FlightJob
     def script_name=(name)
       @script_path = nil
       metadata['script_name'] = name
+    end
+
+    # This is the name used in the user facing interfaces, note:
+    # 1. It is not guaranteed to be unique,
+    # 2. How it is being set is still volatile
+    def identity_name
+      @identity_name || answers['job_name'] || script_name
+    end
+
+    def identity_name=(name)
+      @identity_name ||= name
     end
 
     # NOTE: For backwards compatibility, the 'answers' are not strictly required
@@ -225,6 +237,7 @@ module FlightJob
       answers # Ensure the answers have been set
       {
         "id" => id,
+        "identity_name" => identity_name,
         "path" => script_path
       }.merge(metadata)
     end
