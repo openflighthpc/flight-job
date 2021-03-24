@@ -225,12 +225,14 @@ module FlightJob
       content = render
 
       # Writes the data to disk
-      FileUtils.mkdir_p File.dirname(metadata_path)
-      File.write(metadata_path, YAML.dump(metadata))
+      save_metadata
       File.write(script_path, content)
-
-      # Makes the script executable and metadata read/write
       FileUtils.chmod(0700, script_path)
+    end
+
+    def save_metadata
+      FileUtils.mkdir_p File.dirname(metadata_path)
+      File.write metadata_path, YAML.dump(metadata)
       FileUtils.chmod(0600, metadata_path)
     end
 
