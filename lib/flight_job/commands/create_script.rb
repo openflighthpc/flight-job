@@ -37,8 +37,8 @@ module FlightJob
         answers = opts.stdin ? stdin_answers : prompt_answers
 
         # Render the script
-        script = Script.new(template_id: template.id, script_name: template.script_template_name)
-        script.render_and_save(**answers)
+        script = Script.new(template_id: template.id, script_name: template.script_template_name, answers: answers)
+        script.render_and_save
 
         # Render the script output
         puts Outputs::InfoScript.build_output(**output_options).render(script)
