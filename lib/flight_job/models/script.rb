@@ -40,7 +40,8 @@ module FlightJob
       "properties" => {
         'created_at' => { 'type' => 'string', 'format' => 'date-time' },
         'template_id' => { 'type' => 'string' },
-        'script_name' => { 'type' => 'string' }
+        'script_name' => { 'type' => 'string' },
+        'answers' => { 'type' => 'object' }
       }
     })
 
@@ -175,13 +176,23 @@ module FlightJob
       metadata['script_name'] = name
     end
 
+    # NOTE: For backwards compatibility, the 'answers' are not strictly required
+    # This may change in a few release
+    def answers
+      metadata['answers'] ||= {}
+    end
+
+    def answers=(object)
+      metadata['answers'] = object
+    end
+
     def load_template
       return nil unless template_id
       Template.new(id: template_id)
     end
 
     # NOTE: This method is used to generate a rendered template without saving
-    def render(**answers)
+    def render
       # Ensure the script is in a valid state
       unless valid?(:render)
         FlightJob.logger.error("The script is invalid:\n") do
@@ -197,8 +208,8 @@ module FlightJob
     end
 
     # XXX: Eventually the answers will likely be saved with the script
-    def render_and_save(**answers)
-      content = render(**answers)
+    def render_and_save
+      content = render
 
       # Writes the data to disk
       FileUtils.mkdir_p File.dirname(metadata_path)
@@ -211,6 +222,7 @@ module FlightJob
     end
 
     def serializable_hash
+      answers # Ensure the answers have been set
       {
         "id" => id,
         "path" => script_path
