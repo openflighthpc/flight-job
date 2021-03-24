@@ -1,9 +1,9 @@
-name: MPI multiple slot (Slurm)
+name: Multiple slot
 copyright: Copyright (C) 2020 Alces Flight Ltd.
 license: Creative Commons Attribution-ShareAlike 4.0 International
 script_template: mpi-slots.sh
 version: 0
-synopsis: Submit a job that has multiple processes that may span multiple nodes.
+synopsis: Submit a single job that has multiple processes that may span multiple nodes.
 description: |
   This allows you to specify the total number of cores required for a job whilst
   leaving it up to the scheduler to allocate them. This method is often used for
@@ -13,8 +13,8 @@ description: |
   Your job will be allocated the requested number of cores across the allocated
   nodes. The remaining unallocated cores maybe shared with other jobs. This method
   should not be used for SMP (OpenMP) jobs. As this method allocates individual
-  cores, you may need to share the nodes' resources. You may prefer using
-  multiple mpi nodes job to obtain exclusive access instead.
+  cores, you may need to share the nodes' resources. You may prefer using a
+  multiple mpi node job to obtain exclusive access instead.
 
 generation_questions:
   - id: working_dir
