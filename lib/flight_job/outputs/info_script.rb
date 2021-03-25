@@ -31,22 +31,41 @@ module FlightJob
   module Outputs::InfoScript
     extend OutputMode::TLDR::Show
 
-    register_attribute(header: 'ID') { |s| s.id }
-    register_attribute(header: 'Template ID') { |s| s.template_id }
-    register_attribute(header: 'Name') { |s| s.script_name }
-    register_attribute(header: 'Path') { |s| s.script_path }
+    TEMPLATE = <<~ERB
+      <% each(:main) do |value, field:, padding:, **_| -%>
+      <%= padding -%><%= pastel.blue.bold field -%><%= pastel.bold ':' -%> <%= pastel.green value %>
+      <% end -%>
+
+      <%= pastel.blue.bold 'NOTES' -%><%= pastel.bold ':' %>
+      <% each(:notes) do |value, **_| -%>
+      <%= pastel.green value.chomp %>
+      <% end -%>
+    ERB
+
+    register_attribute(section: :main, header: 'ID') { |s| s.id }
+    # NOTE: The verbose output is at the end to avoid the order changing
+    register_attribute(section: :main, header: 'Template ID') { |s| s.template_id }
+    register_attribute(section: :main, header: 'Name') { |s| s.script_name }
+    register_attribute(section: :main, header: 'Path') { |s| s.script_path }
 
     # Toggle the format of the created at time
-    register_attribute(header: 'Created At', verbose: true) { |s| s.created_at }
-    register_attribute(header: 'Created At', verbose: false) do |script|
+    register_attribute(section: :main, header: 'Created At', verbose: true) { |s| s.created_at }
+    register_attribute(section: :main, header: 'Created At', verbose: false) do |script|
       DateTime.rfc3339(script.created_at).strftime('%d/%m/%y %H:%M')
     end
+
+    register_attribute(section: :notes, header: 'Notes') { |s| s.notes }
 
     def self.build_output(**opts)
       if opts.delete(:json)
         JSONRenderer.new(false, opts[:interactive])
       else
-        super(**opts)
+        super(template: TEMPLATE, **opts).tap do |output|
+          case output
+          when OutputMode::Outputs::Delimited
+            output.config.merge! write_converters: [->(f) { f.to_s.dump.sub(/\A"/, '').sub(/"\Z/, '') }]
+          end
+        end
       end
     end
   end
