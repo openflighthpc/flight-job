@@ -101,7 +101,15 @@ module FlightJob
     # XXX: Consider making the method signature: TEMPLATE_NAME [SCRIPT_NAME]
     create_command 'create-script', 'TEMPLATE_NAME' do |c|
       c.summary = 'Render a new script from a template'
-      c.slop.bool '--stdin', 'Provide the answers via STDIN as JSON'
+      c.slop.string '--answers', <<~MSG.chomp, meta: 'JSON|@filepath|@-'
+        Provide the answers as a JSON string.
+        Alternatively specify a file containing the answers with @filepath or STDIN as @-
+      MSG
+      c.slop.string '--notes', <<~MSG.chomp, meta: 'NOTES|@filepath|@-'
+        Provide additional information about the script
+        Alternatively specify a file containing the notes with @filepath or STDIN as @-
+      MSG
+      c.slop.bool '--stdin', 'Same as: "--answers @-"'
     end
 
     create_command 'delete-script', 'SCRIPT_ID' do |c|

@@ -59,7 +59,7 @@ module FlightJob
       end.reject(&:nil?)
     end
 
-    attr_writer :id
+    attr_writer :id, :notes
 
     validate do
       unless (errors = SCHEMA.validate(metadata).to_a).empty?
@@ -136,6 +136,14 @@ module FlightJob
       File.exists? metadata_path
     end
 
+    def notes
+      @notes ||= if File.exists? notes_path
+                   File.read notes_path
+                 else
+                   ''
+                 end
+    end
+
     def metadata_path
       if ! @metadata_path.nil?
         @metadata_path
@@ -153,6 +161,10 @@ module FlightJob
         @errors.add(:script_path, 'cannot be determined')
         @script_path = false
       end
+    end
+
+    def notes_path
+      @notes_path ||= File.join(FlightJob.config.scripts_dir, id, 'notes.txt')
     end
 
     def created_at
@@ -212,13 +224,25 @@ module FlightJob
       content = render
 
       # Writes the data to disk
-      FileUtils.mkdir_p File.dirname(metadata_path)
-      File.write(metadata_path, YAML.dump(metadata))
+      save_metadata
+      save_notes
       File.write(script_path, content)
 
       # Makes the script executable and metadata read/write
       FileUtils.chmod(0700, script_path)
       FileUtils.chmod(0600, metadata_path)
+    end
+
+    def save_metadata
+      FileUtils.mkdir_p File.dirname(metadata_path)
+      File.write metadata_path, YAML.dump(metadata)
+      FileUtils.chmod(0600, metadata_path)
+    end
+
+    def save_notes
+      FileUtils.mkdir_p File.dirname(notes_path)
+      File.write notes_path, notes
+      FileUtils.chmod(0600, notes_path)
     end
 
     def serializable_hash
