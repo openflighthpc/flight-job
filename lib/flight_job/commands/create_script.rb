@@ -31,13 +31,23 @@ require 'tty-prompt'
 module FlightJob
   module Commands
     class CreateScript < Command
+      # TODO: Make me configurable
       MAX_STDIN_SIZE = 1*1024*1024
 
       def run
-        answers = opts.stdin ? stdin_answers : prompt_answers
+        answers = answers_input || prompt_answers
 
         # Render the script
-        script = Script.new(template_id: template.id, script_name: template.script_template_name, answers: answers)
+        script = Script.new(
+          template_id: template.id,
+          answers: answers,
+          notes: notes_input
+        )
+
+        # Apply the identity_name
+        script.identity_name = args[1] if args.length > 1
+
+        # Save the script
         script.render_and_save
 
         # Render the script output
@@ -55,19 +65,33 @@ module FlightJob
         end
       end
 
-      def stdin_answers
-        # TODO: Validate the correct answers have been provided
-        input = $stdin.read_nonblock(MAX_STDIN_SIZE)
-        if input.length == MAX_STDIN_SIZE
-          raise InputError, "The STDIN exceeds the maximum size of: #{MAX_STDIN_SIZE}B"
-        end
-        JSON.parse(input)
-      rescue Errno::EWOULDBLOCK, Errno::EWOULDBLOCK
-        raise InputError, "Failed to read the data from STDIN"
+      def answers_input
+        return unless opts.stdin || opts.answers
+        string = if opts.stdin || opts.answers == '@-'
+                   cached_stdin
+                 elsif opts.answers[0] == '@'
+                   read_file(opts.answers[1..])
+                 else
+                   opts.answers
+                 end
+        JSON.parse(string)
       rescue JSON::ParserError
-        raise InputError, 'The STDIN is not valid JSON!'
+        flag = opts.stdin ? '--stdin' : '--answers'
+        raise InputError, "The following input is not valid JSON: #{pastel.yellow flag}"
       end
 
+      def notes_input
+        return unless opts.notes
+        if opts.notes == '@-'
+          cached_stdin
+        elsif opts.notes[0] == '@'
+          read_file(opts.notes[1..])
+        else
+          opts.notes
+        end
+      end
+
+      # TODO: Error if not connected to a TTY
       def prompt_answers
         template.generation_questions.each_with_object({}) do |question, memo|
           if question.related_question_id
@@ -108,6 +132,27 @@ module FlightJob
 
       def prompt
         @prompt = TTY::Prompt.new(help_color: :yellow)
+      end
+
+      # Technically multiple flags may try and read STDIN. Whilst this would be an "unusual"
+      # use case, it is still "technically" valid. In this case STDIN becomes the input for
+      # both flags. However as the input can only be read once, it needs to be cached
+      def cached_stdin
+        @cached_stdin ||= $stdin.read_nonblock(MAX_STDIN_SIZE).tap do |str|
+          if str.length == MAX_STDIN_SIZE
+            raise InputError, "The STDIN exceeds the maximum size of: #{MAX_STDIN_SIZE}B"
+          end
+        end
+      rescue Errno::EWOULDBLOCK, Errno::EWOULDBLOCK
+        raise InputError, "Failed to read the data from STDIN"
+      end
+
+      def read_file(path)
+        if File.exists?(path)
+          File.read(path)
+        else
+          raise InputError, "Could not locate file: #{path}"
+        end
       end
     end
   end
