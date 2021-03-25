@@ -97,7 +97,7 @@ module FlightJob
     def sections
       @sections ||= {
         ['template', 'templates'] => 'Templates:',
-        ['script', 'scripts'] => 'Scripts:',
+        ['script', 'scripts', 'script-notes'] => 'Scripts:',
         ['job', 'jobs'] => 'Jobs:'
       }
     end

@@ -25,17 +25,25 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require 'tty-pager'
+require 'tty-editor'
 
 module FlightJob
   module Commands
-    class ViewScript < Command
+    class EditScriptNotes < Command
       def run
-        TTY::Pager.new(commnad: 'less -SFRX').page(File.read script.script_path)
-      end
+        # Ensure the script exists up front
+        script = load_script(args.first)
 
-      def script
-        @script ||= load_script(args.first)
+        cmd = TTY::Editor.from_env.first || begin
+          $stderr.puts pastel.red <<~WARN.chomp
+            Defaulting to 'vi' as the editor.
+            This can be changed by setting the EDITOR environment variable.
+          WARN
+          'vi'
+        end
+
+        # Open the file
+        TTY::Editor.open(script.notes_path, command: cmd)
       end
     end
   end
