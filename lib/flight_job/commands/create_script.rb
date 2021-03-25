@@ -31,9 +31,6 @@ require 'tty-prompt'
 module FlightJob
   module Commands
     class CreateScript < Command
-      # TODO: Make me configurable
-      MAX_STDIN_SIZE = 1*1024*1024
-
       def run
         answers = answers_input || prompt_answers
 
@@ -139,9 +136,9 @@ module FlightJob
       # use case, it is still "technically" valid. In this case STDIN becomes the input for
       # both flags. However as the input can only be read once, it needs to be cached
       def cached_stdin
-        @cached_stdin ||= $stdin.read_nonblock(MAX_STDIN_SIZE).tap do |str|
-          if str.length == MAX_STDIN_SIZE
-            raise InputError, "The STDIN exceeds the maximum size of: #{MAX_STDIN_SIZE}B"
+        @cached_stdin ||= $stdin.read_nonblock(FlightJob.config.max_stdin_size).tap do |str|
+          if str.length == FlightJob.config.max_stdin_size
+            raise InputError, "The STDIN exceeds the maximum size of: #{FlightJob.config.max_stdin_size}B"
           end
         end
       rescue Errno::EWOULDBLOCK, Errno::EWOULDBLOCK

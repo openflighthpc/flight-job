@@ -62,6 +62,7 @@ module FlightJob
     attribute :minimum_terminal_width, default: 80
     attribute :check_cron, default: 'libexec/check-cron.sh',
               transform: relative_to(root_path)
+    attribute :max_stdin_size, default: 1048576
     attribute :log_path, required: false,
               default: '~/.cache/flight/log/share/job.log',
               transform: ->(path) do
