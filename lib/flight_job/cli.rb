@@ -120,6 +120,10 @@ module FlightJob
       c.summary = 'Rename a script given by its ID'
     end
 
+    create_command 'edit-script-notes', 'SCRIPT_ID' do |c|
+      c.summary = 'Open the script notes in the system editor'
+    end
+
     create_command 'delete-script', 'SCRIPT_ID' do |c|
       c.summary = 'Permanently remove a script'
     end
