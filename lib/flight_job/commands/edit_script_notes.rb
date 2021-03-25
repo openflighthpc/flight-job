@@ -1,6 +1,5 @@
-# frozen_string_literal: true
 #==============================================================================
-# Copyright (C) 2020-present Alces Flight Ltd.
+# Copyright (C) 2021-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -25,21 +24,27 @@
 # For more information on Flight Job, please visit:
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
-source 'https://rubygems.org'
 
-gem 'commander-openflighthpc', '~> 2.1'
-gem 'activemodel'
-gem 'flight_configuration', github: 'openflighthpc/flight_configuration', branch: '85905e36d2db793587bf10b17734a36b6e9197f2'
-gem 'json_schemer'
-gem 'output_mode'
-gem 'tty-markdown'
-gem 'tty-editor'
-gem 'tty-table', github: 'openflighthpc/tty-table', branch: '9b326fcbe04968463da58c000fbb1dd5ce178243'
-gem 'tty-prompt'
-gem 'tty-pager'
-gem 'word_wrap'
+require 'tty-editor'
 
-group :development do
-  gem 'pry'
-  gem 'pry-byebug'
+module FlightJob
+  module Commands
+    class EditScriptNotes < Command
+      def run
+        # Ensure the script exists up front
+        script = load_script(args.first)
+
+        cmd = TTY::Editor.from_env.first || begin
+          $stderr.puts pastel.red <<~WARN.chomp
+            Defaulting to 'vi' as the editor.
+            This can be changed by setting the EDITOR environment variable.
+          WARN
+          'vi'
+        end
+
+        # Open the file
+        TTY::Editor.open(script.notes_path, command: cmd)
+      end
+    end
+  end
 end
