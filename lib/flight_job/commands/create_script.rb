@@ -32,9 +32,29 @@ module FlightJob
   module Commands
     class CreateScript < Command
       def run
-        answers = answers_input || prompt_answers
+        # Resolves the answers
+        answers = answers_input || begin
+          if $stdout.tty? && opts.notes == '@-'
+            msg = <<~WARN.chomp
+              Can not prompt for the answers as Standard Input is in use!
+              Proceeding with the defaults.
+            WARN
+            $stderr.puts pastel.red(msg)
+            FlightJob.logger.warn msg
+            {}
+          elsif $stdout.tty?
+            prompt_answers
+          else
+            msg = <<~WARN.chomp
+              No answers have been provided! Proceeding with the defaults.
+            WARN
+            $stderr.puts pastel.red(msg)
+            FlightJob.logger.warn msg
+            {}
+          end
+        end
 
-        # Render the script
+        # Create the script object
         script = Script.new(
           template_id: template.id,
           script_name: template.script_template_name,
@@ -63,6 +83,17 @@ module FlightJob
         end
       end
 
+      def notes_input
+        return unless opts.notes
+        if opts.notes == '@-'
+          cached_stdin
+        elsif opts.notes[0] == '@'
+          read_file(opts.notes[1..])
+        else
+          opts.notes
+        end
+      end
+
       def answers_input
         return unless opts.stdin || opts.answers
         string = if opts.stdin || opts.answers == '@-'
@@ -78,18 +109,6 @@ module FlightJob
         raise InputError, "The following input is not valid JSON: #{pastel.yellow flag}"
       end
 
-      def notes_input
-        return unless opts.notes
-        if opts.notes == '@-'
-          cached_stdin
-        elsif opts.notes[0] == '@'
-          read_file(opts.notes[1..])
-        else
-          opts.notes
-        end
-      end
-
-      # TODO: Error if not connected to a TTY
       def prompt_answers
         template.generation_questions.each_with_object({}) do |question, memo|
           if question.related_question_id
@@ -141,8 +160,8 @@ module FlightJob
             raise InputError, "The STDIN exceeds the maximum size of: #{FlightJob.config.max_stdin_size}B"
           end
         end
-      rescue Errno::EWOULDBLOCK, Errno::EWOULDBLOCK
-        raise InputError, "Failed to read the data from STDIN"
+      rescue Errno::EWOULDBLOCK, EOFError
+        raise InputError, "Failed to read the data from the Standard Input"
       end
 
       def read_file(path)
