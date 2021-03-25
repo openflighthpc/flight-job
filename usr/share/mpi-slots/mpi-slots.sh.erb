@@ -206,7 +206,7 @@ echo "Executing job commands, current working directory is $(pwd)"
 # REPLACE THE FOLLOWING WITH YOUR APPLICATION COMMANDS
 
 echo "Hello, <%= questions.workload.answer %>!" > $OUTPUT_PATH/test.output
-echo "This is an example job. It was allocated $SLURM_NTASKS slot(s) across $SLURM_JOB_NUM_NODES node(s). The master process ran on `hostname -s` (as `whoami`)." > $OUTPUT_PATH/test.output
+echo "This is an example job. It was allocated $SLURM_NTASKS slot(s) across $SLURM_JOB_NUM_NODES node(s). The master process ran on `hostname -s` (as `whoami`)." >> $OUTPUT_PATH/test.output
 mpirun \
     /bin/bash -c \
     'echo "This process was executed on `hostname -s` with rank $OMPI_COMM_WORLD_RANK."' \
