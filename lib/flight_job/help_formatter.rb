@@ -103,7 +103,7 @@ module FlightJob
     end
 
     def command_prefix_order
-      @command_prefix_order ||= ['list', 'create', 'submit', 'show', 'info', 'rename', 'delete']
+      @command_prefix_order ||= ['list', 'create', 'submit', 'info', 'view', 'edit', 'rename', 'delete']
     end
 
     def commands_by_section
