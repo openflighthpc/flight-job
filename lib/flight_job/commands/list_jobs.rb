@@ -29,11 +29,9 @@ module FlightJob
   module Commands
     class ListJobs < Command
       def run
-        if jobs.empty?
-          $stderr.puts 'Nothing To Display'
-        else
-          puts Outputs::ListJobs.build_output(**output_options).render(*jobs)
-        end
+        result = Outputs::ListJobs.build_output(**output_options).render(*jobs)
+        $stderr.puts 'Nothing To Display' if jobs.empty?
+        puts result unless result.empty?
       end
 
       def jobs
