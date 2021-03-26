@@ -33,14 +33,15 @@ module FlightJob
       # Ensure the script exists up front
       script
 
-      # Opens vim/emacs/nano commands at the start line, else use the regular editor
+      # Opens vimish commands with the start line at the top of the editor,
+      # Other common editors will open somewhere near the start line
       # NOTE: gedit needs x-forwarding over ssh, but it also supports the +line
-      cmd = if ['vi', 'vim', 'nvim', 'emacs', 'nano', 'gedit'].include?(editor)
-              if start_line
-                "#{editor} +#{start_line}"
-              else
-                editor
-              end
+      cmd = if ! start_line
+              editor
+            elsif ['vim', 'nvim'].include?(editor)
+              "#{editor} +#{start_line} -c 'let b:scrollofforig=&scrolloff' -c 'set scrolloff=0' -c 'normal! kztj' -c 'let &scrolloff=b:scrollofforig'"
+            elsif ['vi', 'emacs', 'nano', 'gedit'].include?(editor)
+              "#{editor} +#{start_line}"
             else
               editor
             end
@@ -57,7 +58,7 @@ module FlightJob
     def start_line
       File.open(script.script_path) do |file|
         _, idx = file.each_line.each_with_index.find do |line, _|
-          />{4,}.*<{4,}/.match?(line)
+          /^# *>{4,}.*WORKLOAD/.match?(line)
         end
         return idx ? idx + 1 : nil
       end

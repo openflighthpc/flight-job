@@ -103,10 +103,12 @@ module FlightJob
     create_command 'edit-script', 'SCRIPT_ID' do |c|
       c.summary = 'Open the script in your editor'
       c.description = <<~DESC.chomp
-        Open and update your script within the systems editor.
+        Edit your script.
 
-        The editor can be selected using the $EDITOR or $VISUAL
-        environment variable. 'vi' will be used if neither is set.
+        Open the script in the editor given by `$VISUAL`, `$EDITOR` or `vi`.
+
+        Changes you make will affect any future jobs submitted from this script,
+        but will not affect jobs already submitted.
       DESC
     end
 
