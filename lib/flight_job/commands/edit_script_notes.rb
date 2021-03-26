@@ -34,16 +34,8 @@ module FlightJob
         # Ensure the script exists up front
         script = load_script(args.first)
 
-        cmd = TTY::Editor.from_env.first || begin
-          $stderr.puts pastel.red <<~WARN.chomp
-            Defaulting to 'vi' as the editor.
-            This can be changed by setting the EDITOR environment variable.
-          WARN
-          'vi'
-        end
-
         # Open the file
-        TTY::Editor.open(script.notes_path, command: cmd)
+        new_editor.open(script.notes_path)
       end
     end
   end
