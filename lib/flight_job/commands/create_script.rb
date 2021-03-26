@@ -54,7 +54,7 @@ module FlightJob
 
         # Resolve the notes
         notes = notes_input || begin
-          if $stdout.tty? && opts.answers == '@-'
+          if $stdout.tty? && stdin_answers?
             FlightJob.logger.debug "Skipping notes prompt as STDIN is connected to the answers"
             ''
           elsif $stdout.tty? && prompt.yes?("Define notes about the script?", default: true)
@@ -97,6 +97,10 @@ module FlightJob
         end
       end
 
+      def stdin_answers?
+        opts.stdin || opts.answers == '@-'
+      end
+
       def notes_input
         return unless opts.notes
         if opts.notes == '@-'
@@ -110,7 +114,7 @@ module FlightJob
 
       def answers_input
         return unless opts.stdin || opts.answers
-        string = if opts.stdin || opts.answers == '@-'
+        string = if stdin_answers?
                    cached_stdin
                  elsif opts.answers[0] == '@'
                    read_file(opts.answers[1..])
