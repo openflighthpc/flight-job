@@ -47,7 +47,7 @@ module FlightJob
     })
 
     def self.load_all
-      Dir.glob(new(id: '*').metadata_path).map do |path|
+      Dir.glob(metadata_path('*')).map do |path|
         id = File.basename(File.dirname(path))
         script = new(id: id)
         if script.valid?(:load)
@@ -60,7 +60,11 @@ module FlightJob
       end.reject(&:nil?)
     end
 
-    attr_writer :id
+    def self.metadata_path(id)
+      File.join(FlightJob.config.scripts_dir, id, 'metadata.yaml')
+    end
+
+    validates :id, presence: true
 
     validate do
       unless (errors = SCHEMA.validate(metadata).to_a).empty?
@@ -92,6 +96,11 @@ module FlightJob
         next
       end
 
+      # Ensure the reservation has been obtained
+      unless reserved?
+        @errors.add(:id, 'could not be reserved')
+      end
+
       # Ensures the script does not exists
       if File.exists? script_path
         @errors.add(:script_path, 'already exists')
@@ -109,40 +118,93 @@ module FlightJob
       end
     end
 
-    # Implicitly generates an ID by trying to create a randomised directory
-    # This handles ID collisions if and when they occur
-    def id
-      @id ||= begin
-        candidate = '-'
-        while candidate[0] == '-' do
-          # Generate a 8 byte base64 string that does not start with: '-'
-          # NOTE: 6 bytes of randomness becomes 8 base64-chars
-          candidate = SecureRandom.urlsafe_base64(6)
+    attr_reader :id
+
+    def initialize(**opts)
+      # Attempt to set the ID up front from the provided options
+      unless @id = opts.delete(:id)
+        # Attempt to implicitly generate an ID from the provided script_name
+        if name = opts[:script_name]
+          current = Dir.glob(self.class.metadata_path("#{name}.*")).map do |path|
+            id = File.basename File.dirname(path)
+            index = id.split('.').last
+            /\A\d+\Z/.match?(index) ? index.to_i : nil
+          end.reject(&:nil?).max
+
+          # Attempt to reserve the archetype script if no indices have been used
+          if current.nil?
+            self.reserve_id = name
+            current = 0
+          end
+
+          # Increment the indices until a reservation can be made
+          until reserved?
+            current = current + 1
+            self.reserve_id = "#{name}.#{current}"
+          end
+        else
+          # Error as an ID could not be determined
+          raise InternalError, <<~ERROR
+            Either an id: or script_name: must be provided on initalization
+          ERROR
         end
-        # Ensures the parent directory exists with mkdir -p
-        FileUtils.mkdir_p FlightJob.config.scripts_dir
-        # Attempt to create the directory with errors: mkdir
-        FileUtils.mkdir File.join(FlightJob.config.scripts_dir, candidate)
-        # Return the candidate
-        candidate
-      rescue Errno::EEXIST
-        FlightJob.logger.debug "Retrying after script ID collision: #{candidate}"
-        retry
       end
+
+      # Initialize the remaining fields
+      # NOTE: This allows them to be saved in any existing metadata hash which
+      # is dependant on the ID being set
+      super(opts)
     end
 
-    # NOTE: Only used for a shorthand existence check, full validation is required in
+    # Attempt to obtain the reservation for an ID
+    # NOTE: The reservation is not checked at this point as the error handling
+    # needs to be context specific. It does however get checked in the validation
+    def reserve_id=(candidate)
+      @id = candidate
+      FileUtils.mkdir_p File.dirname(reservation_path)
+      # Append the PID to the file
+      File.open(reservation_path, 'a') { |f| f.puts(Process.pid) }
+      @id
+    end
+
+    # NOTE: Only used for a shorthand existence check, full validation is required
     # before it can be used
     def exists?
       File.exists? metadata_path
     end
 
-    def metadata_path
-      if ! @metadata_path.nil?
-        @metadata_path
-      else
-        @metadata_path ||= File.join(FlightJob.config.scripts_dir, id, 'metadata.yaml')
+    # Checks if the process has successfully reserved the ID
+    def reserved?
+      return false unless @id
+      return false unless File.exists?(reservation_path)
+      File.read(reservation_path).split("\n").each do |pid|
+        pid = pid.to_i
+        return true if Process.pid == pid
+        begin
+          # Check if the priority process is still running
+          # This allows the 'id' reservation to be released if not used
+          Process.kill(0, pid)
+          return false
+        rescue Errno::EPERM
+          # Priority process does exist, but is (probably) owned by another user
+          return false
+        rescue Errno::ESRCH
+          # NOOP: The priority process no longer exists, keep checking
+        end
       end
+      return false
+    end
+
+    # Used to reserve an ID before the script can be created. Only the process who's PID
+    # appears at the top of this list owns the ID. The reservation file becomes redundant
+    # once the `metadata` file exists.
+    def reservation_path
+      # NOTE: This path should not be cached
+      File.join(FlightJob.config.scripts_dir, id, 'reservation.pids')
+    end
+
+    def metadata_path
+      @metadata_path ||= self.class.metadata_path(id)
     end
 
     def script_path
@@ -229,6 +291,9 @@ module FlightJob
       File.write(metadata_path, YAML.dump(metadata))
       File.write(script_path, content)
       FileUtils.chmod(0700, script_path)
+
+      # Remove the reservation
+      FileUtils.rm_f reservation_path
     end
 
     def serializable_hash
