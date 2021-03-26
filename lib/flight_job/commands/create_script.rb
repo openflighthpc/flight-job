@@ -102,10 +102,15 @@ module FlightJob
                  else
                    opts.answers
                  end
-        JSON.parse(string)
+        JSON.parse(string).tap do |hash|
+          return if hash.is_a? Hash
+          raise InputError, 'The answers are not a JSON hash'
+        end
       rescue JSON::ParserError
-        flag = opts.stdin ? '--stdin' : '--answers'
-        raise InputError, "The following input is not valid JSON: #{pastel.yellow flag}"
+        raise InputError, <<~ERROR.chomp
+          Failed to parse the answers as they are not valid JSON:
+          #{$!.message}
+        ERROR
       end
 
       def prompt_answers
