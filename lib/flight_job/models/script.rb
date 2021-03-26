@@ -164,7 +164,7 @@ module FlightJob
     end
 
     def notes_path
-      @notes_path ||= File.join(FlightJob.config.scripts_dir, id, 'notes.txt')
+      @notes_path ||= File.join(FlightJob.config.scripts_dir, id, 'notes.md')
     end
 
     def created_at
@@ -219,7 +219,6 @@ module FlightJob
       ).render
     end
 
-    # XXX: Eventually the answers will likely be saved with the script
     def render_and_save
       content = render
 

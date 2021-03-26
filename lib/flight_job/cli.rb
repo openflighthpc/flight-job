@@ -103,10 +103,10 @@ module FlightJob
       c.summary = 'Render a new script from a template'
       c.slop.string '--answers', <<~MSG.chomp, meta: 'JSON|@filepath|@-'
         Provide the answers as a JSON string.
-        Alternatively specify a file containing the answers with @filepath or STDIN as @-
+        Alternatively specify a file containing the JSON answers with @filepath or STDIN as @-
       MSG
       c.slop.string '--notes', <<~MSG.chomp, meta: 'NOTES|@filepath|@-'
-        Provide additional information about the script
+        Provide additional information about the script (Markdown formatting is supported).
         Alternatively specify a file containing the notes with @filepath or STDIN as @-
       MSG
       c.slop.bool '--stdin', 'Same as: "--answers @-"'
@@ -121,6 +121,15 @@ module FlightJob
 
         Changes you make will affect any future jobs submitted from this script,
         but will not affect jobs already submitted.
+      DESC
+    end
+
+    create_command 'edit-script-notes', 'SCRIPT_ID' do |c|
+      c.summary = 'Open the notes in your system editor'
+      c.description = <<~DESC.chomp
+        Edit your notes for a script.
+
+        Open the notes in the editor given by `$VISUAL`, `$EDITOR` or `vi`.
       DESC
     end
 
