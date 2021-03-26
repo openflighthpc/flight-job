@@ -249,6 +249,7 @@ module FlightJob
       answers # Ensure the answers have been set
       {
         "id" => id,
+        "notes" => notes,
         "path" => script_path
       }.merge(metadata)
     end
