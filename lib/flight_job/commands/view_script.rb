@@ -31,7 +31,8 @@ module FlightJob
   module Commands
     class ViewScript < Command
       def run
-        TTY::Pager.new(commnad: 'less -SFRX').page(File.read script.script_path)
+        TTY::Pager.new(command: ENV.fetch('LESS', 'less -SFRX'))
+                  .page(File.read script.script_path)
       end
 
       def script

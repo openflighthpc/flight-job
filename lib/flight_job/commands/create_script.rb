@@ -36,7 +36,7 @@ module FlightJob
         answers = answers_input || begin
           if $stdout.tty? && opts.notes == '@-'
             msg = <<~WARN.chomp
-              Can not prompt for the answers as Standard Input is in use!
+              Cannot prompt for the answers as standard input is in use!
               Proceeding with the defaults.
             WARN
             $stderr.puts pastel.red(msg)
@@ -160,7 +160,7 @@ module FlightJob
           end
         end
       rescue Errno::EWOULDBLOCK, EOFError
-        raise InputError, "Failed to read the data from the Standard Input"
+        raise InputError, "Failed to read the data from the standard input"
       end
 
       def read_file(path)
