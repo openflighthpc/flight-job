@@ -35,13 +35,10 @@ module FlightJob
         # Resolves the answers
         answers = answers_input || begin
           if $stdout.tty? && opts.notes == '@-'
-            msg = <<~WARN.chomp
+            raise InputError, <<~ERROR.chomp
               Cannot prompt for the answers as standard input is in use!
-              Proceeding with the defaults.
-            WARN
-            $stderr.puts pastel.red(msg)
-            FlightJob.logger.warn msg
-            {}
+              Please provide the answers with the following flag: #{pastel.yellow '--answers'}
+            ERROR
           elsif $stdout.tty?
             prompt_answers
           else
