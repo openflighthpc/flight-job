@@ -27,6 +27,7 @@
 
 require 'ostruct'
 require 'pastel'
+require 'tty-editor'
 
 module FlightJob
   class Command
@@ -58,6 +59,17 @@ module FlightJob
 
     def pastel
       @pastel ||= Pastel.new
+    end
+
+    def new_editor
+      cmd = TTY::Editor.from_env.first || begin
+        $stderr.puts pastel.red <<~WARN.chomp
+          Defaulting to 'vi' as the editor.
+          This can be changed by setting the EDITOR environment variable.
+        WARN
+        'vi'
+      end
+      TTY::Editor.new(command: cmd)
     end
 
     def output_options

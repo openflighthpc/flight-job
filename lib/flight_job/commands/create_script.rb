@@ -27,6 +27,7 @@
 
 require 'json'
 require 'tty-prompt'
+require 'tempfile'
 
 module FlightJob
   module Commands
@@ -51,11 +52,28 @@ module FlightJob
           end
         end
 
+        # Resolve the notes
+        notes = notes_input || begin
+          if $stdout.tty? && opts.answers == '@-'
+            FlightJob.logger.debug "Skipping notes prompt as STDIN is connected to the answers"
+            ''
+          elsif $stdout.tty? && prompt.yes?("Define notes about the script?", default: true)
+            with_tmp_file do |file|
+              new_editor.open(file.path)
+              file.rewind
+              file.read
+            end
+          else
+            ''
+          end
+        end
+
         # Create the script object
         script = Script.new(
           template_id: template.id,
+          script_name: template.script_template_name,
           answers: answers,
-          notes: notes_input
+          notes: notes
         )
 
         # Apply the identity_name
@@ -171,6 +189,14 @@ module FlightJob
         else
           raise InputError, "Could not locate file: #{path}"
         end
+      end
+
+      def with_tmp_file
+        file = Tempfile.new('flight-job')
+        yield(file) if block_given?
+      ensure
+        file.close
+        file.unlink
       end
     end
   end
