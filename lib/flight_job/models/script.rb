@@ -42,7 +42,6 @@ module FlightJob
         'created_at' => { 'type' => 'string', 'format' => 'date-time' },
         'template_id' => { 'type' => 'string' },
         'script_name' => { 'type' => 'string' },
-        'identity_name' => { 'type' => 'string' },
         'answers' => { 'type' => 'object' }
       }
     })
@@ -310,17 +309,6 @@ module FlightJob
       metadata['script_name'] = name
     end
 
-    # This is the name used in the user facing interfaces, note:
-    # 1. It is not guaranteed to be unique,
-    # 2. How it is being set is still volatile
-    def identity_name
-      metadata['identity_name'] || answers['job_name'] || script_name
-    end
-
-    def identity_name=(name)
-      metadata['identity_name'] = name
-    end
-
     # NOTE: For backwards compatibility, the 'answers' are not strictly required
     # This may change in a few release
     def answers
@@ -375,7 +363,6 @@ module FlightJob
         "id" => internal_id,
         'internal_id' => internal_id,
         'public_id' => public_id,
-        "identity_name" => identity_name,
         "path" => script_path
       }.merge(metadata)
     end
