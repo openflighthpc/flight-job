@@ -197,7 +197,7 @@ module FlightJob
           end
 
           # Increment the indices until a reservation can be made
-          until reserved?
+          until reserved? && !exists?
             current = current + 1
             self.reserve_id = "#{name}.#{current}"
           end
@@ -261,7 +261,9 @@ module FlightJob
     end
 
     def metadata_path
-      @metadata_path ||= self.class.metadata_path(id)
+      # NOTE: Do not cache, as the 'id' may change whilst being implicitly
+      # determined
+      self.class.metadata_path(public_id)
     end
 
     def script_path
