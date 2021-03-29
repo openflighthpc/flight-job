@@ -122,7 +122,7 @@ module FlightJob
                    opts.answers
                  end
         JSON.parse(string).tap do |hash|
-          return if hash.is_a? Hash
+          next if hash.is_a? Hash
           raise InputError, 'The answers are not a JSON hash'
         end
       rescue JSON::ParserError
