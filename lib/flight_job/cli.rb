@@ -98,8 +98,7 @@ module FlightJob
       c.summary = 'Display details about a rendered script'
     end
 
-    # XXX: Consider making the method signature: TEMPLATE_NAME [SCRIPT_NAME]
-    create_command 'create-script', 'TEMPLATE_NAME' do |c|
+    create_command 'create-script', 'TEMPLATE_NAME [SCRIPT_ID]' do |c|
       c.summary = 'Render a new script from a template'
       c.slop.string '--answers', <<~MSG.chomp, meta: 'JSON|@filepath|@-'
         Provide the answers as a JSON string.
@@ -139,7 +138,7 @@ module FlightJob
       MSG
     end
 
-    create_command 'rename-script', 'SCRIPT_ID SCRIPT_NAME' do |c|
+    create_command 'rename-script', 'OLD_SCRIPT_ID NEW_SCRIPT_ID' do |c|
       c.summary = 'Rename a script given by its ID'
     end
 

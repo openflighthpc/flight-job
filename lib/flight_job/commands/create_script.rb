@@ -42,12 +42,12 @@ module FlightJob
 
         if script.exists?
           # Ensure the script does not already exist
-          raise DuplicateError, "The script '#{script.id}' already exists!"
+          raise DuplicateError, "The script '#{script.public_id}' already exists!"
         elsif ! script.reserved?
           # NOTE: This prevents race conditions in the create and *should* be
           # a temporary condition
           raise InternalError, <<~ERROR
-            Unexpectedly failed to create '#{script.id}', please try again.
+            Unexpectedly failed to create '#{script.public_id}', please try again.
             If this error persists, please contact your system administrator.
           ERROR
         end
