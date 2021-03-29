@@ -123,8 +123,13 @@ module FlightJob
     def initialize(**opts)
       # Attempt to set the ID up front from the provided options
       unless @id = opts.delete(:id)
+        # Apply the user's reserved id
+        # NOTE: It is not checked here to allow the caller to preform the error handling
+        if id = opts.delete(:reserve_id)
+          self.reserve_id = id
+
         # Attempt to implicitly generate an ID from the provided script_name
-        if name = opts[:script_name]
+        elsif name = opts[:script_name]
           current = Dir.glob(self.class.metadata_path("#{name}.*")).map do |path|
             id = File.basename File.dirname(path)
             index = id.split('.').last

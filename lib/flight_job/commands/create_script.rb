@@ -34,10 +34,28 @@ module FlightJob
       MAX_STDIN_SIZE = 1*1024*1024
 
       def run
+        # Attempt to reserve the user's ID
+        script_opts = {
+          template_id: template.id,
+          script_name: template.script_template_name
+        }.tap { |o| o[:reserve_id] = args[1] if args.length > 1 }
+        script = Script.new(**script_opts)
+
+        if script.exists?
+          # Ensure the script does not already exist
+          raise DuplicateError, "The script '#{script.id}' already exists!"
+        elsif ! script.reserved?
+          # NOTE: This prevents race conditions in the create and *should* be
+          # a temporary condition
+          raise InternalError, <<~ERROR
+            Unexpectedly failed to create '#{script.id}', please try again.
+            If this error persists, please contact your system administrator.
+          ERROR
+        end
+
         answers = opts.stdin ? stdin_answers : prompt_answers
 
         # Render the script
-        script = Script.new(template_id: template.id, script_name: template.script_template_name)
         script.render_and_save(**answers)
 
         # Render the script output
