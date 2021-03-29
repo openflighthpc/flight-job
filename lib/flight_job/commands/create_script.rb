@@ -53,6 +53,19 @@ module FlightJob
           ERROR
         end
 
+        # Cleanup the directory if required (leaving the reservation)
+        files = Dir.glob(File.join(File.dirname(script.metadata_path), '*'))
+        files.delete script.reservation_path
+        unless files.empty?
+          msg = <<~WARN.chomp
+            Removing stale file(s):
+            #{files.join("\n")}
+          WARN
+          $stderr.puts pastel.red(msg)
+          FlightJob.logger.warn(msg)
+        end
+        files.each { |f| FileUtils.rm_f f }
+
         answers = opts.stdin ? stdin_answers : prompt_answers
 
         # Render the script

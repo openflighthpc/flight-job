@@ -350,9 +350,12 @@ module FlightJob
       FileUtils.touch internal_id_path
 
       # Writes the data to disk
-      File.write(metadata_path, YAML.dump(metadata))
       File.write(script_path, content)
       FileUtils.chmod(0700, script_path)
+
+      # NOTE: The metadata must be wrote last to denote the script now
+      # exists (excluding cleanup the reservation)
+      File.write(metadata_path, YAML.dump(metadata))
 
       # Remove the reservation
       FileUtils.rm_f reservation_path
