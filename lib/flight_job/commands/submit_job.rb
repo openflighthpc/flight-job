@@ -32,7 +32,7 @@ module FlightJob
     class SubmitJob < Command
       def run
         check_cron
-        job = Job.new(script_id: script.id)
+        job = Job.new(script_id: script.internal_id)
         job.submit
         puts Outputs::InfoJob.build_output(submit: true, **output_options).render(job)
       end
