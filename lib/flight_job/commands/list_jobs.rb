@@ -35,7 +35,7 @@ module FlightJob
       end
 
       def jobs
-        @jobs ||= Job.load_all
+        @jobs ||= Job.load_all.sort_by { |j| DateTime.rfc3339(j.created_at) }
       end
     end
   end

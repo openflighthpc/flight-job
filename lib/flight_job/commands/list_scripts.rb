@@ -40,7 +40,7 @@ module FlightJob
       end
 
       def scripts
-        @scripts ||= Script.load_all
+        @scripts ||= Script.load_all.sort_by(&:public_id)
       end
     end
   end
