@@ -29,21 +29,45 @@ module FlightJob
   module Commands
     class RenameScript < Command
       def run
+        # Loads the existing script
         script = load_script(args.first)
-        script.identity_name = args[1]
 
-        # Ensure the script is still valid
-        # NOTE: Currently this should not fail, however this may change in the future.
-        # Particularly if the ID and identity_name are collapsed together, TBA
-        unless script.valid?
-          raise InputError, "'#{args[1]}' is not a valid script name"
+        # Attempt to reserve the new script
+        reservation = Script.new(reserve_id: args[1])
+        if reservation.exists?
+          raise DuplicateError, "The script '#{reservation.public_id}' already exists!"
+        elsif ! reservation.reserved?
+          raise InternalError, <<~ERROR
+            Unexpectedly failed to rename '#{reservation.public_id}', please try again.
+            If this error persists, please contact your system administrator.
+          ERROR
         end
 
-        # Save the new metadata
-        script.save_metadata
+        # Generate a list of files to be moved:
+        # * The reservation file should not be copied as it coupled to the original names,
+        # * The metadata should be copied last to denote it as successful
+        files = Dir.glob(File.join(File.dirname(script.metadata_path), '*'))
+        files.delete script.reservation_path
+        files.delete script.metadata_path
+        files.push script.metadata_path
+
+        # Copy the files over, maintaining the original version (temporarily)
+        dir = File.dirname(reservation.metadata_path)
+        files.each { |p| FileUtils.cp p, dir }
+
+        # Ensure the new script is valid
+        new_script = Script.new(id: reservation.public_id)
+        unless new_script.valid?
+          # XXX: Should the copy be deleted?
+          raise InternalError, 'Unexpectedly failed to move the script'
+        end
+
+        # Remove the original script and the reservation
+        FileUtils.rm_rf File.dirname(script.metadata_path)
+        FileUtils.rm reservation.reservation_path
 
         # Emit the new info
-        puts Outputs::InfoScript.build_output(**output_options).render(script)
+        puts Outputs::InfoScript.build_output(**output_options).render(new_script)
       end
     end
   end

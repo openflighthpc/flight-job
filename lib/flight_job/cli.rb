@@ -94,17 +94,12 @@ module FlightJob
       c.summary = 'Display details about a rendered script'
     end
 
-    create_command 'create-script', 'TEMPLATE_NAME [SCRIPT_NAME]' do |c|
+    create_command 'create-script', 'TEMPLATE_NAME [SCRIPT_ID]' do |c|
       c.summary = 'Render a new script from a template'
       c.slop.bool '--stdin', 'Provide the answers via STDIN as JSON'
     end
 
-    # NOTE: This method signature is weird! I would expect it to be:
-    # rename-script OLD_SCRIPT_NAME, NEW_SCRIPT_NAME
-    #
-    # However this isn't possible as the "identity names" are not unique.
-    # Consider collapsing the ID and "identity_name" to be the same thing
-    create_command 'rename-script', 'SCRIPT_ID SCRIPT_NAME' do |c|
+    create_command 'rename-script', 'OLD_SCRIPT_ID NEW_SCRIPT_ID' do |c|
       c.summary = 'Rename a script given by its ID'
     end
 
