@@ -39,7 +39,7 @@ module FlightJob
       cmd = if ! start_line
               editor
             elsif ['vim', 'nvim'].include?(editor)
-              "#{editor} +#{start_line} -c 'let b:scrollofforig=&scrolloff' -c 'set scrolloff=0' -c 'normal! kztj' -c 'let &scrolloff=b:scrollofforig'"
+              "#{editor} +#{start_line} -c 'normal! kztj'"
             elsif ['vi', 'emacs', 'nano', 'gedit'].include?(editor)
               "#{editor} +#{start_line}"
             else
