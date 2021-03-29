@@ -28,6 +28,7 @@
 require 'json'
 require 'securerandom'
 require 'json_schemer'
+require 'pastel'
 
 require_relative '../render_context'
 
@@ -61,6 +62,10 @@ module FlightJob
 
     def self.metadata_path(id)
       File.join(FlightJob.config.scripts_dir, id, 'metadata.yaml')
+    end
+
+    def self.internal_id_path(public_id, internal_id)
+      File.join(FlightJob.config.scripts_dir, public_id, "internal-#{internal_id}")
     end
 
     attr_writer :id, :notes
@@ -119,7 +124,11 @@ module FlightJob
       end
     end
 
+    # TODO: Rename the id method to public_id
     attr_reader :id
+    def public_id
+      id
+    end
 
     def initialize(**opts)
       # Attempt to set the ID up front from the provided options
@@ -160,6 +169,41 @@ module FlightJob
       # NOTE: This allows them to be saved in any existing metadata hash which
       # is dependant on the ID being set
       super(opts)
+    end
+
+    # NOTE: This is the ID used to refer to the scripts from existing jobs. It
+    # is static to the lifetime of the script even after being renamed!
+    #
+    # PS: It will be inferred from the existing public_id for legacy scripts
+    def internal_id
+      @internal_id ||= begin
+        # Determine the internal_id from the path file
+        paths = Dir.glob(self.class.internal_id_path(public_id, '*')).sort
+
+        # Ensure there are no duplicates (this should not happen in practice)
+        if paths.length > 1
+          msg = <<~ERROR.chomp
+            Detected duplicate internal_ids for job '#{id}':
+            #{paths.join("\n")}
+
+            This may result in unusual/undefined behaviour of various commands!
+            Please remove all but one of the files to suppress this message.
+          ERROR
+          FlightJob.logger.error msg
+          $stderr.puts Pastel.new.red msg
+        end
+
+        # Determine the ID, generate a new one, or use the legacy public_id
+        if paths.empty? && exists?
+          # NOTE: This is for legacy scripts only (circa v2.0.0), consider removing
+          FileUtils.touch self.class.internal_id_path(public_id, public_id)
+          public_id
+        elsif paths.empty?
+          SecureRandom.uuid
+        else
+          File.basename(paths.first).split('-').last
+        end
+      end
     end
 
     # Attempt to obtain the reservation for an ID
@@ -209,14 +253,6 @@ module FlightJob
       return false
     end
 
-    # Used to reserve an ID before the script can be created. Only the process who's PID
-    # appears at the top of this list owns the ID. The reservation file becomes redundant
-    # once the `metadata` file exists.
-    def reservation_path
-      # NOTE: This path should not be cached
-      File.join(FlightJob.config.scripts_dir, id, 'reservation.pids')
-    end
-
     def metadata_path
       @metadata_path ||= self.class.metadata_path(id)
     end
@@ -234,6 +270,18 @@ module FlightJob
 
     def notes_path
       @notes_path ||= File.join(FlightJob.config.scripts_dir, id, 'notes.md')
+    end
+
+    # Used to reserve an ID before the script can be created. Only the process who's PID
+    # appears at the top of this list owns the ID. The reservation file becomes redundant
+    # once the `metadata` file exists.
+    def reservation_path
+      # NOTE: This path should not be cached
+      File.join(FlightJob.config.scripts_dir, id, 'reservation.pids')
+    end
+
+    def internal_id_path
+      @internal_id_path ||= self.class.internal_id_path(public_id, internal_id)
     end
 
     def created_at
@@ -291,9 +339,15 @@ module FlightJob
     def render_and_save
       content = render
 
+      # Write the internal Id
+      FileUtils.mkdir_p File.dirname(internal_id_path)
+      FileUtils.touch internal_id_path
+
       # Writes the data to disk
       save_metadata
       save_notes
+
+      # Write the script
       File.write(script_path, content)
       FileUtils.chmod(0700, script_path)
 
@@ -316,7 +370,9 @@ module FlightJob
     def serializable_hash
       answers # Ensure the answers have been set
       {
-        "id" => id,
+        "id" => internal_id,
+        'internal_id' => internal_id,
+        'public_id' => public_id,
         "notes" => notes,
         "path" => script_path
       }.merge(metadata)

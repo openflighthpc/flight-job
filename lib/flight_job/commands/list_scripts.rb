@@ -29,6 +29,11 @@ module FlightJob
   module Commands
     class ListScripts < Command
       def run
+        # NOTE: Ensure the internal_ids have been set for all legacy jobs
+        #       This is so legacy scripts can be referenced by the jobs (circa v2.0.0)
+        #       Consider removing
+        scripts.each(&:internal_id)
+
         result = Outputs::ListScripts.build_output(**output_options).render(*scripts)
         $stderr.puts 'Nothing To Display' if scripts.empty?
         puts result unless result.empty?
