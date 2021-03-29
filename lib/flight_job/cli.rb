@@ -45,7 +45,7 @@ module FlightJob
             const_string = FlightJob.constantize(c.name)
             command = FlightJob::Commands.const_get(const_string).new(args, opts)
           rescue NameError
-            FlightJob.logger.fatal "Command class not defined (maybe?): #{self}::#{const_string}"
+            FlightJob.logger.fatal "Command class not defined (maybe?): FlightJob::Commands::#{const_string}"
             raise InternalError.define_class(127), 'Command Not Found!'
           end
           command.run!
@@ -98,6 +98,18 @@ module FlightJob
     create_command 'create-script', 'TEMPLATE_NAME' do |c|
       c.summary = 'Render a new script from a template'
       c.slop.bool '--stdin', 'Provide the answers via STDIN as JSON'
+    end
+
+    create_command 'edit-script', 'SCRIPT_ID' do |c|
+      c.summary = 'Open the script in your editor'
+      c.description = <<~DESC.chomp
+        Edit your script.
+
+        Open the script in the editor given by `$VISUAL`, `$EDITOR` or `vi`.
+
+        Changes you make will affect any future jobs submitted from this script,
+        but will not affect jobs already submitted.
+      DESC
     end
 
     create_command 'delete-script', 'SCRIPT_ID' do |c|

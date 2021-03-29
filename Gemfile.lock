@@ -72,6 +72,8 @@ GEM
     strings-ansi (0.2.0)
     tty-color (0.6.0)
     tty-cursor (0.7.1)
+    tty-editor (0.6.0)
+      tty-prompt (~> 0.22)
     tty-markdown (0.7.0)
       kramdown (>= 1.16.2, < 3.0)
       pastel (~> 0.8)
@@ -105,8 +107,10 @@ DEPENDENCIES
   flight_configuration!
   json_schemer
   output_mode
+  pastel
   pry
   pry-byebug
+  tty-editor
   tty-markdown
   tty-prompt
   tty-table!
