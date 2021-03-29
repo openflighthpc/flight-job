@@ -33,8 +33,27 @@ module FlightJob
   module Commands
     class CreateScript < Command
       def run
+        # Attempt to reserve the user's ID
+        script_opts = {
+          template_id: template.id,
+          script_name: template.script_template_name
+        }.tap { |o| o[:reserve_id] = args[1] if args.length > 1 }
+        script = Script.new(**script_opts)
+
+        if script.exists?
+          # Ensure the script does not already exist
+          raise DuplicateError, "The script '#{script.id}' already exists!"
+        elsif ! script.reserved?
+          # NOTE: This prevents race conditions in the create and *should* be
+          # a temporary condition
+          raise InternalError, <<~ERROR
+            Unexpectedly failed to create '#{script.id}', please try again.
+            If this error persists, please contact your system administrator.
+          ERROR
+        end
+
         # Resolves the answers
-        answers = answers_input || begin
+        script.answers = answers_input || begin
           if $stdout.tty? && stdin_notes?
             raise InputError, <<~ERROR.chomp
               Cannot prompt for the answers as standard input is in use!
@@ -53,7 +72,7 @@ module FlightJob
         end
 
         # Resolve the notes
-        notes = notes_input || begin
+        script.notes = notes_input || begin
           if $stdout.tty? && stdin_answers?
             FlightJob.logger.debug "Skipping notes prompt as STDIN is connected to the answers"
             ''
@@ -68,18 +87,7 @@ module FlightJob
           end
         end
 
-        # Create the script object
-        script = Script.new(
-          template_id: template.id,
-          script_name: template.script_template_name,
-          answers: answers,
-          notes: notes
-        )
-
-        # Apply the identity_name
-        script.identity_name = args[1] if args.length > 1
-
-        # Save the script
+        # Render and save the script
         script.render_and_save
 
         # Render the script output
