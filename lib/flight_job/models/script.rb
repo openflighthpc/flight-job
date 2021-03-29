@@ -68,6 +68,52 @@ module FlightJob
       File.join(FlightJob.config.scripts_dir, public_id, "internal-#{internal_id}")
     end
 
+    def self.lookup_public_id(internal_id)
+      @lookup_public_id ||= Dir.glob(internal_id_path('*', '*')).map do |path|
+        public_id = File.basename(File.dirname(path))
+        internal_id = File.basename(path).split('-', 2).last
+        [internal_id, public_id]
+      end.to_h
+      @lookup_public_id[internal_id]
+    end
+
+    def self.lookup_internal_id(public_id)
+      # Attempt to use the cached lookup table if possible
+      if @lookup_public_id
+        @lookup_internal_id ||= @lookup_public_id.reverse
+        id = @lookup_internal_id[public_id]
+        return id if id
+      end
+
+      # Attempt to glob directly for the internal_id
+      paths = Dir.glob(internal_id_path(public_id, '*')).sort
+
+      # Ensure there are no duplicates (this should not happen in practice)
+      if paths.length > 1
+        msg = <<~ERROR.chomp
+          Detected duplicate internal_ids for job '#{public_id}':
+          #{paths.join("\n")}
+
+          This may result in unusual/undefined behaviour of various commands!
+          Please remove all but one of the files to suppress this message.
+        ERROR
+        FlightJob.logger.error msg
+        $stderr.puts Pastel.new.red msg
+      end
+
+      # Return the id
+      if paths.length > 0
+        File.basename(paths.first).split('-', 2).last
+      # Default to public_id for legacy scripts (circa v2.0.0)
+      # NOTE: Consider removing
+      elsif File.exists? metadata_path(public_id)
+        path = internal_id_path(public_id, public_id)
+        FileUtils.mkdir_p File.dirname(path)
+        FileUtils.touch path
+        public_id
+      end
+    end
+
     attr_writer :id, :notes
 
     validates :id, presence: true
@@ -173,37 +219,8 @@ module FlightJob
 
     # NOTE: This is the ID used to refer to the scripts from existing jobs. It
     # is static to the lifetime of the script even after being renamed!
-    #
-    # PS: It will be inferred from the existing public_id for legacy scripts
     def internal_id
-      @internal_id ||= begin
-        # Determine the internal_id from the path file
-        paths = Dir.glob(self.class.internal_id_path(public_id, '*')).sort
-
-        # Ensure there are no duplicates (this should not happen in practice)
-        if paths.length > 1
-          msg = <<~ERROR.chomp
-            Detected duplicate internal_ids for job '#{id}':
-            #{paths.join("\n")}
-
-            This may result in unusual/undefined behaviour of various commands!
-            Please remove all but one of the files to suppress this message.
-          ERROR
-          FlightJob.logger.error msg
-          $stderr.puts Pastel.new.red msg
-        end
-
-        # Determine the ID, generate a new one, or use the legacy public_id
-        if paths.empty? && exists?
-          # NOTE: This is for legacy scripts only (circa v2.0.0), consider removing
-          FileUtils.touch self.class.internal_id_path(public_id, public_id)
-          public_id
-        elsif paths.empty?
-          SecureRandom.uuid
-        else
-          File.basename(paths.first).split('-').last
-        end
-      end
+      @internal_id ||= self.class.lookup_internal_id(public_id) || SecureRandom.uuid
     end
 
     # Attempt to obtain the reservation for an ID
