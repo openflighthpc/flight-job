@@ -54,7 +54,7 @@ module FlightJob
           script
         else
           FlightJob.logger.error("Failed to load missing/invalid script: #{id}")
-          FlightJob.logger.debug(script.errors)
+          FlightJob.logger.debug(script.errors.full_messages.join("\n"))
           nil
         end
       end.reject(&:nil?)
@@ -182,8 +182,8 @@ module FlightJob
         if id = opts.delete(:reserve_id)
           self.reserve_id = id
 
-        # Attempt to implicitly generate an ID from the provided script_name
-        elsif name = opts[:script_name]
+        # Attempt to implicitly generate an ID from the provided template_id
+        elsif name = opts[:template_id]
           current = Dir.glob(self.class.metadata_path("#{name}.*")).map do |path|
             id = File.basename File.dirname(path)
             index = id.split('.').last
