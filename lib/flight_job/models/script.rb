@@ -71,9 +71,9 @@ module FlightJob
 
     def self.lookup_public_id(internal_id)
       @lookup_public_id ||= Dir.glob(internal_id_path('*', '*')).map do |path|
-        public_id = File.basename(File.dirname(path))
-        internal_id = File.basename(path).split('-', 2).last
-        [internal_id, public_id]
+        cur_public_id = File.basename(File.dirname(path))
+        cur_internal_id = File.basename(path).split('-', 2).last
+        [cur_internal_id, cur_public_id]
       end.to_h
       @lookup_public_id[internal_id]
     end

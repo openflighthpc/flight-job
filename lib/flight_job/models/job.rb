@@ -44,6 +44,8 @@ module FlightJob
         "submit_status" => { "type" => "integer", "minimum" => 0, "maximum" => 255 },
         "submit_stdout" => { "type" => "string" },
         "submit_stderr" => { "type" => "string" },
+        # NOTE: This is the "internal script id", it may not work properly for
+        # legacy scripts (v2.0.0) until the list-scripts command is ran
         "script_id" => { "type" => "string" },
         "created_at" => { "type" => "string", "format" => "date-time" },
         "state" => { "type" => "string", "enum" => STATES },
@@ -145,7 +147,8 @@ module FlightJob
       if submitted?
         errors.add(:submitted, 'the job has already been submitted')
       end
-      unless load_script.valid?(:load)
+      script = load_script
+      if script.nil? || ! script.valid?(:load)
         errors.add(:script, 'is missing or invalid')
       end
     end
@@ -244,7 +247,11 @@ module FlightJob
     end
 
     def load_script
-      Script.new(id: script_id)
+      public_id = Script.lookup_public_id(script_id)
+      return nil unless public_id
+      script = Script.new(id: public_id)
+      return nil unless script.valid?
+      script
     end
 
     def created_at
@@ -260,12 +267,17 @@ module FlightJob
     end
 
     def serializable_hash
-      { "id" => id }.merge(metadata)
+      script_public_id = Script.lookup_public_id(script_id)
+      {
+        "id" => id,
+        "script_internal_id" => script_public_id ? script_id : nil,
+        "script_public_id" => script_public_id,
+      }.merge(metadata)
     end
 
     def submit
       unless valid?(:submit)
-        FlightJob.config.logger("The script is not in a valid submission state: #{id}\n") do
+        FlightJob.logger.error("The script is not in a valid submission state: #{id}\n") do
           errors.full_messages
         end
         raise InternalError, 'Unexpectedly failed to submit the job'
