@@ -29,6 +29,14 @@ module FlightJob
   module Commands
     class RenameScript < Command
       def run
+        if args[1].length > FlightJob.config.maximum_id_length
+          raise InputError,
+            "The new id '#{args[1]}' exceeds the maximum length of #{FlightJob.config.maximum_id_length}"
+        end
+        unless Script::ID_REGEX.match?(args[1])
+          raise InputError, "The new id '#{args[1]}' is invalid. It must be alphanumeric but may include dot, hyphen, and underscore: -_."
+        end
+
         # Loads the existing script
         script = load_script(args.first)
 
