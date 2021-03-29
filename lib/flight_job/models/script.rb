@@ -34,6 +34,8 @@ require_relative '../render_context'
 
 module FlightJob
   class Script < ApplicationModel
+    ID_REGEX = /\A[\w.-]+\Z/
+
     SCHEMA = JSONSchemer.schema({
       "type" => "object",
       "additionalProperties" => false,
@@ -114,7 +116,8 @@ module FlightJob
       end
     end
 
-    validates :id, presence: true
+    # NOTE: The length is not validated as the maximum is subject to be changed
+    validates :id, presence: true, format: { with: ID_REGEX }
 
     validate do
       unless (errors = SCHEMA.validate(metadata).to_a).empty?

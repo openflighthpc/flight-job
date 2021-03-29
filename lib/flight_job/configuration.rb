@@ -59,6 +59,7 @@ module FlightJob
     attribute :monitor_script_path, default: 'libexec/slurm/monitor.sh',
               transform: relative_to(root_path)
     attribute :submission_period, default: 3600
+    attribute :maximum_id_length, default: 16
     attribute :minimum_terminal_width, default: 80
     attribute :check_cron, default: 'libexec/check-cron.sh',
               transform: relative_to(root_path)
