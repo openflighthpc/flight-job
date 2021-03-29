@@ -385,7 +385,7 @@ module FlightJob
     end
 
     def serializable_hash
-      answers # Ensure the answers have been set
+      answers # Ensure the answers have been set in the metadata
       {
         "id" => internal_id,
         'internal_id' => internal_id,
