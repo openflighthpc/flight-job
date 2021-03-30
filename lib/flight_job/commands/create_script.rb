@@ -98,16 +98,14 @@ module FlightJob
       end
 
       def stdin_notes?
-        ['@-', '@/dev/stdin'].tap { |a| a << '@/proc/42/fd/0' if Process.pid == 42 }
-                             .include? opts.notes
+        stdin_flag?(opts.notes)
       end
 
       def stdin_answers?
         if opts.stdin
           true
         elsif opts.answers
-          ['@-', '@/dev/stdin'].tap { |a| a << '@/proc/42/fd/0' if Process.pid == 42 }
-                               .include? opts.answers
+          stdin_flag?(opts.answers)
         else
           false
         end
@@ -183,27 +181,6 @@ module FlightJob
 
       def prompt
         @prompt = TTY::Prompt.new(help_color: :yellow)
-      end
-
-      # Technically multiple flags may try and read STDIN. Whilst this would be an "unusual"
-      # use case, it is still "technically" valid. In this case STDIN becomes the input for
-      # both flags. However as the input can only be read once, it needs to be cached
-      def cached_stdin
-        @cached_stdin ||= $stdin.read_nonblock(FlightJob.config.max_stdin_size).tap do |str|
-          if str.length == FlightJob.config.max_stdin_size
-            raise InputError, "The STDIN exceeds the maximum size of: #{FlightJob.config.max_stdin_size}B"
-          end
-        end
-      rescue Errno::EWOULDBLOCK, EOFError
-        raise InputError, "Failed to read the data from the standard input"
-      end
-
-      def read_file(path)
-        if File.exists?(path)
-          File.read(path)
-        else
-          raise InputError, "Could not locate file: #{path}"
-        end
       end
 
       def with_tmp_file

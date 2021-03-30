@@ -34,8 +34,22 @@ module FlightJob
         # Ensure the script exists up front
         script = load_script(args.first)
 
-        # Open the file
-        new_editor.open(script.notes_path)
+        if stdin_flag?(opts.notes)
+          # Update the notes from stdin
+          File.write script.notes_path, cached_stdin
+
+        elsif opts.notes && opts.notes[0] == '@'
+          # Update the notes from a file
+          File.write script.notes_path, read_file(opts.notes[1..])
+
+        elsif opts.notes
+          # Update the notes from the CLI
+          File.write script.notes_path, opts.notes
+
+        else
+          # Open the notes in the editor
+          new_editor.open(script.notes_path)
+        end
       end
     end
   end

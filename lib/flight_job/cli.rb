@@ -131,6 +131,12 @@ module FlightJob
 
         Open the notes in the editor given by `$VISUAL`, `$EDITOR` or `vi`.
       DESC
+      c.slop.string '--notes', <<~MSG.chomp, meta: 'NOTES|@filepath|@-'
+        Provide the notes without the use of the editor. The NOTES will replace
+        the existing version.
+
+        Alternatively specify a file containing the notes with @filepath or STDIN as @-
+      MSG
     end
 
     create_command 'delete-script', 'SCRIPT_ID' do |c|
