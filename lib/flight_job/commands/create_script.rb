@@ -35,7 +35,7 @@ module FlightJob
       def run
         # Resolves the answers
         answers = answers_input || begin
-          if $stdout.tty? && opts.notes == '@-'
+          if $stdout.tty? && stdin_notes?
             raise InputError, <<~ERROR.chomp
               Cannot prompt for the answers as standard input is in use!
               Please provide the answers with the following flag: #{pastel.yellow '--answers'}
@@ -97,13 +97,25 @@ module FlightJob
         end
       end
 
+      def stdin_notes?
+        ['@-', '@/dev/stdin'].tap { |a| a << '@/proc/42/fd/0' if Process.pid == 42 }
+                             .include? opts.notes
+      end
+
       def stdin_answers?
-        opts.stdin || opts.answers == '@-'
+        if opts.stdin
+          true
+        elsif opts.answers
+          ['@-', '@/dev/stdin'].tap { |a| a << '@/proc/42/fd/0' if Process.pid == 42 }
+                               .include? opts.answers
+        else
+          false
+        end
       end
 
       def notes_input
         return unless opts.notes
-        if opts.notes == '@-'
+        if stdin_notes?
           cached_stdin
         elsif opts.notes[0] == '@'
           read_file(opts.notes[1..])
@@ -122,8 +134,7 @@ module FlightJob
                    opts.answers
                  end
         JSON.parse(string).tap do |hash|
-          next if hash.is_a? Hash
-          raise InputError, 'The answers are not a JSON hash'
+          raise InputError, 'The answers are not a JSON hash' unless hash.is_a?(Hash)
         end
       rescue JSON::ParserError
         raise InputError, <<~ERROR.chomp
