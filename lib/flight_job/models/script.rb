@@ -66,34 +66,67 @@ module FlightJob
       File.join(FlightJob.config.scripts_dir, id, 'metadata.yaml')
     end
 
-    def self.internal_id_path(public_id, internal_id)
-      File.join(FlightJob.config.scripts_dir, public_id, "internal-#{internal_id}")
+    def self.public_id_path(public_id, internal_id)
+      File.join(FlightJob.config.scripts_dir, internal_id, "public-#{public_id}")
+    end
+
+    def self.reserve_public_id(id, write: true)
+      # Check if the id is already taken
+      return false if lookup_internal_id(id)
+
+      # Attempt to obtain the reservation
+      path = public_id_path(id, 'reservations')
+      if write
+        FileUtils.mkdir_p File.dirname(path)
+        File.open(path, 'a') { |f| f.puts(Process.pid) }
+      end
+
+      # Ensure the process obtained the reservation
+      return false unless File.exists?(path)
+      File.read(path).split("\n").each do |pid|
+        pid = pid.to_i
+        break if Process.pid == pid
+        begin
+          # Check if the priority process is still running
+          # This allows the 'id' reservation to be released if not used
+          Process.kill(0, pid)
+          return false
+        rescue Errno::EPERM
+          # Priority process does exist, but is (probably) owned by another user
+          return false
+        rescue Errno::ESRCH
+          # NOOP: The priority process no longer exists, keep checking
+        end
+      end
+
+      # Ensure the ID still isn't taken (prevents race conditions
+      return false if lookup_internal_id(id)
+      true
+    end
+
+
+    # TODO: Shortcut this method by globbing for the public_id directly
+    def self.lookup_internal_id(public_id)
+      paths = Dir.glob(public_id_path(public_id, '*'))
+      paths.delete(public_id_path(public_id, 'reservations'))
+      if paths.length > 1
+        raise InternalError, <<~ERROR
+          Located multiple scripts with the same public_id:
+          #{paths.join("\n")}
+        ERROR
+      end
+      return nil if paths.empty?
+      File.basename(File.dirname(paths.first))
     end
 
     def self.lookup_public_id(internal_id)
-      @lookup_public_id ||= Dir.glob(internal_id_path('*', '*')).map do |path|
-        cur_public_id = File.basename(File.dirname(path))
-        cur_internal_id = File.basename(path).split('-', 2).last
-        [cur_internal_id, cur_public_id]
-      end.to_h
-      @lookup_public_id[internal_id]
-    end
-
-    def self.lookup_internal_id(public_id)
-      # Attempt to use the cached lookup table if possible
-      if @lookup_public_id
-        @lookup_internal_id ||= @lookup_public_id.reverse
-        id = @lookup_internal_id[public_id]
-        return id if id
-      end
-
-      # Attempt to glob directly for the internal_id
-      paths = Dir.glob(internal_id_path(public_id, '*')).sort
+      # Attempt to glob directly for the public_id
+      paths = Dir.glob(public_id_path('*', internal_id)).sort
 
       # Ensure there are no duplicates (this should not happen in practice)
       if paths.length > 1
         msg = <<~ERROR.chomp
-          Detected duplicate internal_ids for job '#{public_id}':
+          Detected duplicate public_ids for job '#{internal_id}':
           #{paths.join("\n")}
 
           This may result in unusual/undefined behaviour of various commands!
@@ -106,20 +139,21 @@ module FlightJob
       # Return the id
       if paths.length > 0
         File.basename(paths.first).split('-', 2).last
-      # Default to public_id for legacy scripts (circa v2.0.0)
+      # Default to internal_id for legacy scripts (circa v2.0.0)
       # NOTE: Consider removing
-      elsif File.exists? metadata_path(public_id)
-        path = internal_id_path(public_id, public_id)
+      elsif File.exists? metadata_path(internal_id)
+        path = public_id_path(internal_id, internal_id)
         FileUtils.mkdir_p File.dirname(path)
         FileUtils.touch path
-        public_id
+        internal_id
       end
     end
 
-    attr_writer :id, :notes
+    attr_writer :notes, :public_id
 
     # NOTE: The length is not validated as the maximum is subject to be changed
-    validates :id, presence: true, format: { with: ID_REGEX }
+    validates :internal_id, presence: true
+    validates :public_id, presence: true, format: { with: ID_REGEX }
 
     validate do
       unless (errors = SCHEMA.validate(metadata).to_a).empty?
@@ -152,8 +186,8 @@ module FlightJob
       end
 
       # Ensure the reservation has been obtained
-      unless reserved?
-        @errors.add(:id, 'could not be reserved')
+      unless self.class.reserve_public_id(public_id, write: false)
+        @errors.add(:public_id, 'has not be reserved')
       end
 
       # Ensures the script does not exists
@@ -173,68 +207,20 @@ module FlightJob
       end
     end
 
-    # TODO: Rename the id method to public_id
-    attr_reader :id
-    def public_id
-      id
-    end
+    attr_reader :internal_id
 
-    def initialize(**opts)
-      # Attempt to set the ID up front from the provided options
-      unless @id = opts.delete(:id)
-        # Apply the user's reserved id
-        # NOTE: It is not checked here to allow the caller to preform the error handling
-        if id = opts.delete(:reserve_id)
-          self.reserve_id = id
-
-        # Attempt to implicitly generate an ID from the provided template_id
-        elsif name = opts[:template_id]
-          current = Dir.glob(self.class.metadata_path("#{name}.*")).map do |path|
-            id = File.basename File.dirname(path)
-            index = id.split('.').last
-            /\A\d+\Z/.match?(index) ? index.to_i : nil
-          end.reject(&:nil?).max
-
-          # Attempt to reserve the archetype script if no indices have been used
-          if current.nil?
-            self.reserve_id = name
-            current = 0
-          end
-
-          # Increment the indices until a reservation can be made
-          until reserved? && !exists?
-            current = current + 1
-            self.reserve_id = "#{name}.#{current}"
-          end
-        else
-          # Error as an ID could not be determined
-          raise InternalError, <<~ERROR
-            Either an id: or script_name: must be provided on initalization
-          ERROR
-        end
-      end
-
-      # Initialize the remaining fields
-      # NOTE: This allows them to be saved in any existing metadata hash which
-      # is dependant on the ID being set
+    def initialize(**input_opts)
+      opts = input_opts.dup
+      @internal_id = opts.delete(:internal_id) || opts.delete(:id) || SecureRandom.uuid
       super(opts)
     end
 
-    # NOTE: This is the ID used to refer to the scripts from existing jobs. It
-    # is static to the lifetime of the script even after being renamed!
-    def internal_id
-      @internal_id ||= self.class.lookup_internal_id(public_id) || SecureRandom.uuid
+    def id
+      internal_id
     end
 
-    # Attempt to obtain the reservation for an ID
-    # NOTE: The reservation is not checked at this point as the error handling
-    # needs to be context specific. It does however get checked in the validation
-    def reserve_id=(candidate)
-      @id = candidate
-      FileUtils.mkdir_p File.dirname(reservation_path)
-      # Append the PID to the file
-      File.open(reservation_path, 'a') { |f| f.puts(Process.pid) }
-      @id
+    def public_id
+      @public_id ||= self.class.lookup_public_id(internal_id)
     end
 
     # NOTE: Only used for a shorthand existence check, full validation is required
@@ -251,32 +237,10 @@ module FlightJob
                  end
     end
 
-    # Checks if the process has successfully reserved the ID
-    def reserved?
-      return false unless @id
-      return false unless File.exists?(reservation_path)
-      File.read(reservation_path).split("\n").each do |pid|
-        pid = pid.to_i
-        return true if Process.pid == pid
-        begin
-          # Check if the priority process is still running
-          # This allows the 'id' reservation to be released if not used
-          Process.kill(0, pid)
-          return false
-        rescue Errno::EPERM
-          # Priority process does exist, but is (probably) owned by another user
-          return false
-        rescue Errno::ESRCH
-          # NOOP: The priority process no longer exists, keep checking
-        end
-      end
-      return false
-    end
-
     def metadata_path
       # NOTE: Do not cache, as the 'id' may change whilst being implicitly
       # determined
-      self.class.metadata_path(public_id)
+      self.class.metadata_path(internal_id)
     end
 
     def script_path
@@ -294,16 +258,9 @@ module FlightJob
       @notes_path ||= File.join(FlightJob.config.scripts_dir, id, 'notes.md')
     end
 
-    # Used to reserve an ID before the script can be created. Only the process who's PID
-    # appears at the top of this list owns the ID. The reservation file becomes redundant
-    # once the `metadata` file exists.
-    def reservation_path
+    def public_id_path
       # NOTE: This path should not be cached
-      File.join(FlightJob.config.scripts_dir, id, 'reservation.pids')
-    end
-
-    def internal_id_path
-      @internal_id_path ||= self.class.internal_id_path(public_id, internal_id)
+      self.class.public_id_path(public_id, internal_id)
     end
 
     def created_at
@@ -330,7 +287,7 @@ module FlightJob
     # NOTE: For backwards compatibility, the 'answers' are not strictly required
     # This may change in a few release
     def answers
-      metadata['answers'] ||= {}
+      metadata['answers']
     end
 
     def answers=(object)
@@ -361,9 +318,9 @@ module FlightJob
     def render_and_save
       content = render
 
-      # Write the internal Id
-      FileUtils.mkdir_p File.dirname(internal_id_path)
-      FileUtils.touch internal_id_path
+      # Write the public_id
+      FileUtils.mkdir_p File.dirname(public_id_path)
+      FileUtils.touch public_id_path
 
       # Writes the data to disk
       save_metadata
@@ -376,9 +333,6 @@ module FlightJob
       # NOTE: The metadata must be wrote last to denote the script now
       # exists (excluding cleanup the reservation)
       File.write(metadata_path, YAML.dump(metadata))
-
-      # Remove the reservation
-      FileUtils.rm_f reservation_path
     end
 
     def save_metadata
@@ -394,14 +348,15 @@ module FlightJob
     end
 
     def serializable_hash
-      answers # Ensure the answers have been set in the metadata
-      {
-        "id" => internal_id,
+      metadata.merge({
+        # NOTE: Override the 'id' field to be public!
+        # This allows it to be implicitly used with the CLI without any flag modifications
+        "id" => public_id,
         'internal_id' => internal_id,
         'public_id' => public_id,
         "notes" => notes,
         "path" => script_path
-      }.merge(metadata)
+      })
     end
 
     private
@@ -411,9 +366,11 @@ module FlightJob
     # Consider refactoring when introducing a non-backwards compatible change
     def metadata
       @metadata ||= if File.exists?(metadata_path)
-                      YAML.load File.read(metadata_path)
+                      YAML.load(File.read(metadata_path)).tap do |data|
+                        data['answers'] ||= {}
+                      end
                     else
-                      { 'created_at' => DateTime.now.rfc3339 }
+                      { 'created_at' => DateTime.now.rfc3339, 'answers' => {} }
                     end
     end
   end

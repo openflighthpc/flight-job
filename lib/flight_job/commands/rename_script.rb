@@ -41,41 +41,20 @@ module FlightJob
         script = load_script(args.first)
 
         # Attempt to reserve the new script
-        reservation = Script.new(reserve_id: args[1])
-        if reservation.exists?
-          raise DuplicateError, "The script '#{reservation.public_id}' already exists!"
-        elsif ! reservation.reserved?
-          raise InternalError, <<~ERROR
-            Unexpectedly failed to rename '#{reservation.public_id}', please try again.
-            If this error persists, please contact your system administrator.
+        unless Script.reserve_public_id(args[1])
+          raise InputError, <<~ERROR.chomp
+            Failed to rename '#{args[1]}' as it is already in used.
           ERROR
         end
 
-        # Generate a list of files to be moved:
-        # * The reservation file should not be copied as it coupled to the original names,
-        # * The metadata should be copied last to denote it as successful
-        files = Dir.glob(File.join(File.dirname(script.metadata_path), '*'))
-        files.delete script.reservation_path
-        files.delete script.metadata_path
-        files.push script.metadata_path
-
-        # Copy the files over, maintaining the original version (temporarily)
-        dir = File.dirname(reservation.metadata_path)
-        files.each { |p| FileUtils.cp p, dir }
-
-        # Ensure the new script is valid
-        new_script = Script.new(id: reservation.public_id)
-        unless new_script.valid?
-          # XXX: Should the copy be deleted?
-          raise InternalError, 'Unexpectedly failed to move the script'
-        end
-
-        # Remove the original script and the reservation
-        FileUtils.rm_rf File.dirname(script.metadata_path)
-        FileUtils.rm reservation.reservation_path
+        # Move the public_id file into its new location
+        old_path = script.public_id_path
+        script.public_id = args[1]
+        new_path = script.public_id_path
+        FileUtils.mv old_path, new_path
 
         # Emit the new info
-        puts Outputs::InfoScript.build_output(**output_options).render(new_script)
+        puts Outputs::InfoScript.build_output(**output_options).render(script)
       end
     end
   end

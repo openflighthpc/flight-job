@@ -43,24 +43,47 @@ module FlightJob
           end
         end
 
+        # Generate a public_id
+        public_id ||= if args.length > 1
+          args[1].tap do |id|
+            unless Script.reserve_public_id(id)
+              raise InputError, <<~ERROR.chomp
+                Failed to create '#{id}' as it is already in used.
+              ERROR
+            end
+          end
+        else
+          name = template.id
+          current = Dir.glob(Script.public_id_path(name, '*')).map do |path|
+            id = File.basename(path).split('-', 2).last
+            index = id.split('.').last
+            /\A\d+\Z/.match?(index) ? index.to_i : nil
+          end.reject(&:nil?).max
+
+          # Attempt to reserve the archetype script if no indices have been used
+          if current.nil?
+            id = name
+            reserved = Script.reserve_public_id(id)
+            current = 0
+          end
+
+          # Increment the indices until a reservation can be made
+          until reserved
+            current = current + 1
+            id = "#{name}.#{current}"
+            reserved = Script.reserve_public_id(id)
+          end
+          id
+        end
+
+
         # Attempt to reserve the user's ID
         script_opts = {
+          public_id: public_id,
           template_id: template.id,
           script_name: template.script_template_name
-        }.tap { |o| o[:reserve_id] = args[1] if args.length > 1 }
+        }
         script = Script.new(**script_opts)
-
-        if script.exists?
-          # Ensure the script does not already exist
-          raise DuplicateError, "The script '#{script.public_id}' already exists!"
-        elsif ! script.reserved?
-          # NOTE: This prevents race conditions in the create and *should* be
-          # a temporary condition
-          raise InternalError, <<~ERROR
-            Unexpectedly failed to create '#{script.public_id}', please try again.
-            If this error persists, please contact your system administrator.
-          ERROR
-        end
 
         # Resolves the answers
         script.answers = answers_input || begin
@@ -96,19 +119,6 @@ module FlightJob
             ''
           end
         end
-
-        # Cleanup the directory if required (leaving the reservation)
-        files = Dir.glob(File.join(File.dirname(script.metadata_path), '*'))
-        files.delete script.reservation_path
-        unless files.empty?
-          msg = <<~WARN.chomp
-            Removing stale file(s):
-            #{files.join("\n")}
-          WARN
-          $stderr.puts pastel.red(msg)
-          FlightJob.logger.warn(msg)
-        end
-        files.each { |f| FileUtils.rm_f f }
 
         # Render and save the script
         script.render_and_save

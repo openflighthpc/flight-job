@@ -31,7 +31,7 @@ module FlightJob
   module Outputs::ListScripts
     extend OutputMode::TLDR::Index
 
-    register_column(header: 'ID', row_color: :yellow) { |s| s.id }
+    register_column(header: 'ID', row_color: :yellow) { |s| s.public_id }
     register_column(header: 'Template ID') { |s| s.template_id }
     register_column(header: 'Name') { |s| s.script_name }
 

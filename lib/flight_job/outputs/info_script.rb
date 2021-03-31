@@ -42,7 +42,7 @@ module FlightJob
       <% end -%>
     ERB
 
-    register_attribute(section: :main, header: 'ID') { |s| s.id }
+    register_attribute(section: :main, header: 'ID') { |s| s.public_id }
     register_attribute(section: :main, header: 'Template ID') { |s| s.template_id }
     register_attribute(section: :main, header: 'File Name') { |s| s.script_name }
     register_attribute(section: :main, header: 'Path') { |s| s.script_path }
