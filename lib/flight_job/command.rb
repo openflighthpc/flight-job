@@ -149,7 +149,13 @@ module FlightJob
       end
     end
 
-    def load_script(id)
+    def load_script(input_id)
+      id = if opts.internal_script_id
+        Script.lookup_public_id(input_id)
+      else
+        input_id
+      end
+
       Script.new(id: id).tap do |script|
         unless script.exists?
           raise MissingScriptError, "Could not locate script: #{id}"

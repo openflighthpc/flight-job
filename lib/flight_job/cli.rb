@@ -74,6 +74,10 @@ module FlightJob
     global_slop.bool '--ascii', 'Display a simplified version of the output, when supported'
     global_slop.bool '--json', 'Display a JSON version of the output, when supported'
 
+    INTERNAL_SCRIPT_ID = ->(c) do
+      c.slop.bool '--internal-script-id', 'Toggle the SCRIPT_ID arguments to use the internal id'
+    end
+
     create_command 'list-templates' do |c|
       c.summary = 'List available templates'
     end
@@ -92,10 +96,12 @@ module FlightJob
 
     create_command 'view-script', 'SCRIPT_ID' do |c|
       c.summary = 'View the content of a script'
+      INTERNAL_SCRIPT_ID.call(c)
     end
 
     create_command 'info-script', 'SCRIPT_ID' do |c|
       c.summary = 'Display details about a rendered script'
+      INTERNAL_SCRIPT_ID.call(c)
     end
 
     create_command 'create-script', 'TEMPLATE_NAME [SCRIPT_ID]' do |c|
@@ -121,6 +127,7 @@ module FlightJob
         Changes you make will affect any future jobs submitted from this script,
         but will not affect jobs already submitted.
       DESC
+      INTERNAL_SCRIPT_ID.call(c)
     end
 
     create_command 'edit-script-notes', 'SCRIPT_ID' do |c|
@@ -136,14 +143,20 @@ module FlightJob
 
         Alternatively specify a file containing the notes with @filepath or STDIN as @-
       MSG
+      INTERNAL_SCRIPT_ID.call(c)
     end
 
     create_command 'rename-script', 'OLD_SCRIPT_ID NEW_SCRIPT_ID' do |c|
       c.summary = 'Rename a script given by its ID'
+      c.slop.bool '--internal-script-id', <<~DESC.chomp
+        Toggle OLD_SCRIPT_ID use the internal ID
+        The NEW_SCRIPT_ID is unaffected, and still sets the public identifier.
+      DESC
     end
 
     create_command 'delete-script', 'SCRIPT_ID' do |c|
       c.summary = 'Permanently remove a script'
+      INTERNAL_SCRIPT_ID.call(c)
     end
 
     create_command 'list-jobs' do |c|
@@ -156,6 +169,7 @@ module FlightJob
 
     create_command 'submit-job', 'SCRIPT_ID' do |c|
       c.summary = 'Schedule a new job to run from a script'
+      INTERNAL_SCRIPT_ID.call(c)
     end
 
     create_command 'info-job', 'JOB_ID' do |c|
