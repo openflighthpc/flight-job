@@ -52,7 +52,7 @@ module FlightJob
       script = job.load_script
       script ? script.public_id : nil
     end
-    register_attribute(section: :main, header: 'Alt. ID') { |j| j.scheduler_id }
+    register_attribute(section: :main, header: 'Sched. ID') { |j| j.scheduler_id }
     register_attribute(section: :main, header: 'State') { |j| j.state }
 
     # Show a boolean in the "simplified" output, and the exit code in the verbose

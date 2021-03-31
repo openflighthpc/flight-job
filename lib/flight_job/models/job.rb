@@ -247,9 +247,7 @@ module FlightJob
     end
 
     def load_script
-      public_id = Script.lookup_public_id(script_id)
-      return nil unless public_id
-      script = Script.new(id: public_id)
+      script = Script.new(id: script_id)
       return nil unless script.valid?
       script
     end
@@ -277,7 +275,7 @@ module FlightJob
 
     def submit
       unless valid?(:submit)
-        FlightJob.logger.error("The script is not in a valid submission state: #{id}\n") do
+        FlightJob.logger.error("The job is not in a valid submission state: #{id}\n") do
           errors.full_messages
         end
         raise InternalError, 'Unexpectedly failed to submit the job'
