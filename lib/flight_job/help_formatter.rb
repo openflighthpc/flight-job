@@ -97,13 +97,13 @@ module FlightJob
     def sections
       @sections ||= {
         ['template', 'templates'] => 'Templates:',
-        ['script', 'scripts'] => 'Scripts:',
+        ['script', 'scripts', 'script-notes'] => 'Scripts:',
         ['job', 'jobs'] => 'Jobs:'
       }
     end
 
     def command_prefix_order
-      @command_prefix_order ||= ['list', 'create', 'submit', 'show', 'info', 'edit', 'delete']
+      @command_prefix_order ||= ['list', 'create', 'submit', 'info', 'view', 'edit', 'delete']
     end
 
     def commands_by_section

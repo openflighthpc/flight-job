@@ -90,6 +90,10 @@ module FlightJob
       c.summary = 'List your rendered scripts'
     end
 
+    create_command 'view-script', 'SCRIPT_ID' do |c|
+      c.summary = 'View the content of a script'
+    end
+
     create_command 'info-script', 'SCRIPT_ID' do |c|
       c.summary = 'Display details about a rendered script'
     end
@@ -97,7 +101,15 @@ module FlightJob
     # XXX: Consider making the method signature: TEMPLATE_NAME [SCRIPT_NAME]
     create_command 'create-script', 'TEMPLATE_NAME' do |c|
       c.summary = 'Render a new script from a template'
-      c.slop.bool '--stdin', 'Provide the answers via STDIN as JSON'
+      c.slop.string '--answers', <<~MSG.chomp, meta: 'JSON|@filepath|@-'
+        Provide the answers as a JSON string.
+        Alternatively specify a file containing the JSON answers with @filepath or STDIN as @-
+      MSG
+      c.slop.string '--notes', <<~MSG.chomp, meta: 'NOTES|@filepath|@-'
+        Provide additional information about the script (Markdown formatting is supported).
+        Alternatively specify a file containing the notes with @filepath or STDIN as @-
+      MSG
+      c.slop.bool '--stdin', 'Same as: "--answers @-"'
     end
 
     create_command 'edit-script', 'SCRIPT_ID' do |c|
@@ -110,6 +122,21 @@ module FlightJob
         Changes you make will affect any future jobs submitted from this script,
         but will not affect jobs already submitted.
       DESC
+    end
+
+    create_command 'edit-script-notes', 'SCRIPT_ID' do |c|
+      c.summary = 'Open the notes in your system editor'
+      c.description = <<~DESC.chomp
+        Edit your notes for a script.
+
+        Open the notes in the editor given by `$VISUAL`, `$EDITOR` or `vi`.
+      DESC
+      c.slop.string '--notes', <<~MSG.chomp, meta: 'NOTES|@filepath|@-'
+        Provide the notes without the use of the editor. The NOTES will replace
+        the existing version.
+
+        Alternatively specify a file containing the notes with @filepath or STDIN as @-
+      MSG
     end
 
     create_command 'delete-script', 'SCRIPT_ID' do |c|

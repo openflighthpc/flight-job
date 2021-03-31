@@ -27,18 +27,60 @@
 
 require 'json'
 require 'tty-prompt'
+require 'tempfile'
 
 module FlightJob
   module Commands
     class CreateScript < Command
-      MAX_STDIN_SIZE = 1*1024*1024
-
       def run
-        answers = opts.stdin ? stdin_answers : prompt_answers
+        # Resolves the answers
+        answers = answers_input || begin
+          if $stdout.tty? && stdin_notes?
+            raise InputError, <<~ERROR.chomp
+              Cannot prompt for the answers as standard input is in use!
+              Please provide the answers with the following flag: #{pastel.yellow '--answers'}
+            ERROR
+          elsif $stdout.tty?
+            prompt_answers
+          else
+            msg = <<~WARN.chomp
+              No answers have been provided! Proceeding with the defaults.
+            WARN
+            $stderr.puts pastel.red(msg)
+            FlightJob.logger.warn msg
+            {}
+          end
+        end
 
-        # Render the script
-        script = Script.new(template_id: template.id, script_name: template.script_template_name)
-        script.render_and_save(**answers)
+        # Resolve the notes
+        notes = notes_input || begin
+          if $stdout.tty? && stdin_answers?
+            FlightJob.logger.debug "Skipping notes prompt as STDIN is connected to the answers"
+            ''
+          elsif $stdout.tty? && prompt.yes?("Define notes about the script?", default: true)
+            with_tmp_file do |file|
+              new_editor.open(file.path)
+              file.rewind
+              file.read
+            end
+          else
+            ''
+          end
+        end
+
+        # Create the script object
+        script = Script.new(
+          template_id: template.id,
+          script_name: template.script_template_name,
+          answers: answers,
+          notes: notes
+        )
+
+        # Apply the identity_name
+        script.identity_name = args[1] if args.length > 1
+
+        # Save the script
+        script.render_and_save
 
         # Render the script output
         puts Outputs::InfoScript.build_output(**output_options).render(script)
@@ -55,17 +97,48 @@ module FlightJob
         end
       end
 
-      def stdin_answers
-        # TODO: Validate the correct answers have been provided
-        input = $stdin.read_nonblock(MAX_STDIN_SIZE)
-        if input.length == MAX_STDIN_SIZE
-          raise InputError, "The STDIN exceeds the maximum size of: #{MAX_STDIN_SIZE}B"
+      def stdin_notes?
+        stdin_flag?(opts.notes)
+      end
+
+      def stdin_answers?
+        if opts.stdin
+          true
+        elsif opts.answers
+          stdin_flag?(opts.answers)
+        else
+          false
         end
-        JSON.parse(input)
-      rescue Errno::EWOULDBLOCK, Errno::EWOULDBLOCK
-        raise InputError, "Failed to read the data from STDIN"
+      end
+
+      def notes_input
+        return unless opts.notes
+        if stdin_notes?
+          cached_stdin
+        elsif opts.notes[0] == '@'
+          read_file(opts.notes[1..])
+        else
+          opts.notes
+        end
+      end
+
+      def answers_input
+        return unless opts.stdin || opts.answers
+        string = if stdin_answers?
+                   cached_stdin
+                 elsif opts.answers[0] == '@'
+                   read_file(opts.answers[1..])
+                 else
+                   opts.answers
+                 end
+        JSON.parse(string).tap do |hash|
+          raise InputError, 'The answers are not a JSON hash' unless hash.is_a?(Hash)
+        end
       rescue JSON::ParserError
-        raise InputError, 'The STDIN is not valid JSON!'
+        raise InputError, <<~ERROR.chomp
+          Failed to parse the answers as they are not valid JSON:
+          #{$!.message}
+        ERROR
       end
 
       def prompt_answers
@@ -108,6 +181,14 @@ module FlightJob
 
       def prompt
         @prompt = TTY::Prompt.new(help_color: :yellow)
+      end
+
+      def with_tmp_file
+        file = Tempfile.new('flight-job')
+        yield(file) if block_given?
+      ensure
+        file.close
+        file.unlink
       end
     end
   end

@@ -86,6 +86,13 @@
 # minimum_terminal_width: 80
 
 # ==============================================================================
+# Maximum Standard Input Size
+# The maximum file size that will be provided to STDIN. The size must be given
+# in Bytes.
+# ==============================================================================
+# max_stdin_size: 1048576 # (1 MB)
+
+# ==============================================================================
 # Submission Period
 # The minimum amount of time to wait before a job that is "pending submission"
 # is considered failed.

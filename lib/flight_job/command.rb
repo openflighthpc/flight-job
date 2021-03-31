@@ -27,6 +27,7 @@
 
 require 'ostruct'
 require 'pastel'
+require 'tty-editor'
 
 module FlightJob
   class Command
@@ -58,6 +59,43 @@ module FlightJob
 
     def pastel
       @pastel ||= Pastel.new
+    end
+
+    # Check if the given option flag denotes STDIN
+    def stdin_flag?(flag)
+      ['@-', '@/dev/stdin'].tap { |a| a << '@/proc/42/fd/0' if Process.pid == 42 }
+                           .include? flag
+    end
+
+    # Ensures the file exists before reading
+    def read_file(path)
+      if File.exists?(path)
+        File.read(path)
+      else
+        raise InputError, "Could not locate file: #{path}"
+      end
+    end
+
+    # Allows multiple reads of STDIN without having to rewind it OR it being blocked indefinitely
+    def cached_stdin
+      @cached_stdin ||= $stdin.read_nonblock(FlightJob.config.max_stdin_size).tap do |str|
+        if str.length == FlightJob.config.max_stdin_size
+          raise InputError, "The STDIN exceeds the maximum size of: #{FlightJob.config.max_stdin_size}B"
+        end
+      end
+    rescue Errno::EWOULDBLOCK, EOFError
+      raise InputError, "Failed to read the data from the standard input"
+    end
+
+    def new_editor
+      cmd = TTY::Editor.from_env.first || begin
+        $stderr.puts pastel.red <<~WARN.chomp
+          Defaulting to 'vi' as the editor.
+          This can be changed by setting the EDITOR environment variable.
+        WARN
+        'vi'
+      end
+      TTY::Editor.new(command: cmd)
     end
 
     def output_options
