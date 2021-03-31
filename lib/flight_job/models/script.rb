@@ -139,13 +139,6 @@ module FlightJob
       # Return the id
       if paths.length > 0
         File.basename(paths.first).split('-', 2).last
-      # Default to internal_id for legacy scripts (circa v2.0.0)
-      # NOTE: Consider removing
-      elsif File.exists? metadata_path(internal_id)
-        path = public_id_path(internal_id, internal_id)
-        FileUtils.mkdir_p File.dirname(path)
-        FileUtils.touch path
-        internal_id
       end
     end
 
@@ -166,6 +159,23 @@ module FlightJob
     end
 
     validate on: :load do
+      # Implicitly generate a public_id if it is missing
+      # NOTE: This is required for legacy installations
+      if File.exists?(metadata_path) && !public_id
+        candidate = internal_id
+        reserved = self.class.reserve_public_id(candidate)
+        until reserved
+          candidate = SecureRandom.urlsafe_base64(6)
+          reserved = self.class.reserve_public_id(candidate)
+        end
+        self.public_id = candidate
+        FileUtils.touch public_id_path
+
+        # Trigger the script to be re-validated
+        @errors = nil
+        valid?(:load)
+      end
+
       # Ensures the metadata file exists
       unless File.exists? metadata_path
         @errors.add(:metadata_path, 'does not exist')
