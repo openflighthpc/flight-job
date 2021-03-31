@@ -151,9 +151,9 @@ module FlightJob
 
     def load_script(input_id)
       id = if opts.internal_script_id
-        Script.lookup_public_id(input_id)
-      else
         input_id
+      else
+        Script.lookup_internal_id(input_id)
       end
 
       Script.new(id: id).tap do |script|
