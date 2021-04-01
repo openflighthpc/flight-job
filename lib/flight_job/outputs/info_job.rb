@@ -32,7 +32,28 @@ module FlightJob
     extend OutputMode::TLDR::Show
 
     TEMPLATE = <<~ERB
-      <% each(:main) do |value, field:, padding:, **_| -%>
+      <%
+        verbose = output.procs.any?(&:verbose?)
+        attrs = []
+        stdout = nil
+        stdout_padding = nil
+        each(:main) do |value, field:, padding:, **_|
+          if field == 'StdOut Path'
+            stdout = value
+            stdout_padding = padding
+          elsif field == 'StdErr Path'
+            if !verbose && value == stdout
+              attrs << [value, { field: 'Output Path', padding: stdout_padding }]
+            else
+              attrs << [stdout, { field: 'StdOut Path', padding: stdout_padding }]
+              attrs << [value, { field: 'StdErr Path', padding: padding }]
+            end
+          else
+            attrs << [value, { field: field, padding: padding }]
+          end
+        end
+      -%>
+      <% attrs.each do |value, field:, padding:| -%>
       <%= padding -%><%= pastel.blue.bold field -%><%= pastel.bold ':' -%> <%= pastel.green value %>
       <% end -%>
       <%
@@ -76,6 +97,10 @@ module FlightJob
       DateTime.rfc3339(job.end_time).strftime('%d/%m/%y %H:%M')
     end
 
+    # NOTE: The 'StdOut Path' header must be exactly the same length as the 'Output Path' header
+    #       This allows the header to be toggled without affecting the padding
+    # NOTE: Remember to update the Template if the STDOUT/STDERR header changes
+    #       Failure to do so will break the rendering
     register_attribute(section: :main, header: 'StdOut Path') { |j| j.stdout_path }
     register_attribute(section: :main, header: 'StdErr Path') { |j| j.stderr_path }
 
