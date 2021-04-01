@@ -42,20 +42,20 @@ module FlightJob
     register_column(header: 'Submit Status', verbose: true) { |j| j.submit_status }
 
     # Toggle the format of the created at time
-    register_column(header: 'Created At', verbose: true) { |j| j.created_at }
-    register_column(header: 'Created At', verbose: false) do |job|
+    register_column(header: 'Created at', verbose: true) { |j| j.created_at }
+    register_column(header: 'Created at', verbose: false) do |job|
       DateTime.rfc3339(job.created_at).strftime('%d/%m/%y %H:%M')
     end
 
     # NOTE: These could be the predicted times instead of the actual, consider
     # delineating the two
-    register_column(header: 'Start Time', verbose: true) { |j| j.start_time }
-    register_column(header: 'Start Time', verbose: false) do |job|
+    register_column(header: 'Started at', verbose: true) { |j| j.start_time }
+    register_column(header: 'Started at', verbose: false) do |job|
       next nil unless job.start_time
       DateTime.rfc3339(job.start_time).strftime('%d/%m/%y %H:%M')
     end
-    register_column(header: 'End Time', verbose: true) { |j| j.end_time }
-    register_column(header: 'End Time', verbose: false) do |job|
+    register_column(header: 'Ended at', verbose: true) { |j| j.end_time }
+    register_column(header: 'Ended at', verbose: false) do |job|
       next nil unless job.end_time
       DateTime.rfc3339(job.end_time).strftime('%d/%m/%y %H:%M')
     end

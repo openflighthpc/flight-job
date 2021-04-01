@@ -49,8 +49,8 @@ module FlightJob
     register_attribute(section: :main, header: 'Path') { |s| s.script_path }
 
     # Toggle the format of the created at time
-    register_attribute(section: :main, header: 'Created At', verbose: true) { |s| s.created_at }
-    register_attribute(section: :main, header: 'Created At', verbose: false) do |script|
+    register_attribute(section: :main, header: 'Created at', verbose: true) { |s| s.created_at }
+    register_attribute(section: :main, header: 'Created at', verbose: false) do |script|
       DateTime.rfc3339(script.created_at).strftime('%d/%m/%y %H:%M')
     end
 
