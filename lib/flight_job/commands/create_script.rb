@@ -33,6 +33,9 @@ module FlightJob
   module Commands
     class CreateScript < Command
       def run
+        # Preliminarily check if the provided ID is okay
+        verify_id(args[1]) if args.length > 1
+
         # Resolves the answers
         answers = answers_input || begin
           if $stdout.tty? && stdin_notes?
@@ -189,6 +192,29 @@ module FlightJob
       ensure
         file.close
         file.unlink
+      end
+
+      # Checks if the script has and ID error
+      # All other errors are intentionally ignored and must be handled independently
+      def verify_id(id)
+        script = Script.new(id: id)
+        return if script.valid?(:id_check)
+
+        # Find the first error related to the ID
+        # NOTE: There maybe more than one error, but the first one determines the
+        #       exit code. The error log will contain the full list
+        error = script.errors.find { |e| e.attribute == :id }
+        return unless error
+        FlightJob.logger.error("The script is invalid:\n") do
+          script.errors.full_messages.join("\n")
+        end
+
+        # Determine the exit code from the cause
+        if error.type == :already_exists
+          raise DuplicateError, "The ID #{error.message}!"
+        else
+          raise InputError, "The ID #{error.message}!"
+        end
       end
     end
   end
