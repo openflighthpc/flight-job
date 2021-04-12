@@ -72,15 +72,14 @@ module FlightJob
         end
 
         # Create the script object
+        opts = ( args.length > 1 ? { id: args[1] } : {} )
         script = Script.new(
           template_id: template.id,
           script_name: template.script_template_name,
           answers: answers,
-          notes: notes
+          notes: notes,
+          **opts
         )
-
-        # Apply the identity_name
-        script.id = args[1] if args.length > 1
 
         # Save the script
         script.render_and_save

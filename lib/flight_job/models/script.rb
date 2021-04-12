@@ -59,7 +59,8 @@ module FlightJob
       end.reject(&:nil?)
     end
 
-    attr_writer :id, :notes
+    attr_reader :id
+    attr_writer :notes
 
     validates :id, presence: true, length: { maximum: FlightJob.config.max_id_length },
               format: { with: /\A[a-zA-Z0-9_-]+\Z/,
@@ -113,31 +114,39 @@ module FlightJob
       end
     end
 
-    # Implicitly generates an ID
-    def id
-      @id ||= begin
-        candidate = false
-        until candidate do
-          # Generate a 8 byte base64 string
-          # NOTE: 6 bytes of randomness becomes 8 base64-chars
-          candidate = SecureRandom.urlsafe_base64(6)
+    def initialize(**original)
+      opts = original.dup
+      if id = opts.delete(:id)
+        # Set the provided ID
+        @id = id
+      else
+        # Implicitly generate an ID
+        @id ||= begin
+          candidate = false
+          until candidate do
+            # Generate a 8 byte base64 string
+            # NOTE: 6 bytes of randomness becomes 8 base64-chars
+            candidate = SecureRandom.urlsafe_base64(6)
 
-          # Ensure the candidate start with an alphanumeric character
-          unless /[[:alnum:]]/ =~ candidate[0]
-            candidate = false
-            next
-          end
+            # Ensure the candidate start with an alphanumeric character
+            unless /[[:alnum:]]/ =~ candidate[0]
+              candidate = false
+              next
+            end
 
-          # Check the candidate has not been taken
-          # NOTE: This does not reserve the candidate, it needs to be checked
-          #       again just before the script is rendered
-          if Dir.exists? File.expand_path(candidate, FlightJob.config.scripts_dir)
-            candidate = false
-            next
+            # Check the candidate has not been taken
+            # NOTE: This does not reserve the candidate, it needs to be checked
+            #       again just before the script is rendered
+            if Dir.exists? File.expand_path(candidate, FlightJob.config.scripts_dir)
+              candidate = false
+              next
+            end
           end
+          candidate
         end
-        candidate
       end
+
+      super(**opts)
     end
 
     # NOTE: Only used for a shorthand existence check, full validation is required in
