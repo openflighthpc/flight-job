@@ -194,8 +194,7 @@ module FlightJob
         file.unlink
       end
 
-      # Checks if the script has and ID error
-      # All other errors are intentionally ignored and must be handled independently
+      # Checks if the script's ID is valid
       def verify_id(id)
         script = Script.new(id: id)
         return if script.valid?(:id_check)
