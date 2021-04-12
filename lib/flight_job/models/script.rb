@@ -85,15 +85,15 @@ module FlightJob
     end
 
     validate on: :render do
-      # Ensures the metadata does not exists
-      if File.exists? metadata_path
-        @errors.add(:metadata_path, 'already exists')
+      # Attempt to create the directory for the script
+      # NOTE: The metadata_path/script_path does not need checking as they live
+      #       in this directory.
+      begin
+        FileUtils.mkdir_p FlightJob.config.scripts_dir
+        FileUtils.mkdir File.expand_path(id, FlightJob.config.scripts_dir)
+      rescue Errno::EEXIST
+        @errors.add(:id, 'already exists')
         next
-      end
-
-      # Ensures the script does not exists
-      if File.exists? script_path
-        @errors.add(:script_path, 'already exists')
       end
 
       # Ensures the template is valid
@@ -108,21 +108,29 @@ module FlightJob
       end
     end
 
-    # Implicitly generates an ID by trying to create a randomised directory
-    # This handles ID collisions if and when they occur
+    # Implicitly generates an ID
     def id
       @id ||= begin
-        candidate = '-'
-        while candidate[0] == '-' do
-          # Generate a 8 byte base64 string that does not start with: '-'
+        candidate = false
+        until candidate do
+          # Generate a 8 byte base64 string
           # NOTE: 6 bytes of randomness becomes 8 base64-chars
           candidate = SecureRandom.urlsafe_base64(6)
+
+          # Ensure the candidate does not start with: '-'
+          if candidate[0] == '-'
+            candidate = false
+            next
+          end
+
+          # Check the candidate has not been taken
+          # NOTE: This does not reserve the candidate, it needs to be checked
+          #       again just before the script is rendered
+          if Dir.exists? File.expand_path(candidate, FlightJob.config.scripts_dir)
+            candidate = false
+            next
+          end
         end
-        # Ensures the parent directory exists with mkdir -p
-        FileUtils.mkdir_p FlightJob.config.scripts_dir
-        # Attempt to create the directory with errors: mkdir
-        FileUtils.mkdir File.join(FlightJob.config.scripts_dir, candidate)
-        # Return the candidate
         candidate
       rescue Errno::EEXIST
         FlightJob.logger.debug "Retrying after script ID collision: #{candidate}"

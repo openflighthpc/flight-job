@@ -77,7 +77,7 @@ module FlightJob
         )
 
         # Apply the identity_name
-        script.identity_name = args[1] if args.length > 1
+        script.id = args[1] if args.length > 1
 
         # Save the script
         script.render_and_save
