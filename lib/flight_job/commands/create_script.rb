@@ -32,7 +32,19 @@ require 'tempfile'
 module FlightJob
   module Commands
     class CreateScript < Command
-      QuestionPrompter = Struct.new(:prompt, :questions) do
+      SUMMARY = ERB.new(<<~'TEMPLATE', nil, '-')
+        <%= pastel.bold.underline 'SUMMARY' %>
+        <% questions.each do |question| -%>
+        <%= pastel.bold(question.text) %>
+        <%
+          value = answers[question.id]
+          value = (value.is_a?(Array) ? value.join(',') : value.to_s)
+        -%>
+        <%= pastel.green value %>
+        <% end -%>
+      TEMPLATE
+
+      QuestionPrompter = Struct.new(:prompt, :pastel, :questions) do
         # Initially set to the defaults
         def answers
           @answers ||= questions.map { |q| [q.id, q.default] }.to_h
@@ -41,6 +53,10 @@ module FlightJob
         # Allows lookups by question ID
         def questions_map
           @questions_map ||= questions.map { |q| [q.id, q] }.to_h
+        end
+
+        def summary
+          SUMMARY.result self.binding
         end
 
         def prompt_all
@@ -96,8 +112,9 @@ module FlightJob
               Please provide the answers with the following flag: #{pastel.yellow '--answers'}
             ERROR
           elsif $stdout.tty?
-            prompter = QuestionPrompter.new(prompt, template.generation_questions)
+            prompter = QuestionPrompter.new(prompt, pastel, template.generation_questions)
             prompter.prompt_all
+            puts prompter.summary
             prompter.answers
           else
             msg = <<~WARN.chomp
