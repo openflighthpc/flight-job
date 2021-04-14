@@ -69,31 +69,41 @@ module FlightJob
               end
             end
 
-            prompt_id(question.id)
+            prompt_question(question)
           end
         end
 
-        def prompt_id(question_id)
-          question = questions_map[question_id]
-          answers[question_id] = case question.format['type']
+        # Prompts the user for any answers they wish to change
+        def prompt_again
+          case prompt.select("Would you like to change your answers?", ['All', 'None'], default: 'None')
+          when 'All'
+            prompt_all
+            true
+          else
+            false
+          end
+        end
+
+        def prompt_question(question)
+          answers[question.id] = case question.format['type']
           when 'text'
-            prompt.ask(question.text, default: question.default)
+            prompt.ask(question.text, default: answers[question.id])
           when 'multiline_text'
             # NOTE: The 'default' field does not work particularly well for multiline inputs
             # Consider replacing with $EDITOR
             lines = prompt.multiline(question.text)
-            lines.empty? ? question.default : lines.join('')
+            lines.empty? ? answers[question.id] : lines.join('')
           when 'select'
             opts = { show_help: :always }
             choices = question.format['options'].each_with_index.map do |opt, idx|
-              opts[:default] = idx + 1 if opt['value'] == question.default
+              opts[:default] = idx + 1 if opt['value'] == answers[question.id]
               { name: opt['text'], value: opt['value'] }
             end
             prompt.select(question.text, choices, **opts)
           when 'multiselect'
             opts = { show_help: :always}
             choices = question.format['options'].each_with_index.map do |opt, idx|
-              opts[:default] = idx + 1 if question.default.include?(opt['value'])
+              opts[:default] = idx + 1 if answers[question.id].include?(opt['value'])
               { name: opt['text'], value: opt['value'] }
             end
             prompt.multi_select(question.text, choices, **opts)
@@ -117,7 +127,11 @@ module FlightJob
           elsif $stdout.tty?
             prompter = QuestionPrompter.new(prompt, pastel, template.generation_questions)
             prompter.prompt_all
-            pager.page prompter.summary
+            reask = true
+            while reask
+              pager.page prompter.summary
+              reask = prompter.prompt_again
+            end
             prompter.answers
           else
             msg = <<~WARN.chomp
