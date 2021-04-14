@@ -32,6 +32,61 @@ require 'tempfile'
 module FlightJob
   module Commands
     class CreateScript < Command
+      QuestionPrompter = Struct.new(:prompt, :questions) do
+        # Initially set to the defaults
+        def answers
+          @answers ||= questions.map { |q| [q.id, q.default] }.to_h
+        end
+
+        # Allows lookups by question ID
+        def questions_map
+          @questions_map ||= questions.map { |q| [q.id, q] }.to_h
+        end
+
+        def prompt_all
+          questions.each do |question|
+            if question.related_question_id
+              related = answers[question.related_question_id]
+              unless related == question.ask_when['eq']
+                FlightJob.logger.debug("Skipping question: #{question.id}")
+                next
+              end
+            end
+
+            prompt_id(question.id)
+          end
+        end
+
+        def prompt_id(question_id)
+          question = questions_map[question_id]
+          answers[question_id] = case question.format['type']
+          when 'text'
+            prompt.ask(question.text, default: question.default)
+          when 'multiline_text'
+            # NOTE: The 'default' field does not work particularly well for multiline inputs
+            # Consider replacing with $EDITOR
+            lines = prompt.multiline(question.text)
+            lines.empty? ? question.default : lines.join('')
+          when 'select'
+            opts = { show_help: :always }
+            choices = question.format['options'].each_with_index.map do |opt, idx|
+              opts[:default] = idx + 1 if opt['value'] == question.default
+              { name: opt['text'], value: opt['value'] }
+            end
+            prompt.select(question.text, choices, **opts)
+          when 'multiselect'
+            opts = { show_help: :always}
+            choices = question.format['options'].each_with_index.map do |opt, idx|
+              opts[:default] = idx + 1 if question.default.include?(opt['value'])
+              { name: opt['text'], value: opt['value'] }
+            end
+            prompt.multi_select(question.text, choices, **opts)
+          else
+            raise InternalError, "Unexpectedly reached question type: #{question.format['type']}"
+          end
+        end
+      end
+
       def run
         # Preliminarily check if the provided ID is okay
         verify_id(args[1]) if args.length > 1
@@ -44,7 +99,9 @@ module FlightJob
               Please provide the answers with the following flag: #{pastel.yellow '--answers'}
             ERROR
           elsif $stdout.tty?
-            prompt_answers
+            prompter = QuestionPrompter.new(prompt, template.generation_questions)
+            prompter.prompt_all
+            prompter.answers
           else
             msg = <<~WARN.chomp
               No answers have been provided! Proceeding with the defaults.
@@ -141,44 +198,6 @@ module FlightJob
           Failed to parse the answers as they are not valid JSON:
           #{$!.message}
         ERROR
-      end
-
-      def prompt_answers
-        template.generation_questions.each_with_object({}) do |question, memo|
-          if question.related_question_id
-            related = memo[question.related_question_id]
-            unless related == question.ask_when['eq']
-              FlightJob.logger.debug("Skipping question: #{question.id}")
-              next
-            end
-          end
-
-          memo[question.id] = case question.format['type']
-          when 'text'
-            prompt.ask(question.text, default: question.default)
-          when 'multiline_text'
-            # NOTE: The 'default' field does not work particularly well for multiline inputs
-            # Consider replacing with $EDITOR
-            lines = prompt.multiline(question.text)
-            lines.empty? ? question.default : lines.join('')
-          when 'select'
-            opts = { show_help: :always }
-            choices = question.format['options'].each_with_index.map do |opt, idx|
-              opts[:default] = idx + 1 if opt['value'] == question.default
-              { name: opt['text'], value: opt['value'] }
-            end
-            prompt.select(question.text, choices, **opts)
-          when 'multiselect'
-            opts = { show_help: :always}
-            choices = question.format['options'].each_with_index.map do |opt, idx|
-              opts[:default] = idx + 1 if question.default.include?(opt['value'])
-              { name: opt['text'], value: opt['value'] }
-            end
-            prompt.multi_select(question.text, choices, **opts)
-          else
-            raise InternalError, "Unexpectedly reached question type: #{question.format['type']}"
-          end
-        end
       end
 
       def prompt
