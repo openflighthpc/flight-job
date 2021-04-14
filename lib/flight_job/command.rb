@@ -28,6 +28,7 @@
 require 'ostruct'
 require 'pastel'
 require 'tty-editor'
+require 'tty-pager'
 
 module FlightJob
   class Command
@@ -59,6 +60,10 @@ module FlightJob
 
     def pastel
       @pastel ||= Pastel.new
+    end
+
+    def pager
+      @pager ||= TTY::Pager.new(command: ENV.fetch('LESS', 'less -SFRX'))
     end
 
     # Check if the given option flag denotes STDIN

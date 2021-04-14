@@ -25,14 +25,11 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require 'tty-pager'
-
 module FlightJob
   module Commands
     class ViewScript < Command
       def run
-        TTY::Pager.new(command: ENV.fetch('LESS', 'less -SFRX'))
-                  .page(File.read script.script_path)
+        pager.page(File.read script.script_path)
       end
 
       def script

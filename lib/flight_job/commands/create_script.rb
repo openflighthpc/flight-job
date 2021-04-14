@@ -117,7 +117,7 @@ module FlightJob
           elsif $stdout.tty?
             prompter = QuestionPrompter.new(prompt, pastel, template.generation_questions)
             prompter.prompt_all
-            puts prompter.summary
+            pager.page prompter.summary
             prompter.answers
           else
             msg = <<~WARN.chomp
