@@ -44,11 +44,13 @@ module FlightJob
         -%>
         <%= pastel.green value %>
         <% end -%>
+        <%= pastel.bold('Notes') %>
+        <%= pastel.green notes %>
       TEMPLATE
 
       # NOTE: The questions must be topologically sorted on their dependencies otherwise
       # these prompts will not function correctly
-      QuestionPrompter = Struct.new(:prompt, :pastel, :questions) do
+      QuestionPrompter = Struct.new(:pastel, :questions, :notes) do
         # Initially set to the defaults
         def answers
           @answers ||= questions.map { |q| [q.id, q.default] }.to_h
@@ -58,28 +60,10 @@ module FlightJob
           SUMMARY.result self.binding
         end
 
-        # Tracks if a question has been asked
-        def asked
-          @asked ||= {}
-        end
-
-        # Checks if any of the questions have dependencies
-        def dependencies?
-          @dependencies ||= questions.any? { |q| q.related_question_id }
-        end
-
         # Checks the questions dependencies and return if it should be prompted for
         def prompt?(question)
           return true unless question.related_question_id
           answers[question.related_question_id] == question.ask_when['eq']
-        end
-
-        # Flags a question as being skipped
-        # NOTE: The answer needs resetting in case it has been previously asked
-        def skip_question(question)
-          FlightJob.logger.debug("Skipping question: #{question.id}")
-          asked[question.id] = false
-          answers[question.id] = question.default
         end
 
         # Ask all the questions in order
@@ -96,6 +80,7 @@ module FlightJob
           case prompt.select("Would you like to change your answers?", ['All', 'Selected', 'None'], **opts)
           when 'All'
             prompt_all
+            prompt_notes
             true
           when 'Selected'
             puts(pastel.yellow(<<~WARN).chomp) if dependencies?
@@ -108,12 +93,43 @@ module FlightJob
                 next unless asked[question.id]
                 menu.choice question.text, question
               end
+              menu.choice 'Update notes about the script', :notes
             end
-            prompt_questions(*selected)
+            ask_notes = selected.delete(:notes)
+            prompt_questions(*selected) unless selected.empty?
+            prompt_notes(false) if ask_notes
             true
           else
             false
           end
+        end
+
+        def prompt_notes(confirm = true)
+          if confirm
+            open = prompt.yes?("Define notes about the script?", default: true)
+          else
+            prompt.keypress('Define notes about the script. Press any key to continue...')
+            open = true
+          end
+          if open
+            with_tmp_file do |file|
+              file.write(notes)
+              file.rewind
+              editor.open(file.path)
+              file.rewind
+              self.notes = file.read
+            end
+          end
+        end
+
+        private
+
+        def prompt
+          @prompt ||= TTY::Prompt.new(help_color: :yellow)
+        end
+
+        def editor
+          @editor ||= Command.new_editor(pastel)
         end
 
         def prompt_questions(*selected_questions)
@@ -177,49 +193,73 @@ module FlightJob
             raise InternalError, "Unexpectedly reached question type: #{question.format['type']}"
           end
         end
+
+        # Tracks if a question has been asked
+        def asked
+          @asked ||= {}
+        end
+
+        # Checks if any of the questions have dependencies
+        def dependencies?
+          @dependencies ||= questions.any? { |q| q.related_question_id }
+        end
+
+        # Flags a question as being skipped
+        # NOTE: The answer needs resetting in case it has been previously asked
+        def skip_question(question)
+          FlightJob.logger.debug("Skipping question: #{question.id}")
+          asked[question.id] = false
+          answers[question.id] = question.default
+        end
+
+        def with_tmp_file
+          file = Tempfile.new('flight-job')
+          yield(file) if block_given?
+        ensure
+          file.close
+          file.unlink
+        end
       end
 
       def run
-        # Resolves the answers
-        answers = answers_input || begin
-          if $stdout.tty? && stdin_notes?
-            raise InputError, <<~ERROR.chomp
-              Cannot prompt for the answers as standard input is in use!
-              Please provide the answers with the following flag: #{pastel.yellow '--answers'}
-            ERROR
-          elsif $stdout.tty?
-            prompter = QuestionPrompter.new(prompt, pastel, template.generation_questions)
-            prompter.prompt_all
-            reask = true
-            while reask
-              pager.page prompter.summary
-              reask = prompter.prompt_again
-            end
-            prompter.answers
-          else
-            msg = <<~WARN.chomp
-              No answers have been provided! Proceeding with the defaults.
-            WARN
+        # Attempt to get the answers/notes from the input flags
+        answers = answers_input
+        notes = notes_input
+
+        # Skip this section if both have been provided
+        if answers && notes
+          # NOOP
+
+        # Handle STDIN contention (disables the prompts)
+        elsif stdin_answers? || stdin_notes?
+          raise InputError, <<~ERROR.chomp if answers.nil?
+            Cannot prompt for the answers as standard input is in use!
+            Please provide the answers with the following flag: #{pastel.yellow '--answers'}
+          ERROR
+          notes ||= ''
+
+        # Prompt for this missing answers/notes
+        elsif $stdout.tty?
+          reask = true
+          prompter = QuestionPrompter.new(pastel, template.generation_questions, notes || '')
+          prompter.prompt_all if answers.nil?
+          notes = prompter.prompt_notes if notes.nil?
+          while reask
+            pager.page prompter.summary
+            reask = prompter.prompt_again
+          end
+          answers = prompter.answers
+          notes = prompter.notes
+
+        # Populate missing answers/notes in a non-interactive shell
+        else
+          answers ||= begin
+            msg = "No answers have been provided! Proceeding with the defaults."
             $stderr.puts pastel.red(msg)
             FlightJob.logger.warn msg
             {}
           end
-        end
-
-        # Resolve the notes
-        notes = notes_input || begin
-          if $stdout.tty? && stdin_answers?
-            FlightJob.logger.debug "Skipping notes prompt as STDIN is connected to the answers"
-            ''
-          elsif $stdout.tty? && prompt.yes?("Define notes about the script?", default: true)
-            with_tmp_file do |file|
-              new_editor.open(file.path)
-              file.rewind
-              file.read
-            end
-          else
-            ''
-          end
+          notes ||= ''
         end
 
         # Create the script object
@@ -229,9 +269,6 @@ module FlightJob
           answers: answers,
           notes: notes
         )
-
-        # Apply the identity_name
-        script.identity_name = args[1] if args.length > 1
 
         # Save the script
         script.render_and_save
@@ -293,18 +330,6 @@ module FlightJob
           Failed to parse the answers as they are not valid JSON:
           #{$!.message}
         ERROR
-      end
-
-      def prompt
-        @prompt = TTY::Prompt.new(help_color: :yellow)
-      end
-
-      def with_tmp_file
-        file = Tempfile.new('flight-job')
-        yield(file) if block_given?
-      ensure
-        file.close
-        file.unlink
       end
     end
   end
