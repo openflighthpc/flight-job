@@ -32,6 +32,7 @@ require 'tempfile'
 module FlightJob
   module Commands
     class CreateScript < Command
+      MULTI_HELP = "(Press ↑/↓/←/→ arrow to scroll, Space/Ctrl+A|R to select (all|rev) and Enter to finish)"
       SUMMARY = ERB.new(<<~'TEMPLATE', nil, '-')
         <%= pastel.bold.underline 'SUMMARY' %>
         <% questions.each do |question| -%>
@@ -91,7 +92,8 @@ module FlightJob
         # Prompts the user for any answers they wish to change
         # return [Boolean] if the user requested questions to be re-asked
         def prompt_again
-          case prompt.select("Would you like to change your answers?", ['All', 'Selected', 'None'], default: 'None')
+          opts = { default: 'None', show_help: :always }
+          case prompt.select("Would you like to change your answers?", ['All', 'Selected', 'None'], **opts)
           when 'All'
             prompt_all
             true
@@ -100,7 +102,8 @@ module FlightJob
               WARN: Some of the questions have dependencies on previous answers.
               The exact question prompts may differ if the dependencies change.
             WARN
-            selected = prompt.multi_select("Which questions would you like to change?") do |menu|
+            opts = { show_help: :always, echo: false, cycle: true, help: MULTI_HELP }
+            selected = prompt.multi_select("Which questions would you like to change?", **opts) do |menu|
               questions.each do |question|
                 next unless asked[question.id]
                 menu.choice question.text, question
@@ -164,7 +167,7 @@ module FlightJob
             end
             prompt.select(question.text, choices, **opts)
           when 'multiselect'
-            opts = { show_help: :always}
+            opts = { show_help: :always, echo: false, help: MULTI_HELP }
             choices = question.format['options'].each_with_index.map do |opt, idx|
               opts[:default] = idx + 1 if answers[question.id].include?(opt['value'])
               { name: opt['text'], value: opt['value'] }
