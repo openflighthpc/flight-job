@@ -75,16 +75,50 @@ module FlightJob
 
         # Prompts the user for any answers they wish to change
         def prompt_again
-          case prompt.select("Would you like to change your answers?", ['All', 'None'], default: 'None')
+          case prompt.select("Would you like to change your answers?", ['All', 'Selected', 'None'], default: 'None')
           when 'All'
             prompt_all
+            true
+          when 'Selected'
+            puts pastel.yellow(<<~WARN).chomp
+              WARN: Some of the questions have dependencies on previously answers.
+              The exact list of prompt questions may differ if the dependencies change.
+            WARN
+            selected = prompt.multi_select("Which questions would you like to change?") do |menu|
+              questions.each do |question|
+                next unless asked[question.id]
+                menu.choice question.text, question
+              end
+            end
+            prompt_questions(*selected)
             true
           else
             false
           end
         end
 
+        def prompt_questions(*selected_questions)
+          id_map = selected_questions.map { |q| [q.id, true] }.to_h
+
+          # NOTE: Loops through the original questions array to guarantee the order is preserved
+          questions.each do |question|
+            # Prompt dependent questions to be asked
+            if question.related_question_id && id_map[question.related_question_id]
+              # Prompt for dependent questions as the answer may have changed
+              # NOTE: * The conditional check is preformed in: prompt_question
+              #       * id_map needs to be updated to allow for chained dependencies
+              id_map[question.id] = true
+            # Skip question not in id_map
+            elsif ! id_map[question.id]
+              next
+            end
+
+            prompt_question(question)
+          end
+        end
+
         def prompt_question(question)
+          # Check the questions dependencies
           if question.related_question_id
             related = answers[question.related_question_id]
             unless related == question.ask_when['eq']
