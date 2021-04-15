@@ -35,6 +35,7 @@ module FlightJob
       SUMMARY = ERB.new(<<~'TEMPLATE', nil, '-')
         <%= pastel.bold.underline 'SUMMARY' %>
         <% questions.each do |question| -%>
+        <% next unless asked[question.id] -%>
         <%= pastel.bold(question.text) %>
         <%
           value = answers[question.id]
@@ -59,16 +60,15 @@ module FlightJob
           SUMMARY.result self.binding
         end
 
-        def prompt_all
-          questions.each do |question|
-            if question.related_question_id
-              related = answers[question.related_question_id]
-              unless related == question.ask_when['eq']
-                FlightJob.logger.debug("Skipping question: #{question.id}")
-                next
-              end
-            end
+        # Tracks if a question has been asked
+        def asked
+          @asked ||= {}
+        end
 
+        def prompt_all
+          @asked = {} # Reset the asked cache
+
+          questions.each do |question|
             prompt_question(question)
           end
         end
@@ -85,6 +85,18 @@ module FlightJob
         end
 
         def prompt_question(question)
+          if question.related_question_id
+            related = answers[question.related_question_id]
+            unless related == question.ask_when['eq']
+              FlightJob.logger.debug("Skipping question: #{question.id}")
+              asked[question.id] = false # Flag the question as skipped
+              # NOTE: The answer gets reset to the default in case it was previously asked
+              answers[question.id] = question.default
+              return
+            end
+          end
+
+          asked[question.id] = true # Flags the question as asked
           answers[question.id] = case question.format['type']
           when 'text'
             prompt.ask(question.text, default: answers[question.id])
