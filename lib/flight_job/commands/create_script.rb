@@ -167,9 +167,9 @@ module FlightJob
             end
             prompt.select(question.text, choices, **opts)
           when 'multiselect'
-            opts = { show_help: :always, echo: false, help: MULTI_HELP }
+            opts = { show_help: :always, echo: false, help: MULTI_HELP, default: [] }
             choices = question.format['options'].each_with_index.map do |opt, idx|
-              opts[:default] = idx + 1 if answers[question.id].include?(opt['value'])
+              opts[:default] << idx + 1 if answers[question.id].include?(opt['value'])
               { name: opt['text'], value: opt['value'] }
             end
             prompt.multi_select(question.text, choices, **opts)
