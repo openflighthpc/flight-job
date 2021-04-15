@@ -62,6 +62,11 @@ module FlightJob
           @asked ||= {}
         end
 
+        # Checks if any of the questions have dependencies
+        def dependencies?
+          @dependencies ||= questions.any? { |q| q.related_question_id }
+        end
+
         # Checks the questions dependencies and return if it should be prompted for
         def prompt?(question)
           return true unless question.related_question_id
@@ -84,14 +89,15 @@ module FlightJob
         end
 
         # Prompts the user for any answers they wish to change
+        # return [Boolean] if the user requested questions to be re-asked
         def prompt_again
           case prompt.select("Would you like to change your answers?", ['All', 'Selected', 'None'], default: 'None')
           when 'All'
             prompt_all
             true
           when 'Selected'
-            puts pastel.yellow(<<~WARN).chomp
-              WARN: Some of the questions have dependencies on previously answers.
+            puts(pastel.yellow(<<~WARN).chomp) if dependencies?
+              WARN: Some of the questions have dependencies on previous answers.
               The exact question prompts may differ if the dependencies change.
             WARN
             selected = prompt.multi_select("Which questions would you like to change?") do |menu|
@@ -124,6 +130,7 @@ module FlightJob
             unless prompt?(question)
               $stderr.puts pastel.red.bold "Skipping the following question as the dependencies are no longer met:"
               $stderr.puts pastel.yellow question.text
+              FlightJob.logger.error("Skipping selected question as the dependecies are no longer met: #{question.id}")
               id_map[question.id] = false
               skip_question(question)
               next
