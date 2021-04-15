@@ -65,11 +65,24 @@ module FlightJob
           @asked ||= {}
         end
 
-        def prompt_all
-          @asked = {} # Reset the asked cache
+        # Checks the questions dependencies and return if it should be prompted for
+        def prompt?(question)
+          return true unless question.related_question_id
+          answers[question.related_question_id] == question.ask_when['eq']
+        end
 
+        # Flags a question as being skipped
+        # NOTE: The answer needs resetting in case it has been previously asked
+        def skip_question(question)
+          FlightJob.logger.debug("Skipping question: #{question.id}")
+          asked[question.id] = false
+          answers[question.id] = question.default
+        end
+
+        # Ask all the questions in order
+        def prompt_all
           questions.each do |question|
-            prompt_question(question)
+            prompt?(question) ? prompt_question(question) : skip_question(question)
           end
         end
 
@@ -82,7 +95,7 @@ module FlightJob
           when 'Selected'
             puts pastel.yellow(<<~WARN).chomp
               WARN: Some of the questions have dependencies on previously answers.
-              The exact list of prompt questions may differ if the dependencies change.
+              The exact question prompts may differ if the dependencies change.
             WARN
             selected = prompt.multi_select("Which questions would you like to change?") do |menu|
               questions.each do |question|
@@ -100,36 +113,36 @@ module FlightJob
         def prompt_questions(*selected_questions)
           id_map = selected_questions.map { |q| [q.id, true] }.to_h
 
-          # NOTE: Loops through the original questions array to guarantee the order is preserved
+          # NOTE: Loops through the original questions array to guarantee the order and allow dependencies
           questions.each do |question|
-            # Prompt dependent questions to be asked
+            # Check if a dependent question needs to be re-asked
             if question.related_question_id && id_map[question.related_question_id]
-              # Prompt for dependent questions as the answer may have changed
-              # NOTE: * The conditional check is preformed in: prompt_question
-              #       * id_map needs to be updated to allow for chained dependencies
-              id_map[question.id] = true
-            # Skip question not in id_map
-            elsif ! id_map[question.id]
+              prompt?(question) ? (id_map[question.id] = true) : skip_question(question)
+            end
+
+            # Skip questions that have not been flagged
+            next unless id_map[question.id]
+
+            # Warn the user a question is being skipped because the dependency is no longer met
+            unless prompt?(question)
+              $stderr.puts pastel.red.bold "Skipping the following question as the dependencies are no longer met:"
+              $stderr.puts pastel.yellow question.text
+              id_map[question.id] = false
+              skip_question(question)
               next
             end
 
+            # Prompt for the answer
+            original = answers[question.id]
             prompt_question(question)
+
+            # Unset the flag if the answer hasn't changed
+            # NOTE: This prevents dependent questions from being asked
+            id_map[question.id] = false if original == answers[question.id]
           end
         end
 
         def prompt_question(question)
-          # Check the questions dependencies
-          if question.related_question_id
-            related = answers[question.related_question_id]
-            unless related == question.ask_when['eq']
-              FlightJob.logger.debug("Skipping question: #{question.id}")
-              asked[question.id] = false # Flag the question as skipped
-              # NOTE: The answer gets reset to the default in case it was previously asked
-              answers[question.id] = question.default
-              return
-            end
-          end
-
           asked[question.id] = true # Flags the question as asked
           answers[question.id] = case question.format['type']
           when 'text'
