@@ -45,15 +45,12 @@ module FlightJob
         <% end -%>
       TEMPLATE
 
+      # NOTE: The questions must be topologically sorted on their dependencies otherwise
+      # these prompts will not function correctly
       QuestionPrompter = Struct.new(:prompt, :pastel, :questions) do
         # Initially set to the defaults
         def answers
           @answers ||= questions.map { |q| [q.id, q.default] }.to_h
-        end
-
-        # Allows lookups by question ID
-        def questions_map
-          @questions_map ||= questions.map { |q| [q.id, q] }.to_h
         end
 
         def summary
