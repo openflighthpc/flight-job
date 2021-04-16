@@ -2,6 +2,7 @@ name: SMP multiple slot
 copyright: Copyright (C) 2021 Alces Flight Ltd.
 license: Creative Commons Attribution-ShareAlike 4.0 International
 script_template: smp.sh
+priority: 2000
 version: 0
 synopsis: Submit a job that has multiple processes where all processes need to reside on a single host.
 description: |

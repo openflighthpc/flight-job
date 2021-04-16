@@ -2,6 +2,7 @@ name: Multiple slot
 copyright: Copyright (C) 2020 Alces Flight Ltd.
 license: Creative Commons Attribution-ShareAlike 4.0 International
 script_template: mpi-slots.sh
+priority: 2000
 version: 0
 synopsis: Submit a single job that has multiple processes that may span multiple nodes.
 description: |

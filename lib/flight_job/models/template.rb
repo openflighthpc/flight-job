@@ -48,7 +48,8 @@ module FlightJob
             "required" => ['text', 'value'],
             "properties" => {
               'text' => { "type" => "string" },
-              'value' => { "type" => "string" }
+              'value' => { "type" => "string" },
+              'priority' => { "type" => 'integer' }
             }
           }
         }
@@ -127,6 +128,8 @@ module FlightJob
           FlightJob.logger.debug("Errors: \n") { template.errors.full_messages.join("\n") }
           false
         end
+
+        templates.sort!
 
         templates.each_with_index do |t, idx|
           t.index = idx + 1
@@ -235,6 +238,24 @@ module FlightJob
 
     def to_erb
       ERB.new(File.read(template_path), nil, '-')
+    end
+
+    def priority
+      metadata['priority']
+    end
+
+    protected
+
+    def <=>(other)
+      if self.priority == other.priority
+        self.id <=> other.id
+      elsif self.priority.nil?
+        1
+      elsif other.priority.nil?
+        -1
+      else
+        self.priority <=> other.priority
+      end
     end
   end
 end
