@@ -64,8 +64,8 @@ module FlightJob
 
     validates :id, presence: true, length: { maximum: FlightJob.config.max_id_length },
               format: { with: /\A[a-zA-Z0-9_-]+\Z/,
-                        message: 'must be alphanumeric but may contain hyphen and underscore' }
-    validates :id, format: { with: /\A[[:alnum:]].*\Z/, message: 'must start with an alphanumeric character' }
+                        message: 'can only contain letters, numbers, hyphens, and underscores' }
+    validates :id, format: { with: /\A[[:alnum:]].*\Z/, message: 'must start with a letter or a number' }
 
     validate do
       # Skip this validation on :id_check
