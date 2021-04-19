@@ -33,6 +33,9 @@ module FlightJob
   module Commands
     class CreateScript < Command
       def run
+        # Preliminarily check if the provided ID is okay
+        verify_id(args[1]) if args.length > 1
+
         # Resolves the answers
         answers = answers_input || begin
           if $stdout.tty? && stdin_notes?
@@ -69,15 +72,14 @@ module FlightJob
         end
 
         # Create the script object
+        opts = ( args.length > 1 ? { id: args[1] } : {} )
         script = Script.new(
           template_id: template.id,
           script_name: template.script_template_name,
           answers: answers,
-          notes: notes
+          notes: notes,
+          **opts
         )
-
-        # Apply the identity_name
-        script.identity_name = args[1] if args.length > 1
 
         # Save the script
         script.render_and_save
@@ -189,6 +191,28 @@ module FlightJob
       ensure
         file.close
         file.unlink
+      end
+
+      # Checks if the script's ID is valid
+      def verify_id(id)
+        script = Script.new(id: id)
+        return if script.valid?(:id_check)
+
+        # Find the first error related to the ID
+        # NOTE: There maybe more than one error, but the first one determines the
+        #       exit code. The error log will contain the full list
+        error = script.errors.find { |e| e.attribute == :id }
+        return unless error
+        FlightJob.logger.error("The script is invalid:\n") do
+          script.errors.full_messages.join("\n")
+        end
+
+        # Determine the exit code from the cause
+        if error.type == :already_exists
+          script.raise_duplicate_id_error
+        else
+          raise InputError, "The ID #{error.message}!"
+        end
       end
     end
   end

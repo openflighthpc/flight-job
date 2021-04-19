@@ -59,9 +59,18 @@ module FlightJob
       end.reject(&:nil?)
     end
 
-    attr_writer :id, :notes
+    attr_reader :id
+    attr_writer :notes
+
+    validates :id, presence: true, length: { maximum: FlightJob.config.max_id_length },
+              format: { with: /\A[a-zA-Z0-9_-]+\Z/,
+                        message: 'can only contain letters, numbers, hyphens, and underscores' }
+    validates :id, format: { with: /\A[[:alnum:]].*\Z/, message: 'must start with a letter or a number' }
 
     validate do
+      # Skip this validation on :id_check
+      next if validation_context == :id_check
+
       unless (errors = SCHEMA.validate(metadata).to_a).empty?
         @errors.add(:metadata, 'is not valid')
         path_tag = File.exists?(metadata_path) ? metadata_path : id
@@ -84,18 +93,15 @@ module FlightJob
       end
     end
 
+    validate on: [:id_check, :render] do
+      # Ensure the ID has not been taken
+      # NOTE: This negates the need to check if metadata_path exists
+      if Dir.exists? File.expand_path(id, FlightJob.config.scripts_dir)
+        @errors.add(:id, :already_exists, message: 'already exists')
+      end
+    end
+
     validate on: :render do
-      # Ensures the metadata does not exists
-      if File.exists? metadata_path
-        @errors.add(:metadata_path, 'already exists')
-        next
-      end
-
-      # Ensures the script does not exists
-      if File.exists? script_path
-        @errors.add(:script_path, 'already exists')
-      end
-
       # Ensures the template is valid
       template = load_template
       if template.nil?
@@ -108,26 +114,39 @@ module FlightJob
       end
     end
 
-    # Implicitly generates an ID by trying to create a randomised directory
-    # This handles ID collisions if and when they occur
-    def id
-      @id ||= begin
-        candidate = '-'
-        while candidate[0] == '-' do
-          # Generate a 8 byte base64 string that does not start with: '-'
-          # NOTE: 6 bytes of randomness becomes 8 base64-chars
-          candidate = SecureRandom.urlsafe_base64(6)
+    def initialize(**original)
+      opts = original.dup
+      if id = opts.delete(:id)
+        # Set the provided ID
+        @id = id
+      else
+        # Implicitly generate an ID
+        @id ||= begin
+          candidate = false
+          until candidate do
+            # Generate a 8 byte base64 string
+            # NOTE: 6 bytes of randomness becomes 8 base64-chars
+            candidate = SecureRandom.urlsafe_base64(6)
+
+            # Ensure the candidate start with an alphanumeric character
+            unless /[[:alnum:]]/ =~ candidate[0]
+              candidate = false
+              next
+            end
+
+            # Check the candidate has not been taken
+            # NOTE: This does not reserve the candidate, it needs to be checked
+            #       again just before the script is rendered
+            if Dir.exists? File.expand_path(candidate, FlightJob.config.scripts_dir)
+              candidate = false
+              next
+            end
+          end
+          candidate
         end
-        # Ensures the parent directory exists with mkdir -p
-        FileUtils.mkdir_p FlightJob.config.scripts_dir
-        # Attempt to create the directory with errors: mkdir
-        FileUtils.mkdir File.join(FlightJob.config.scripts_dir, candidate)
-        # Return the candidate
-        candidate
-      rescue Errno::EEXIST
-        FlightJob.logger.debug "Retrying after script ID collision: #{candidate}"
-        retry
       end
+
+      super(**opts)
     end
 
     # NOTE: Only used for a shorthand existence check, full validation is required in
@@ -210,7 +229,14 @@ module FlightJob
         FlightJob.logger.error("The script is invalid:\n") do
           errors.full_messages.join("\n")
         end
-        raise InternalError, 'Unexpectedly failed to render the script!'
+        duplicate_errors = errors.find do |error|
+          error.attribute == :id && error.type == :already_exists
+        end
+        if duplicate_errors
+          raise_duplicate_id_error
+        else
+          raise InternalError, 'Unexpectedly failed to render the script!'
+        end
       end
 
       # Render the content
@@ -221,6 +247,17 @@ module FlightJob
 
     def render_and_save
       content = render
+
+      # Ensures it claims the ID
+      # NOTE: As this is done after validation, it may trigger a race condition
+      #       This could cause the command to fail, whilst the other succeeds
+      #       Subsequent commands will detect the ID has been taken
+      begin
+        FileUtils.mkdir_p FlightJob.config.scripts_dir
+        FileUtils.mkdir File.expand_path(id, FlightJob.config.scripts_dir)
+      rescue Errno::EEXIST
+        raise_duplicate_id_error
+      end
 
       # Writes the data to disk
       save_metadata
@@ -233,13 +270,11 @@ module FlightJob
     end
 
     def save_metadata
-      FileUtils.mkdir_p File.dirname(metadata_path)
       File.write metadata_path, YAML.dump(metadata)
       FileUtils.chmod(0600, metadata_path)
     end
 
     def save_notes
-      FileUtils.mkdir_p File.dirname(notes_path)
       File.write notes_path, notes
       FileUtils.chmod(0600, notes_path)
     end
@@ -251,6 +286,10 @@ module FlightJob
         "notes" => notes,
         "path" => script_path
       }.merge(metadata)
+    end
+
+    def raise_duplicate_id_error
+      raise DuplicateError, "The ID already exists!"
     end
 
     private

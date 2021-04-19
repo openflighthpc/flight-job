@@ -86,6 +86,12 @@
 # minimum_terminal_width: 80
 
 # ==============================================================================
+# Maximum ID Length
+# The maximum allowed length for script IDs
+# ==============================================================================
+# max_id_length: 16
+
+# ==============================================================================
 # Maximum Standard Input Size
 # The maximum file size that will be provided to STDIN. The size must be given
 # in Bytes.
