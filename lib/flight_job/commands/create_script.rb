@@ -209,7 +209,7 @@ module FlightJob
 
         # Determine the exit code from the cause
         if error.type == :already_exists
-          raise DuplicateError, "The ID #{error.message}!"
+          script.raise_duplicate_id_error
         else
           raise InputError, "The ID #{error.message}!"
         end

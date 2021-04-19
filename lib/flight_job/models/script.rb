@@ -229,7 +229,14 @@ module FlightJob
         FlightJob.logger.error("The script is invalid:\n") do
           errors.full_messages.join("\n")
         end
-        raise InternalError, 'Unexpectedly failed to render the script!'
+        duplicate_errors = errors.find do |error|
+          error.attribute == :id && error.type == :already_exists
+        end
+        if duplicate_errors
+          raise_duplicate_id_error
+        else
+          raise InternalError, 'Unexpectedly failed to render the script!'
+        end
       end
 
       # Render the content
@@ -249,7 +256,7 @@ module FlightJob
         FileUtils.mkdir_p FlightJob.config.scripts_dir
         FileUtils.mkdir File.expand_path(id, FlightJob.config.scripts_dir)
       rescue Errno::EEXIST
-        raise InternalError, "Unexpectedly failed to claim ID: #{id}"
+        raise_duplicate_id_error
       end
 
       # Writes the data to disk
@@ -279,6 +286,10 @@ module FlightJob
         "notes" => notes,
         "path" => script_path
       }.merge(metadata)
+    end
+
+    def raise_duplicate_id_error
+      raise DuplicateError, "The ID already exists!"
     end
 
     private
