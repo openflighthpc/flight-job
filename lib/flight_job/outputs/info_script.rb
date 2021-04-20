@@ -48,7 +48,7 @@ module FlightJob
     register_attribute(section: :main, header: 'Name') { |s| s.script_name }
     register_attribute(section: :main, header: 'Path') { |s| s.script_path }
 
-    register_attribute(header: 'Created at') do |script, verbose:|
+    register_attribute(section: :main, header: 'Created at') do |script, verbose:|
       if verbose
         script.created_at
       else

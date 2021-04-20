@@ -68,7 +68,7 @@ module FlightJob
 
     register_attribute(section: :main, header: 'ID') { |j| j.id }
     register_attribute(section: :main, header: 'Script ID') { |j| j.script_id }
-    register_attribute(section: :main, header: 'Alt. ID') { |j| j.scheduler_id }
+    register_attribute(section: :main, header: 'Sched. ID') { |j| j.scheduler_id }
     register_attribute(section: :main, header: 'State') { |j| j.state }
 
     # Show a boolean in the "simplified" output, and the exit code in the verbose
@@ -76,7 +76,7 @@ module FlightJob
     # NOTE: There is a rendering issue of integers into the TSV output. Needs investigation
     register_attribute(section: :main, header: 'Submit Status', verbose: true) { |j| j.submit_status.to_s }
 
-    register_attribute(header: 'Created at') do |job, verbose:|
+    register_attribute(section: :main, header: 'Created at') do |job, verbose:|
       if verbose
         job.created_at
       else
@@ -86,7 +86,7 @@ module FlightJob
 
     # NOTE: These could be the predicted times instead of the actual, consider
     # delineating the two
-    register_attribute(header: 'Started at') do |job, verbose:|
+    register_attribute(section: :main, header: 'Started at') do |job, verbose:|
       if job.start_time.nil?
         nil
       elsif verbose
@@ -95,7 +95,7 @@ module FlightJob
         DateTime.rfc3339(job.start_time).strftime('%d/%m/%y %H:%M')
       end
     end
-    register_attribute(header: 'Ended at') do |job, verbose:|
+    register_attribute(section: :main, header: 'Ended at') do |job, verbose:|
       if job.end_time.nil?
         nil
       elsif verbose
