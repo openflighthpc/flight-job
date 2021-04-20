@@ -48,7 +48,7 @@ GEM
       rexml
     method_source (1.0.0)
     minitest (5.14.4)
-    output_mode (1.4.0)
+    output_mode (1.5.0)
       pastel (>= 0.7)
       tty-color (>= 0.5)
       tty-table (>= 0.11)
