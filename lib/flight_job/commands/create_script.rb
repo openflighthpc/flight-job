@@ -87,7 +87,7 @@ module FlightJob
               WARN: Some of the questions have dependencies on previous answers.
               The exact question prompts may differ if the dependencies change.
             WARN
-            opts = { show_help: :always, echo: false, cycle: true, help: MULTI_HELP }
+            opts = { show_help: :always, echo: false, help: MULTI_HELP }
             selected = prompt.multi_select("Which questions would you like to change?", **opts) do |menu|
               questions.each do |question|
                 next unless asked[question.id]
@@ -248,6 +248,7 @@ module FlightJob
           prompter.prompt_all if answers.nil?
           notes = prompter.prompt_notes if notes.nil?
           while reask
+            puts "\n\n"
             pager.page prompter.summary
             reask = prompter.prompt_again
           end
