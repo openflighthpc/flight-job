@@ -90,10 +90,8 @@ module FlightJob
           reask = true
           while reask
             puts "\n"
-            text = summary
-            # NOTE: There is an off-by-one error somewhere in this logic. It causes the padded
-            #       text to scroll up/down by one line (which shouldn't happen).
-            diff = TTY::Screen.rows - text.lines.count - 1
+            text = summary.chomp
+            diff = TTY::Screen.rows - text.lines.count
             # Work around issues with LESS -SFRX flag
             # The -F/--quit-if-one-screen flag disables less if the summary fits on one page
             # However, the prompt_again question adds an additional X lines, which isn't being
@@ -102,7 +100,7 @@ module FlightJob
             # The 'pager' should still be used, as the user may have changed either PAGER/LESS
             # env vars. Instead the text is padded with newlines, if its length is X lines less
             # than the terminal height
-            if 0 < diff && diff < 6
+            if 0 < diff && diff < 7
               text = "#{text}#{"\n" * diff}"
             end
             pager.page text
