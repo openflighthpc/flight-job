@@ -90,7 +90,7 @@ module FlightJob
           reask = true
           while reask
             puts "\n"
-            text = summary.chomp
+            text = summary.sub(/\n+\Z/, '')
             diff = TTY::Screen.rows - text.lines.count
             # Work around issues with LESS -SFRX flag
             # The -F/--quit-if-one-screen flag disables less if the summary fits on one page
@@ -339,8 +339,8 @@ module FlightJob
         answers = answers_input
         notes = notes_input
 
-        # Skip this section if both have been provided
-        if answers && notes
+        # Skip this section if all the fields have been provided
+        if answers && notes && name
           # NOOP
 
         # Handle STDIN contention (disables the prompts)
@@ -351,12 +351,12 @@ module FlightJob
           ERROR
           notes ||= ''
 
-        # Prompt for this missing answers/notes
+        # Prompt for this missing answers/notes/name
         elsif $stdout.tty?
           prompter = QuestionPrompter.new(pastel, pager, template.generation_questions, notes || '', name)
           prompter.prompt_invalid_name
           prompter.prompt_all if answers.nil?
-          prompter.prompt_notes
+          prompter.prompt_notes if notes.nil?
           prompter.prompt_loop
 
         # Populate missing answers/notes in a non-interactive shell
