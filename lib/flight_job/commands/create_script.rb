@@ -39,24 +39,33 @@ module FlightJob
         <%= pastel.bold 'Name: ' -%><%= (name ? pastel.green(name) : pastel.yellow('(To Be Determined)')) %>
 
         <%= pastel.bold 'Answers:' %>
-        <% questions.each do |question| -%>
-        <% next unless asked[question.id] -%>
-        <%= pastel.bold.cyan(question.text) %>
         <%
-          value = answers[question.id]
-          value = (value.is_a?(Array) ? value.join(',') : value.to_s)
+            questions.each do |question|
+              next unless asked[question.id] -%>
+        <%=   pastel.blue.bold(question.text) -%>
+        <%    value = answers[question.id]
+              value = (value.is_a?(Array) ? value.join(',') : value.to_s)
+              if value.empty?
         -%>
-        <%= (value.empty? ? pastel.yellow('(none)') : pastel.green(value)) %>
-        <% end -%>
+        <%=     " #{pastel.yellow('(none)')}" %>
+        <%    elsif question.format['type'] == 'multiline_text' -%>
+
+        <%      value.each_line do |line| -%>
+        <%=       pastel.green(line.chomp) %>
+        <%      end -%>
+        <%    else -%>
+        <%=     " #{pastel.green(value)}" %>
+        <%    end -%>
+        <%  end -%>
 
         <%= pastel.bold 'Notes:' %>
-        <% if notes.empty? -%>
-        <%= pastel.yellow('(none)') %>
-        <% else -%>
-        <% notes.each_line do |line| # Colourise each line so it appears correctly in the pager -%>
-        <%= pastel.green(line.chomp) %>
-        <% end -%>
-        <% end -%>
+        <%  if notes.empty? -%>
+        <%=   pastel.yellow('(none)') %>
+        <%  else -%>
+        <%    notes.each_line do |line| -%>
+        <%=     pastel.green(line.chomp) %>
+        <%    end -%>
+        <%  end -%>
       TEMPLATE
 
       # NOTE: The questions must be topologically sorted on their dependencies otherwise
