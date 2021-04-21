@@ -56,7 +56,7 @@ module FlightJob
 
       # NOTE: The questions must be topologically sorted on their dependencies otherwise
       # these prompts will not function correctly
-      QuestionPrompter = Struct.new(:pastel, :questions, :notes, :name) do
+      QuestionPrompter = Struct.new(:pastel, :pager, :questions, :notes, :name) do
         # Initially set to the defaults
         def answers
           @answers ||= questions.map { |q| [q.id, q.default] }.to_h
@@ -72,61 +72,19 @@ module FlightJob
           answers[question.related_question_id] == question.ask_when['eq']
         end
 
+        def prompt_loop
+          reask = true
+          while reask
+            puts "\n\n"
+            pager.page summary
+            reask = prompt_again
+          end
+        end
+
         # Ask all the questions in order
         def prompt_all
           questions.each do |question|
             prompt?(question) ? prompt_question(question) : skip_question(question)
-          end
-        end
-
-        # Prompts the user for any answers they wish to change
-        # return [Boolean] if the user requested questions to be re-asked
-        def prompt_again
-          opts = {
-            default: if name.nil?
-                       3
-                     elsif notes?
-                       5
-                     else
-                       4
-                     end,
-            show_help: :always }
-          choices = {
-            'All' => :all, 'Selected' => :selected, 'Name Only' => :name, 'Notes Only' => :notes, 'Finish' => :finish
-          }
-          case prompt.select("Would you like to change the script name, answers, or notes?", choices, **opts)
-          when :all
-            prompt_name
-            prompt_all
-            prompt_notes
-            true
-          when :selected
-            puts(pastel.yellow(<<~WARN).chomp) if dependencies?
-              WARN: Some of the questions have dependencies on previous answers.
-              The exact question prompts may differ if the dependencies change.
-            WARN
-            opts = { show_help: :always, echo: false, help: MULTI_HELP }
-            selected = prompt.multi_select("Which questions would you like to change?", **opts) do |menu|
-              menu.choice "#{name ? 'Update' : 'Set'} the script name?", :name
-              questions.each do |question|
-                next unless asked[question.id]
-                menu.choice question.text, question
-              end
-              menu.choice 'Update notes about the script?', :notes
-            end
-            ask_name = selected.delete(:name)
-            ask_notes = selected.delete(:notes)
-            prompt_name if ask_name
-            prompt_questions(*selected) unless selected.empty?
-            prompt_notes(false) if ask_notes
-            true
-          when :name
-            prompt_name
-            true
-          when :notes
-            prompt_notes(false)
-          else
-            false
           end
         end
 
@@ -190,6 +148,57 @@ module FlightJob
         end
 
         private
+
+        # Prompts the user for any answers they wish to change
+        # return [Boolean] if the user requested questions to be re-asked
+        def prompt_again
+          opts = {
+            default: if name.nil?
+                       3
+                     elsif notes?
+                       5
+                     else
+                       4
+                     end,
+            show_help: :always }
+          choices = {
+            'All' => :all, 'Selected' => :selected, 'Name Only' => :name, 'Notes Only' => :notes, 'Finish' => :finish
+          }
+          case prompt.select("Would you like to change the script name, answers, or notes?", choices, **opts)
+          when :all
+            prompt_name
+            prompt_all
+            prompt_notes
+            true
+          when :selected
+            puts(pastel.yellow(<<~WARN).chomp) if dependencies?
+              WARN: Some of the questions have dependencies on previous answers.
+              The exact question prompts may differ if the dependencies change.
+            WARN
+            opts = { show_help: :always, echo: false, help: MULTI_HELP }
+            selected = prompt.multi_select("Which questions would you like to change?", **opts) do |menu|
+              menu.choice "#{name ? 'Update' : 'Set'} the script name?", :name
+              questions.each do |question|
+                next unless asked[question.id]
+                menu.choice question.text, question
+              end
+              menu.choice 'Update notes about the script?', :notes
+            end
+            ask_name = selected.delete(:name)
+            ask_notes = selected.delete(:notes)
+            prompt_name if ask_name
+            prompt_questions(*selected) unless selected.empty?
+            prompt_notes(false) if ask_notes
+            true
+          when :name
+            prompt_name
+            true
+          when :notes
+            prompt_notes(false)
+          else
+            false
+          end
+        end
 
         # Checks if the notes have been defined
         def notes?
@@ -316,16 +325,11 @@ module FlightJob
 
         # Prompt for this missing answers/notes
         elsif $stdout.tty?
-          reask = true
-          prompter = QuestionPrompter.new(pastel, template.generation_questions, notes || '', name)
+          prompter = QuestionPrompter.new(pastel, pager, template.generation_questions, notes || '', name)
           prompter.prompt_invalid_name
           prompter.prompt_all if answers.nil?
-          notes = prompter.prompt_notes
-          while reask
-            puts "\n\n"
-            pager.page prompter.summary
-            reask = prompter.prompt_again
-          end
+          prompter.prompt_notes
+          prompter.prompt_loop
           answers = prompter.answers
           notes = prompter.notes
           name = prompter.name
