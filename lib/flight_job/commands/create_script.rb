@@ -82,11 +82,19 @@ module FlightJob
         # Prompts the user for any answers they wish to change
         # return [Boolean] if the user requested questions to be re-asked
         def prompt_again
-          opts = { default: name ? 4 : 3, show_help: :always }
+          opts = {
+            default: if name.nil?
+                       3
+                     elsif notes?
+                       5
+                     else
+                       4
+                     end,
+            show_help: :always }
           choices = {
-            'All' => :all, 'Selected' => :selected, 'Name Only' => :name, 'Finish' => :finish
+            'All' => :all, 'Selected' => :selected, 'Name Only' => :name, 'Notes Only' => :notes, 'Finish' => :finish
           }
-          case prompt.select("Would you like to change the script name or answers?", choices, **opts)
+          case prompt.select("Would you like to change the script name, answers, or notes?", choices, **opts)
           when :all
             prompt_name
             prompt_all
@@ -115,6 +123,8 @@ module FlightJob
           when :name
             prompt_name
             true
+          when :notes
+            prompt_notes(false)
           else
             false
           end
