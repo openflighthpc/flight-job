@@ -52,6 +52,14 @@ begin
   # Builds and runs the CLI
   require_relative '../lib/flight_job/cli'
 
+  # Kill attempt to kill all child processes on exit, this does two things:
+  # * Terminate any remaining scheduler commands as there output will be ignored
+  #   regardless at this point, and
+  # * Terminate any open pagers which would otherwise break the SHELL
+  trap('EXIT') do
+    Process.kill(-Signal.list['TERM'], Process.pid)
+  end
+
   # Runs the command within the original directory
   Dir.chdir(ENV.fetch('FLIGHT_CWD', '.')) do
     OpenFlight.set_standard_env rescue nil
