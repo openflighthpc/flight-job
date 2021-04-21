@@ -35,17 +35,23 @@ module FlightJob
       MULTI_HELP = "(Press ↑/↓/←/→ arrow to scroll, Space/Ctrl+A|R to select (all|rev) and Enter to finish)"
       SUMMARY = ERB.new(<<~'TEMPLATE', nil, '-')
         <%= pastel.bold.underline 'SUMMARY' %>
+
+        <%= pastel.bold 'Name: ' -%><%= pastel.red '(To Be Determined)' %>
+
+        <%= pastel.bold 'Answers:' %>
         <% questions.each do |question| -%>
         <% next unless asked[question.id] -%>
-        <%= pastel.bold(question.text) %>
+        <%= pastel.bold.cyan(question.text) %>
         <%
           value = answers[question.id]
           value = (value.is_a?(Array) ? value.join(',') : value.to_s)
         -%>
-        <%= pastel.green value %>
+        <%= (value.empty? ? pastel.red('(none)') : pastel.green(value)) %>
         <% end -%>
-        <%= pastel.bold('Notes') %>
-        <%= pastel.green notes %>
+
+        <%= pastel.bold 'Notes:' %>
+        <%= (notes.to_s.empty? ? pastel.red('(none)') : pastel.green(notes)) %>
+
       TEMPLATE
 
       # NOTE: The questions must be topologically sorted on their dependencies otherwise
@@ -76,13 +82,16 @@ module FlightJob
         # Prompts the user for any answers they wish to change
         # return [Boolean] if the user requested questions to be re-asked
         def prompt_again
-          opts = { default: 'None', show_help: :always }
-          case prompt.select("Would you like to change your answers?", ['All', 'Selected', 'None'], **opts)
-          when 'All'
+          opts = { default: 3, show_help: :always }
+          choices = {
+            'All' => :all, 'Selected' => :selected, 'Name Only' => :name, 'None' => :none
+          }
+          case prompt.select("Would you like to the script name or answers?", choices, **opts)
+          when :all
             prompt_all
             prompt_notes
             true
-          when 'Selected'
+          when :selected
             puts(pastel.yellow(<<~WARN).chomp) if dependencies?
               WARN: Some of the questions have dependencies on previous answers.
               The exact question prompts may differ if the dependencies change.
