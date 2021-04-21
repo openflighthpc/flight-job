@@ -50,7 +50,13 @@ module FlightJob
         <% end -%>
 
         <%= pastel.bold 'Notes:' %>
-        <%= (notes.to_s.empty? ? pastel.yellow('(none)') : pastel.green(notes)) %>
+        <% if notes.empty? -%>
+        <%= pastel.yellow('(none)') %>
+        <% else -%>
+        <% notes.each_line do |line| # Colourise each line so it appears correctly in the pager -%>
+        <%= pastel.green(line.chomp) %>
+        <% end -%>
+        <% end -%>
       TEMPLATE
 
       # NOTE: The questions must be topologically sorted on their dependencies otherwise
