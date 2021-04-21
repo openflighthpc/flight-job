@@ -330,9 +330,6 @@ module FlightJob
           prompter.prompt_all if answers.nil?
           prompter.prompt_notes
           prompter.prompt_loop
-          answers = prompter.answers
-          notes = prompter.notes
-          name = prompter.name
 
         # Populate missing answers/notes in a non-interactive shell
         else
@@ -345,6 +342,27 @@ module FlightJob
           notes ||= ''
         end
 
+        # Create the script from the prompter
+        script = nil
+        if prompter
+          begin
+            script = render_and_save(prompter.name, prompter.answers, prompter.notes)
+          rescue DuplicateError
+            # Retry if the name was taken before it could be saved
+            prompter.prompt_invalid_name
+            prompter.prompt_loop
+            retry
+          end
+        # Create the script from the manual inputs
+        else
+          script = render_and_save(name, answers, notes)
+        end
+
+        # Render the script output
+        puts Outputs::InfoScript.build_output(**output_options).render(script)
+      end
+
+      def render_and_save(name, answers, notes)
         # Ensure the ID is valid
         verify_id(name) if name
 
@@ -361,8 +379,8 @@ module FlightJob
         # Save the script
         script.render_and_save
 
-        # Render the script output
-        puts Outputs::InfoScript.build_output(**output_options).render(script)
+        # Return the script
+        script
       end
 
       def template
