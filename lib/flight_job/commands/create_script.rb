@@ -36,7 +36,7 @@ module FlightJob
       SUMMARY = ERB.new(<<~'TEMPLATE', nil, '-')
         <%= pastel.bold.underline 'SUMMARY' %>
 
-        <%= pastel.bold 'Name: ' -%><%= (name ? pastel.green(name) : pastel.red('(To Be Determined)')) %>
+        <%= pastel.bold 'Name: ' -%><%= (name ? pastel.green(name) : pastel.yellow('(To Be Determined)')) %>
 
         <%= pastel.bold 'Answers:' %>
         <% questions.each do |question| -%>
@@ -46,11 +46,11 @@ module FlightJob
           value = answers[question.id]
           value = (value.is_a?(Array) ? value.join(',') : value.to_s)
         -%>
-        <%= (value.empty? ? pastel.red('(none)') : pastel.green(value)) %>
+        <%= (value.empty? ? pastel.yellow('(none)') : pastel.green(value)) %>
         <% end -%>
 
         <%= pastel.bold 'Notes:' %>
-        <%= (notes.to_s.empty? ? pastel.red('(none)') : pastel.green(notes)) %>
+        <%= (notes.to_s.empty? ? pastel.yellow('(none)') : pastel.green(notes)) %>
 
       TEMPLATE
 
@@ -84,7 +84,7 @@ module FlightJob
         def prompt_again
           opts = { default: name ? 4 : 3, show_help: :always }
           choices = {
-            'All' => :all, 'Selected' => :selected, 'Name Only' => :name, 'None' => :none
+            'All' => :all, 'Selected' => :selected, 'Name Only' => :name, 'Finish' => :finish
           }
           case prompt.select("Would you like to change the script name or answers?", choices, **opts)
           when :all
@@ -138,8 +138,28 @@ module FlightJob
           end
         end
 
+        # Used to prompt the user that the provided name is invalid
+        # It is intended to be called up-front so it can unset default to the 'prompt_name' method
+        def prompt_invalid_name
+          return unless name
+          script = Script.new(id: name)
+          return if script.valid?(:id_check)
+          error = script.errors.first
+          msg = if error.type == :already_exists
+                  'already exists!'
+                else
+                  "is invalid as it #{error.message}"
+                end
+          prompt.keypress(pastel.red.bold <<~WARN.chomp)
+            The provided script name #{msg}
+            You will need to provide a new name. Press any key to continue...
+          WARN
+          self.name = nil
+        end
+
         def prompt_name
-          candidate = prompt.ask("What is the script's name?")
+          opts = name ? { default: name } : { required: true }
+          candidate = prompt.ask("What is the script's name?", **opts)
           script = Script.new(id: candidate)
           if script.valid?(:id_check)
             self.name = candidate
@@ -152,7 +172,7 @@ module FlightJob
             # NOTE: Technically there maybe multiple errors, but the prompt is nicer
             # when only the first is emitted. This should be sufficient for must error conditions
             $stderr.puts pastel.red(<<~ERROR.chomp)
-              The selected name is invalid as it #{script.errors.messages.first.last.first}
+              The selected name is invalid as it #{script.errors.first.message}
               Please try again...
             ERROR
             prompt_name
@@ -264,8 +284,9 @@ module FlightJob
       end
 
       def run
-        # Preliminarily check if the provided ID is okay
-        verify_id(args[1]) if args.length > 1
+        # Stashes the preliminary version of the name
+        # NOTE: It is validated latter
+        name = args.length > 1 ? args[1] : nil
 
         # Attempt to get the answers/notes from the input flags
         answers = answers_input
@@ -286,7 +307,8 @@ module FlightJob
         # Prompt for this missing answers/notes
         elsif $stdout.tty?
           reask = true
-          prompter = QuestionPrompter.new(pastel, template.generation_questions, notes || '')
+          prompter = QuestionPrompter.new(pastel, template.generation_questions, notes || '', name)
+          prompter.prompt_invalid_name
           prompter.prompt_all if answers.nil?
           notes = prompter.prompt_notes
           while reask
@@ -296,6 +318,7 @@ module FlightJob
           end
           answers = prompter.answers
           notes = prompter.notes
+          name = prompter.name
 
         # Populate missing answers/notes in a non-interactive shell
         else
@@ -308,8 +331,11 @@ module FlightJob
           notes ||= ''
         end
 
+        # Ensure the ID is valid
+        verify_id(name) if name
+
         # Create the script object
-        opts = ( args.length > 1 ? { id: args[1] } : {} )
+        opts = ( name ? { id: name } : {} )
         script = Script.new(
           template_id: template.id,
           script_name: template.script_template_name,
