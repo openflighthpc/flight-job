@@ -28,10 +28,22 @@
 require 'ostruct'
 require 'pastel'
 require 'tty-editor'
+require 'tty-pager'
 
 module FlightJob
   class Command
     attr_accessor :args, :opts
+
+    def self.new_editor(pastel)
+      cmd = TTY::Editor.from_env.first || begin
+        $stderr.puts pastel.red <<~WARN.chomp
+          Defaulting to 'vi' as the editor.
+          This can be changed by setting the EDITOR environment variable.
+        WARN
+        'vi'
+      end
+      TTY::Editor.new(command: cmd)
+    end
 
     def initialize(args, opts)
       @args = args.freeze
@@ -61,6 +73,10 @@ module FlightJob
       @pastel ||= Pastel.new
     end
 
+    def pager
+      @pager ||= TTY::Pager.new(command: ENV.fetch('LESS', 'less -SFRX'))
+    end
+
     # Check if the given option flag denotes STDIN
     def stdin_flag?(flag)
       ['@-', '@/dev/stdin'].tap { |a| a << '@/proc/42/fd/0' if Process.pid == 42 }
@@ -88,14 +104,7 @@ module FlightJob
     end
 
     def new_editor
-      cmd = TTY::Editor.from_env.first || begin
-        $stderr.puts pastel.red <<~WARN.chomp
-          Defaulting to 'vi' as the editor.
-          This can be changed by setting the EDITOR environment variable.
-        WARN
-        'vi'
-      end
-      TTY::Editor.new(command: cmd)
+      self.class.new_editor(pastel)
     end
 
     def output_options
