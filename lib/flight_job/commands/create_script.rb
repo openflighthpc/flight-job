@@ -88,6 +88,7 @@ module FlightJob
           }
           case prompt.select("Would you like to change the script name or answers?", choices, **opts)
           when :all
+            prompt_name
             prompt_all
             prompt_notes
             true
@@ -121,9 +122,9 @@ module FlightJob
 
         def prompt_notes(confirm = true)
           if confirm
-            open = prompt.yes?("Define notes about the script?", default: true)
+            open = prompt.yes?("#{notes? ? 'Update' : 'Define'} notes about the script?", default: !notes?)
           else
-            prompt.keypress('Define notes about the script. Press any key to continue...')
+            prompt.keypress("#{notes? ? 'Updating' : 'Defining'} notes about the script. Press any key to continue...")
             open = true
           end
           if open
@@ -159,6 +160,11 @@ module FlightJob
         end
 
         private
+
+        # Checks if the notes have been defined
+        def notes?
+          !notes.to_s.empty?
+        end
 
         def prompt
           @prompt ||= TTY::Prompt.new(help_color: :yellow)
@@ -282,7 +288,7 @@ module FlightJob
           reask = true
           prompter = QuestionPrompter.new(pastel, template.generation_questions, notes || '')
           prompter.prompt_all if answers.nil?
-          notes = prompter.prompt_notes if notes.nil?
+          notes = prompter.prompt_notes
           while reask
             puts "\n\n"
             pager.page prompter.summary
