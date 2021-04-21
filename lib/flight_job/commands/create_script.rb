@@ -56,7 +56,7 @@ module FlightJob
 
       # NOTE: The questions must be topologically sorted on their dependencies otherwise
       # these prompts will not function correctly
-      QuestionPrompter = Struct.new(:pastel, :questions, :notes) do
+      QuestionPrompter = Struct.new(:pastel, :questions, :notes, :name) do
         # Initially set to the defaults
         def answers
           @answers ||= questions.map { |q| [q.id, q.default] }.to_h
@@ -108,6 +108,9 @@ module FlightJob
             prompt_questions(*selected) unless selected.empty?
             prompt_notes(false) if ask_notes
             true
+          when :name
+            prompt_name
+            false
           else
             false
           end
@@ -128,6 +131,27 @@ module FlightJob
               file.rewind
               self.notes = file.read
             end
+          end
+        end
+
+        def prompt_name
+          candidate = prompt.ask("What is the script's name?")
+          script = Script.new(id: candidate)
+          if script.valid?(:id_check)
+            self.name = candidate
+          elsif script.errors.any? { |e| e.type == :already_exists }
+            $stderr.puts pastel.red(<<~ERROR.chomp)
+              The selected name is already taken, please try again...
+            ERROR
+            prompt_name
+          else
+            # NOTE: Technically there maybe multiple errors, but the prompt is nicer
+            # when only the first is emitted. This should be sufficient for must error conditions
+            $stderr.puts pastel.red(<<~ERROR.chomp)
+              The selected name is invalid as it #{script.errors.messages.first.last.first}
+              Please try again...
+            ERROR
+            prompt_name
           end
         end
 
