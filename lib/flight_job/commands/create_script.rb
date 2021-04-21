@@ -36,7 +36,7 @@ module FlightJob
       SUMMARY = ERB.new(<<~'TEMPLATE', nil, '-')
         <%= pastel.bold.underline 'SUMMARY' %>
 
-        <%= pastel.bold 'Name: ' -%><%= pastel.red '(To Be Determined)' %>
+        <%= pastel.bold 'Name: ' -%><%= (name ? pastel.green(name) : pastel.red('(To Be Determined)')) %>
 
         <%= pastel.bold 'Answers:' %>
         <% questions.each do |question| -%>
@@ -82,11 +82,11 @@ module FlightJob
         # Prompts the user for any answers they wish to change
         # return [Boolean] if the user requested questions to be re-asked
         def prompt_again
-          opts = { default: 3, show_help: :always }
+          opts = { default: name ? 4 : 3, show_help: :always }
           choices = {
             'All' => :all, 'Selected' => :selected, 'Name Only' => :name, 'None' => :none
           }
-          case prompt.select("Would you like to the script name or answers?", choices, **opts)
+          case prompt.select("Would you like to change the script name or answers?", choices, **opts)
           when :all
             prompt_all
             prompt_notes
@@ -98,19 +98,22 @@ module FlightJob
             WARN
             opts = { show_help: :always, echo: false, help: MULTI_HELP }
             selected = prompt.multi_select("Which questions would you like to change?", **opts) do |menu|
+              menu.choice "#{name ? 'Update' : 'Set'} the script name?", :name
               questions.each do |question|
                 next unless asked[question.id]
                 menu.choice question.text, question
               end
-              menu.choice 'Update notes about the script', :notes
+              menu.choice 'Update notes about the script?', :notes
             end
+            ask_name = selected.delete(:name)
             ask_notes = selected.delete(:notes)
+            prompt_name if ask_name
             prompt_questions(*selected) unless selected.empty?
             prompt_notes(false) if ask_notes
             true
           when :name
             prompt_name
-            false
+            true
           else
             false
           end
