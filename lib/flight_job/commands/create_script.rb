@@ -36,7 +36,7 @@ module FlightJob
       SUMMARY = ERB.new(<<~'TEMPLATE', nil, '-')
         <%= pastel.bold.underline 'SUMMARY' %>
 
-        <%= pastel.bold 'Name: ' -%><%= (name ? pastel.green(name) : pastel.yellow('(To Be Determined)')) %>
+        <%= pastel.bold 'Name: ' -%><%= pastel.green(name) %>
 
         <%= pastel.bold 'Answers:' %>
         <%
@@ -72,6 +72,17 @@ module FlightJob
       # NOTE: The questions must be topologically sorted on their dependencies otherwise
       # these prompts will not function correctly
       QuestionPrompter = Struct.new(:pastel, :pager, :questions, :notes, :name) do
+        def initialize(*a)
+          super
+          if self.name
+            @prompt_for_name = false
+          else
+            self.name ||= Script.new.id
+            @prompt_for_name = true
+          end
+          @prompt_for_notes = true
+        end
+
         def answers
           @answers ||= {}
         end
@@ -117,6 +128,7 @@ module FlightJob
         end
 
         def prompt_notes(confirm = true)
+          @prompt_for_notes = false
           if confirm
             open = prompt.yes?("#{notes? ? 'Update' : 'Define'} notes about the script?", default: !notes?)
           else
@@ -150,7 +162,8 @@ module FlightJob
             The provided script name #{msg}
             You will need to provide a new name. Press any key to continue...
           WARN
-          self.name = nil
+          @prompt_for_name = true
+          self.name = Script.new.id
         end
 
         def prompt_name
@@ -158,6 +171,7 @@ module FlightJob
           candidate = prompt.ask("What is the script's name?", **opts)
           script = Script.new(id: candidate)
           if script.valid?(:id_check)
+            @prompt_for_name = false
             self.name = candidate
           elsif script.errors.any? { |e| e.type == :already_exists }
             $stderr.puts pastel.red(<<~ERROR.chomp)
@@ -181,12 +195,12 @@ module FlightJob
         # return [Boolean] if the user requested questions to be re-asked
         def prompt_again
           opts = {
-            default: if name.nil?
+            default: if @prompt_for_name
                        3
-                     elsif notes?
-                       5
-                     else
+                     elsif @prompt_for_notes
                        4
+                     else
+                       5
                      end,
             show_help: :always }
           choices = {
