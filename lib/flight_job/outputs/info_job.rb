@@ -59,16 +59,16 @@ module FlightJob
         if verbose || output.context[:submit]
       -%>
 
-      <%= pastel.blue.bold "Submit Std. Out" -%><%= pastel.bold ':' %>
+      <%= pastel.blue.bold "Submit Stdout" -%><%= pastel.bold ':' %>
       <%= pastel.green submit_outputs.first.call(model) %>
-      <%= pastel.blue.bold "Submit Std. Error" -%><%= pastel.bold ':' %>
+      <%= pastel.blue.bold "Submit Stderr" -%><%= pastel.bold ':' %>
       <%= pastel.green submit_outputs.last.call(model) %>
       <% end -%>
     ERB
 
     register_attribute(section: :main, header: 'ID') { |j| j.id }
     register_attribute(section: :main, header: 'Script ID') { |j| j.script_id }
-    register_attribute(section: :main, header: 'Sched. ID') { |j| j.scheduler_id }
+    register_attribute(section: :main, header: 'Scheduler ID') { |j| j.scheduler_id }
     register_attribute(section: :main, header: 'State') { |j| j.state }
 
     # Show a boolean in the "simplified" output, and the exit code in the verbose
@@ -111,8 +111,8 @@ module FlightJob
     #
     #       As each attribute is defined independently, the headers can be changed without
     #       affecting the ability to pad the output.
-    register_attribute(section: :main, modes: [:paths], header: 'Std. Out Path') { |j| j.stdout_path }
-    register_attribute(section: :main, modes: [:paths], header: 'Std. Error Path') { |j| j.stderr_path }
+    register_attribute(section: :main, modes: [:paths], header: 'Stdout Path') { |j| j.stdout_path }
+    register_attribute(section: :main, modes: [:paths], header: 'Stderr Path') { |j| j.stderr_path }
     register_attribute(section: :main, interactive: true, modes: [:combined], header: 'Output Path') { |j| j.stdout_path }
 
     register_attribute(section: :submit, header: 'noop') do |job|
