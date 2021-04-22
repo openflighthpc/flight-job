@@ -136,22 +136,14 @@ module FlightJob
           end
         end
 
-        def prompt_notes(confirm = true)
+        def open_notes
           @prompt_for_notes = false
-          if confirm
-            open = prompt.yes?("#{notes? ? 'Update' : 'Define'} notes about the script?", default: !notes?)
-          else
-            prompt.keypress("#{notes? ? 'Updating' : 'Defining'} notes about the script. Press any key to continue...")
-            open = true
-          end
-          if open
-            with_tmp_file do |file|
-              file.write(notes)
-              file.rewind
-              editor.open(file.path)
-              file.rewind
-              self.notes = file.read
-            end
+          with_tmp_file do |file|
+            file.write(notes)
+            file.rewind
+            editor.open(file.path)
+            file.rewind
+            self.notes = file.read
           end
         end
 
@@ -177,21 +169,21 @@ module FlightJob
 
         def prompt_name
           opts = name ? { default: name } : { required: true }
-          candidate = prompt.ask("What is the script's name?", **opts)
+          candidate = prompt.ask("What is the script's identifier?", **opts)
           script = Script.new(id: candidate)
           if script.valid?(:id_check)
             @prompt_for_name = false
             self.name = candidate
           elsif script.errors.any? { |e| e.type == :already_exists }
             $stderr.puts pastel.red(<<~ERROR.chomp)
-              The selected name is already taken, please try again...
+              The selected identifier is already taken, please try again...
             ERROR
             prompt_name
           else
             # NOTE: Technically there maybe multiple errors, but the prompt is nicer
             # when only the first is emitted. This should be sufficient for must error conditions
             $stderr.puts pastel.red(<<~ERROR.chomp)
-              The selected name is invalid as it #{script.errors.first.message}
+              The selected identifier is invalid as it #{script.errors.first.message}
               Please try again...
             ERROR
             prompt_name
@@ -205,21 +197,23 @@ module FlightJob
         def prompt_again
           opts = {
             default: if @prompt_for_name
-                       3
+                       1
                      elsif @prompt_for_notes
-                       4
+                       2
                      else
                        5
                      end,
             show_help: :always }
           choices = {
-            'All' => :all, 'Selected' => :selected, 'Name Only' => :name, 'Notes Only' => :notes, 'Finish' => :finish
+            'Change the script identifier.' => :name,
+            "#{notes.empty? ? 'Define' : 'Change'} the notes about the script." => :notes,
+            'Change the answers to selected questions.' => :selected,
+            'Re-ask all the questions.' => :all,
+            'Save and quit!' => :finish
           }
-          case prompt.select("Would you like to change the script name, answers, or notes?", choices, **opts)
+          case prompt.select("What would you like to do next?", choices, **opts)
           when :all
-            prompt_name
             prompt_all
-            prompt_notes
             true
           when :selected
             puts(pastel.yellow(<<~WARN).chomp) if dependencies?
@@ -228,24 +222,18 @@ module FlightJob
             WARN
             opts = { show_help: :always, echo: false, help: MULTI_HELP }
             selected = prompt.multi_select("Which questions would you like to change?", **opts) do |menu|
-              menu.choice "#{name ? 'Update' : 'Set'} the script name?", :name
               questions.each do |question|
                 next unless prompt?(question)
                 menu.choice question.text, question
               end
-              menu.choice 'Update notes about the script?', :notes
             end
-            ask_name = selected.delete(:name)
-            ask_notes = selected.delete(:notes)
-            prompt_name if ask_name
             prompt_questions(*selected) unless selected.empty?
-            prompt_notes(false) if ask_notes
             true
           when :name
             prompt_name
             true
           when :notes
-            prompt_notes(false)
+            open_notes
           else
             false
           end
