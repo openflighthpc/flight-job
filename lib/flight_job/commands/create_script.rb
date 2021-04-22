@@ -44,6 +44,7 @@ module FlightJob
               next unless prompt?(question) -%>
         <%=   pastel.blue.bold(question.text) -%>
         <%    value = answers[question.id]
+              value = question.default if value.nil?
               value = (value.is_a?(Array) ? value.join(',') : value.to_s)
               if value.empty?
         -%>
@@ -71,9 +72,8 @@ module FlightJob
       # NOTE: The questions must be topologically sorted on their dependencies otherwise
       # these prompts will not function correctly
       QuestionPrompter = Struct.new(:pastel, :pager, :questions, :notes, :name) do
-        # Initially set to the defaults
         def answers
-          @answers ||= questions.map { |q| [q.id, q.default] }.to_h
+          @answers ||= {}
         end
 
         def summary
@@ -275,9 +275,10 @@ module FlightJob
         end
 
         def prompt_question(question)
+          default = answers.key?(question.id) ? answers[question.id] : question.default
           answers[question.id] = case question.format['type']
           when 'text'
-            prompt.ask(question.text, default: answers[question.id])
+            prompt.ask(question.text, default: default)
           when 'multiline_text'
             # NOTE: The 'default' field does not work particularly well for multiline inputs
             # Consider replacing with $EDITOR
@@ -286,14 +287,14 @@ module FlightJob
           when 'select'
             opts = { show_help: :always }
             choices = question.format['options'].each_with_index.map do |opt, idx|
-              opts[:default] = idx + 1 if opt['value'] == answers[question.id]
+              opts[:default] = idx + 1 if opt['value'] == default
               { name: opt['text'], value: opt['value'] }
             end
             prompt.select(question.text, choices, **opts)
           when 'multiselect'
             opts = { show_help: :always, echo: false, help: MULTI_HELP, default: [] }
             choices = question.format['options'].each_with_index.map do |opt, idx|
-              opts[:default] << idx + 1 if answers[question.id].include?(opt['value'])
+              opts[:default] << idx + 1 if default.is_a?(Array) && default.include?(opt['value'])
               { name: opt['text'], value: opt['value'] }
             end
             prompt.multi_select(question.text, choices, **opts)
@@ -307,12 +308,10 @@ module FlightJob
           @dependencies ||= questions.any? { |q| q.related_question_id }
         end
 
-        # Flags a question as being skipped
-        # NOTE: The answer needs resetting in case it has been previously asked
+        # Flags a question as being skipped and removes the previous answer
         def skip_question(question)
           FlightJob.logger.debug("Skipping question: #{question.id}")
-          asked[question.id] = false
-          answers[question.id] = question.default
+          answers.delete(question.id)
         end
 
         def with_tmp_file
