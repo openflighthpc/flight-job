@@ -42,7 +42,16 @@ module FlightJob
         <%
             questions.each do |question|
               next unless prompt?(question) -%>
-        <%=   pastel.blue.bold(question.text) -%>
+        <%
+              if /[[:alnum:]]/.match?(question.text[-1])
+                text = question.text
+                delim = ':'
+              else
+                text = question.text[0..-2]
+                delim = question.text[-1]
+              end
+        -%>
+        <%=   pastel.blue.bold(text) -%><%= pastel.bold(delim) -%>
         <%    value = answers[question.id]
               value = question.default if value.nil?
               value = (value.is_a?(Array) ? value.join(',') : value.to_s)
