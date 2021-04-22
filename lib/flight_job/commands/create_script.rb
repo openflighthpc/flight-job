@@ -349,7 +349,6 @@ module FlightJob
           prompter = QuestionPrompter.new(pastel, pager, template.generation_questions, notes || '', name)
           prompter.prompt_invalid_name
           prompter.prompt_all if answers.nil?
-          prompter.prompt_notes if notes.nil?
           prompter.prompt_loop
 
         # Populate missing answers/notes in a non-interactive shell
