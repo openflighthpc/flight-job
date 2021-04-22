@@ -41,7 +41,7 @@ module FlightJob
         <%= pastel.bold 'Answers:' %>
         <%
             questions.each do |question|
-              next unless asked[question.id] -%>
+              next unless prompt?(question) -%>
         <%=   pastel.blue.bold(question.text) -%>
         <%    value = answers[question.id]
               value = (value.is_a?(Array) ? value.join(',') : value.to_s)
@@ -207,7 +207,7 @@ module FlightJob
             selected = prompt.multi_select("Which questions would you like to change?", **opts) do |menu|
               menu.choice "#{name ? 'Update' : 'Set'} the script name?", :name
               questions.each do |question|
-                next unless asked[question.id]
+                next unless prompt?(question)
                 menu.choice question.text, question
               end
               menu.choice 'Update notes about the script?', :notes
@@ -275,7 +275,6 @@ module FlightJob
         end
 
         def prompt_question(question)
-          asked[question.id] = true # Flags the question as asked
           answers[question.id] = case question.format['type']
           when 'text'
             prompt.ask(question.text, default: answers[question.id])
@@ -301,11 +300,6 @@ module FlightJob
           else
             raise InternalError, "Unexpectedly reached question type: #{question.format['type']}"
           end
-        end
-
-        # Tracks if a question has been asked
-        def asked
-          @asked ||= {}
         end
 
         # Checks if any of the questions have dependencies
