@@ -36,20 +36,20 @@ module FlightJob
 
   # Setup the autoloads for the commands
   module Commands
-    Dir.glob(File.expand_path('flight_job/commands/*', __dir__)).each do |path|
+    Dir.glob(File.expand_path('flight_job/commands/*.rb', __dir__)).each do |path|
       autoload FlightJob.constantize(File.basename(path, '.*')), path
     end
   end
 
   # Setup the autoloads for models
-  Dir.glob(File.expand_path('flight_job/models/*', __dir__)).each do |path|
+  Dir.glob(File.expand_path('flight_job/models/*.rb', __dir__)).each do |path|
     autoload FlightJob.constantize(File.basename(path, '.*')), path
   end
 
   # Setup the autoloads for outputs
   autoload(:JSONRenderer, File.expand_path('flight_job/json_renderer', __dir__))
   module Outputs
-    Dir.glob(File.expand_path('flight_job/outputs/*', __dir__)).each do |path|
+    Dir.glob(File.expand_path('flight_job/outputs/*.rb', __dir__)).each do |path|
       autoload FlightJob.constantize(File.basename(path, '.*')), path
     end
   end
