@@ -33,6 +33,7 @@ require 'open3'
 
 module FlightJob
   class Job < ApplicationModel
+    STATE_MAP = YAML.load(File.read(FlightJob.config.state_map_path))
     TERMINAL_STATES = ['FAILED', 'COMPLETED', 'CANCELLED', 'UNKNOWN']
     RUNNING_STATES = ['RUNNING']
     RUNNING_OR_TERMINAL_STATES = [*RUNNING_STATES, *TERMINAL_STATES]
@@ -268,11 +269,7 @@ module FlightJob
     # Takes the scheduler's state and converts it to an internal flight-job one
     # NOTE: The `state=` method should be used when updating the internal state directly
     def update_scheduler_state(scheduler_state)
-      if STATES.include? scheduler_state
-        self.state = scheduler_state
-      else
-        'UNKNOWN'
-      end
+      self.state = STATE_MAP.fetch(scheduler_state, 'UNKNOWN')
     end
 
     def submit

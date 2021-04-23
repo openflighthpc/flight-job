@@ -54,6 +54,8 @@ module FlightJob
               transform: relative_to(root_path)
     attribute :jobs_dir, default: '~/.local/share/flight/job/jobs',
               transform: relative_to(root_path)
+    attribute :state_map_path, default: 'etc/state-maps/slurm.yaml',
+              transform: relative_to(root_path)
     attribute :submit_script_path, default: 'libexec/slurm/submit.sh',
               transform: relative_to(root_path)
     attribute :monitor_script_path, default: 'libexec/slurm/monitor.sh',

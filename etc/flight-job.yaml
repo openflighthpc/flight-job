@@ -66,6 +66,18 @@
 # monitor_script_path: libexec/slurm/monitor.sh
 
 # ==============================================================================
+# State Map Path
+# Specify the path to the state map file. This file should contain a list of
+# "scheduler states" and the corresponding "flight job state".
+#
+# Relative paths are expanded from the install directory.
+#
+# WARNING: Unrecognized flight-job states may prevent the job from being updated.
+# Ensure all flight-job states are valid (see: lib/flight_job/models/script.rb)
+# ==============================================================================
+# monitor_script_path: libexec/slurm/monitor.sh
+
+# ==============================================================================
 # Check Cron Path
 # Specify the path to the script which checks if cron is setup to run the
 # monitor.
