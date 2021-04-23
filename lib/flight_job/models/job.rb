@@ -326,7 +326,6 @@ module FlightJob
         process_output('monitor', status, stdout) do |data|
           self.state = data['state']
 
-          # Update the start_time
           if ['', nil].include? data['start_time']
             self.start_time = nil
           else
@@ -339,8 +338,11 @@ module FlightJob
             end
           end
 
-          # Update the end_time
-          if ['', nil].include? data['end_time']
+          # For jobs in a non-terminal state, the slurm monitor reports the
+          # "expected end time" as the "actual end time".  Dealing with this
+          # issue here is the simplest fix, but ideally the monitor would
+          # separate expected and actual end times.
+          if ['', nil].include?(data['end_time']) || !TERMINAL_STATES.include?(state)
             self.end_time = nil
           else
             begin
