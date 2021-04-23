@@ -359,7 +359,9 @@ module FlightJob
           elsif data['reason']
             self.reason = data['reason']
           end
-          File.write(metadata_path, YAML.dump(metadata))
+          if valid?(:load)
+            File.write(metadata_path, YAML.dump(metadata))
+          end
         end
       end
 
