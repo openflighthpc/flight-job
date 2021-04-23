@@ -206,7 +206,7 @@ module FlightJob
             show_help: :always }
           choices = {
             'Change the script identifier.' => :name,
-            "#{notes.empty? ? 'Define' : 'Change'} the notes about the script." => :notes,
+            "#{notes.empty? ? 'Add' : 'Edit the'} notes about the script." => :notes,
             'Change the answers to selected questions.' => :selected,
             'Re-ask all the questions.' => :all,
             'Save and quit!' => :finish
