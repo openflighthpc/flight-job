@@ -331,7 +331,7 @@ module FlightJob
             self.start_time = nil
           else
             begin
-              self.start_time = DateTime.parse(data['start_time']).rfc3339
+              self.start_time = Time.parse(data['start_time']).to_datetime.rfc3339
             rescue ArgumentError
               FlightJob.logger.error "Failed to parse start_time: #{data['start_time']}"
               FlightJob.logger.debug $!.full_message
@@ -344,7 +344,7 @@ module FlightJob
             self.end_time = nil
           else
             begin
-              self.end_time = DateTime.parse(data['end_time']).rfc3339
+              self.end_time = Time.parse(data['end_time']).to_datetime.rfc3339
             rescue ArgumentError
               FlightJob.logger.error "Failed to parse end_time: #{data['end_time']}"
               FlightJob.logger.debug $!.full_message
