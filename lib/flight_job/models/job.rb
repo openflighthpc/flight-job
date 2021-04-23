@@ -349,7 +349,7 @@ module FlightJob
           # the RUNNING_STATES.
           #
           # Consider refactoring
-          if ['', nil].include? data['start_time'] || !RUNNING_OR_TERMINAL_STATES.include?(state)
+          if ['', nil].include?(data['start_time']) || !RUNNING_OR_TERMINAL_STATES.include?(state)
             self.start_time = nil
           else
             begin
