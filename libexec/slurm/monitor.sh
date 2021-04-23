@@ -49,19 +49,17 @@ read -r -d '' template <<'TEMPLATE' || true
 TEMPLATE
 
 # Fetch the state of the job
-control=$(scontrol show job "$1" 2>&1)
+control=$(scontrol show job "$1" --oneline | head -n 1 | tr ' ' '\n' 2>&1)
 exit_status="$?"
 if [[ "$exit_status" -eq 0 ]]; then
-  # Determine the state and reason
-  state=$(echo "$control" | grep -E "\s*JobState=" | sed "s/^\s*JobState=\([^ ]*\).*/\1/g")
-  reason=$(echo "$control" | grep -E "Reason=" | sed "s/.*Reason=\(.*\)\sDependency=.*/\1/g")
+  state=$( echo "$control" | grep '^JobState=' | cut -d= -f2)
+  reason=$(echo "$control" | grep '^Reason='   | cut -d= -f2)
   if [[ "$reason" == "None" ]]; then
     reason=""
   fi
 
-  # Extract the times
-  start_time=$(echo "$control" | grep -E ".*StartTime=" | sed "s/.*StartTime=\([^ ]*\).*/\1/g" )
-  end_time=$(echo "$control" | grep -E ".*EndTime=" | sed "s/.*EndTime=\([^ ]*\).*/\1/g" )
+  start_time=$(echo "$control" | grep '^StartTime=' | cut -d= -f2)
+  end_time=$(  echo "$control" | grep '^EndTime='   | cut -d= -f2)
 elif [[ "$control" == "slurm_load_jobs error: Invalid job id specified" ]]; then
   # Fallback to sacct if scontrol does not recognise the ID
   acct=$(sacct --noheader --parsable --jobs "$1" --format State,Reason,START,END  | head -n1)
