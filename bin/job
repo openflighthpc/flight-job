@@ -63,5 +63,4 @@ rescue Interrupt
   else
     $stderr.puts "\nWARNING: Cancelled by user"
   end
-  exit(130)
 end

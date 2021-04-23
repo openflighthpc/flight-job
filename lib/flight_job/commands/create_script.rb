@@ -35,25 +35,65 @@ module FlightJob
       MULTI_HELP = "(Press ↑/↓/←/→ arrow to scroll, Space/Ctrl+A|R to select (all|rev) and Enter to finish)"
       SUMMARY = ERB.new(<<~'TEMPLATE', nil, '-')
         <%= pastel.bold.underline 'SUMMARY' %>
-        <% questions.each do |question| -%>
-        <% next unless asked[question.id] -%>
-        <%= pastel.bold(question.text) %>
+
+        <%= pastel.bold 'Name: ' -%><%= pastel.green(name) %>
+
+        <%= pastel.bold 'Answers:' %>
         <%
-          value = answers[question.id]
-          value = (value.is_a?(Array) ? value.join(',') : value.to_s)
+            questions.each do |question|
+              next unless prompt?(question) -%>
+        <%
+              if /[[:alnum:]]/.match?(question.text[-1])
+                text = question.text
+                delim = ':'
+              else
+                text = question.text[0..-2]
+                delim = question.text[-1]
+              end
         -%>
-        <%= pastel.green value %>
-        <% end -%>
-        <%= pastel.bold('Notes') %>
-        <%= pastel.green notes %>
+        <%=   pastel.blue.bold(text) -%><%= pastel.bold(delim) -%>
+        <%    value = answers[question.id]
+              value = question.default if value.nil?
+              value = (value.is_a?(Array) ? value.join(',') : value.to_s)
+              if value.empty?
+        -%>
+        <%=     " #{pastel.yellow('(none)')}" %>
+        <%    elsif question.format['type'] == 'multiline_text' -%>
+
+        <%      value.each_line do |line| -%>
+        <%=       pastel.green(line.chomp) %>
+        <%      end -%>
+        <%    else -%>
+        <%=     " #{pastel.green(value)}" %>
+        <%    end -%>
+        <%  end -%>
+
+        <%= pastel.bold 'Notes:' %>
+        <%  if notes.empty? -%>
+        <%=   pastel.yellow('(none)') %>
+        <%  else -%>
+        <%    notes.each_line do |line| -%>
+        <%=     pastel.green(line.chomp) %>
+        <%    end -%>
+        <%  end -%>
       TEMPLATE
 
       # NOTE: The questions must be topologically sorted on their dependencies otherwise
       # these prompts will not function correctly
-      QuestionPrompter = Struct.new(:pastel, :questions, :notes) do
-        # Initially set to the defaults
+      QuestionPrompter = Struct.new(:pastel, :pager, :questions, :notes, :name) do
+        def initialize(*a)
+          super
+          if self.name
+            @prompt_for_name = false
+          else
+            self.name ||= Script.new.id
+            @prompt_for_name = true
+          end
+          @prompt_for_notes = true
+        end
+
         def answers
-          @answers ||= questions.map { |q| [q.id, q.default] }.to_h
+          @answers ||= {}
         end
 
         def summary
@@ -66,6 +106,29 @@ module FlightJob
           answers[question.related_question_id] == question.ask_when['eq']
         end
 
+        def prompt_loop
+          reask = true
+          while reask
+            puts "\n"
+            text = summary.sub(/\n+\Z/, '')
+            diff = TTY::Screen.rows - text.lines.count
+            # Work around issues with LESS -SFRX flag
+            # The -F/--quit-if-one-screen flag disables less if the summary fits on one page
+            # However, the prompt_again question adds an additional X lines, which isn't being
+            # accounted for.
+            #
+            # The 'pager' should still be used, as the user may have changed either PAGER/LESS
+            # env vars. Instead the text is padded with newlines, if its length is X lines less
+            # than the terminal height
+            if 0 < diff && diff < 7
+              text = "#{text}#{"\n" * diff}"
+            end
+            pager.page text
+            print "\n"
+            reask = prompt_again
+          end
+        end
+
         # Ask all the questions in order
         def prompt_all
           questions.each do |question|
@@ -73,16 +136,86 @@ module FlightJob
           end
         end
 
+        def open_notes
+          @prompt_for_notes = false
+          with_tmp_file do |file|
+            file.write(notes)
+            file.rewind
+            editor.open(file.path)
+            file.rewind
+            self.notes = file.read
+          end
+        end
+
+        # Used to prompt the user that the provided name is invalid
+        # It is intended to be called up-front so it can unset default to the 'prompt_name' method
+        def prompt_invalid_name
+          return unless name
+          script = Script.new(id: name)
+          return if script.valid?(:id_check)
+          error = script.errors.first
+          msg = if error.type == :already_exists
+                  'already exists!'
+                else
+                  "is invalid as it #{error.message}"
+                end
+          prompt.keypress(pastel.red.bold <<~WARN.chomp)
+            The provided script name #{msg}
+            You will need to provide a new name. Press any key to continue...
+          WARN
+          @prompt_for_name = true
+          self.name = Script.new.id
+        end
+
+        def prompt_name
+          opts = name ? { default: name } : { required: true }
+          candidate = prompt.ask("What is the script's identifier?", **opts)
+          script = Script.new(id: candidate)
+          if script.valid?(:id_check)
+            @prompt_for_name = false
+            self.name = candidate
+          elsif script.errors.any? { |e| e.type == :already_exists }
+            $stderr.puts pastel.red(<<~ERROR.chomp)
+              The selected identifier is already taken, please try again...
+            ERROR
+            prompt_name
+          else
+            # NOTE: Technically there maybe multiple errors, but the prompt is nicer
+            # when only the first is emitted. This should be sufficient for must error conditions
+            $stderr.puts pastel.red(<<~ERROR.chomp)
+              The selected identifier is invalid as it #{script.errors.first.message}
+              Please try again...
+            ERROR
+            prompt_name
+          end
+        end
+
+        private
+
         # Prompts the user for any answers they wish to change
         # return [Boolean] if the user requested questions to be re-asked
         def prompt_again
-          opts = { default: 'None', show_help: :always }
-          case prompt.select("Would you like to change your answers?", ['All', 'Selected', 'None'], **opts)
-          when 'All'
+          opts = {
+            default: if @prompt_for_name
+                       1
+                     elsif @prompt_for_notes
+                       2
+                     else
+                       5
+                     end,
+            show_help: :always }
+          choices = {
+            'Change the script identifier.' => :name,
+            "#{notes.empty? ? 'Add' : 'Edit the'} notes about the script." => :notes,
+            'Change the answers to selected questions.' => :selected,
+            'Re-ask all the questions.' => :all,
+            'Save and quit!' => :finish
+          }
+          case prompt.select("What would you like to do next?", choices, **opts)
+          when :all
             prompt_all
-            prompt_notes
             true
-          when 'Selected'
+          when :selected
             puts(pastel.yellow(<<~WARN).chomp) if dependencies?
               WARN: Some of the questions have dependencies on previous answers.
               The exact question prompts may differ if the dependencies change.
@@ -90,39 +223,26 @@ module FlightJob
             opts = { show_help: :always, echo: false, help: MULTI_HELP }
             selected = prompt.multi_select("Which questions would you like to change?", **opts) do |menu|
               questions.each do |question|
-                next unless asked[question.id]
+                next unless prompt?(question)
                 menu.choice question.text, question
               end
-              menu.choice 'Update notes about the script', :notes
             end
-            ask_notes = selected.delete(:notes)
             prompt_questions(*selected) unless selected.empty?
-            prompt_notes(false) if ask_notes
             true
+          when :name
+            prompt_name
+            true
+          when :notes
+            open_notes
           else
             false
           end
         end
 
-        def prompt_notes(confirm = true)
-          if confirm
-            open = prompt.yes?("Define notes about the script?", default: true)
-          else
-            prompt.keypress('Define notes about the script. Press any key to continue...')
-            open = true
-          end
-          if open
-            with_tmp_file do |file|
-              file.write(notes)
-              file.rewind
-              editor.open(file.path)
-              file.rewind
-              self.notes = file.read
-            end
-          end
+        # Checks if the notes have been defined
+        def notes?
+          !notes.to_s.empty?
         end
-
-        private
 
         def prompt
           @prompt ||= TTY::Prompt.new(help_color: :yellow)
@@ -166,10 +286,10 @@ module FlightJob
         end
 
         def prompt_question(question)
-          asked[question.id] = true # Flags the question as asked
+          default = answers.key?(question.id) ? answers[question.id] : question.default
           answers[question.id] = case question.format['type']
           when 'text'
-            prompt.ask(question.text, default: answers[question.id])
+            prompt.ask(question.text, default: default)
           when 'multiline_text'
             # NOTE: The 'default' field does not work particularly well for multiline inputs
             # Consider replacing with $EDITOR
@@ -178,14 +298,14 @@ module FlightJob
           when 'select'
             opts = { show_help: :always }
             choices = question.format['options'].each_with_index.map do |opt, idx|
-              opts[:default] = idx + 1 if opt['value'] == answers[question.id]
+              opts[:default] = idx + 1 if opt['value'] == default
               { name: opt['text'], value: opt['value'] }
             end
             prompt.select(question.text, choices, **opts)
           when 'multiselect'
             opts = { show_help: :always, echo: false, help: MULTI_HELP, default: [] }
             choices = question.format['options'].each_with_index.map do |opt, idx|
-              opts[:default] << idx + 1 if answers[question.id].include?(opt['value'])
+              opts[:default] << idx + 1 if default.is_a?(Array) && default.include?(opt['value'])
               { name: opt['text'], value: opt['value'] }
             end
             prompt.multi_select(question.text, choices, **opts)
@@ -194,22 +314,15 @@ module FlightJob
           end
         end
 
-        # Tracks if a question has been asked
-        def asked
-          @asked ||= {}
-        end
-
         # Checks if any of the questions have dependencies
         def dependencies?
           @dependencies ||= questions.any? { |q| q.related_question_id }
         end
 
-        # Flags a question as being skipped
-        # NOTE: The answer needs resetting in case it has been previously asked
+        # Flags a question as being skipped and removes the previous answer
         def skip_question(question)
           FlightJob.logger.debug("Skipping question: #{question.id}")
-          asked[question.id] = false
-          answers[question.id] = question.default
+          answers.delete(question.id)
         end
 
         def with_tmp_file
@@ -222,15 +335,16 @@ module FlightJob
       end
 
       def run
-        # Preliminarily check if the provided ID is okay
-        verify_id(args[1]) if args.length > 1
+        # Stashes the preliminary version of the name
+        # NOTE: It is validated latter
+        name = args.length > 1 ? args[1] : nil
 
         # Attempt to get the answers/notes from the input flags
         answers = answers_input
         notes = notes_input
 
-        # Skip this section if both have been provided
-        if answers && notes
+        # Skip this section if all the fields have been provided
+        if answers && notes && name
           # NOOP
 
         # Handle STDIN contention (disables the prompts)
@@ -241,19 +355,12 @@ module FlightJob
           ERROR
           notes ||= ''
 
-        # Prompt for this missing answers/notes
+        # Prompt for this missing answers/notes/name
         elsif $stdout.tty?
-          reask = true
-          prompter = QuestionPrompter.new(pastel, template.generation_questions, notes || '')
+          prompter = QuestionPrompter.new(pastel, pager, template.generation_questions, notes || '', name)
+          prompter.prompt_invalid_name
           prompter.prompt_all if answers.nil?
-          notes = prompter.prompt_notes if notes.nil?
-          while reask
-            puts "\n\n"
-            pager.page prompter.summary
-            reask = prompter.prompt_again
-          end
-          answers = prompter.answers
-          notes = prompter.notes
+          prompter.prompt_loop
 
         # Populate missing answers/notes in a non-interactive shell
         else
@@ -266,8 +373,32 @@ module FlightJob
           notes ||= ''
         end
 
+        # Create the script from the prompter
+        script = nil
+        if prompter
+          begin
+            script = render_and_save(prompter.name, prompter.answers, prompter.notes)
+          rescue DuplicateError
+            # Retry if the name was taken before it could be saved
+            prompter.prompt_invalid_name
+            prompter.prompt_loop
+            retry
+          end
+        # Create the script from the manual inputs
+        else
+          script = render_and_save(name, answers, notes)
+        end
+
+        # Render the script output
+        puts Outputs::InfoScript.build_output(**output_options).render(script)
+      end
+
+      def render_and_save(name, answers, notes)
+        # Ensure the ID is valid
+        verify_id(name) if name
+
         # Create the script object
-        opts = ( args.length > 1 ? { id: args[1] } : {} )
+        opts = ( name ? { id: name } : {} )
         script = Script.new(
           template_id: template.id,
           script_name: template.script_template_name,
@@ -279,8 +410,8 @@ module FlightJob
         # Save the script
         script.render_and_save
 
-        # Render the script output
-        puts Outputs::InfoScript.build_output(**output_options).render(script)
+        # Return the script
+        script
       end
 
       def template
