@@ -32,24 +32,43 @@ module FlightJob
     extend OutputMode::TLDR::Show
 
     TEMPLATE = <<~ERB
-      <% each(:main) do |value, field:, padding:, **_| -%>
-      <%= padding -%><%= pastel.blue.bold field -%><%= pastel.bold ':' -%> <%= pastel.green value %>
+      <%
+        verbose = output.context[:verbose]
+        main = output.callables.config_select(:section, :main)
+        paths = main.select(&:paths?)
+
+        # Determine if the STDOUT/STDERR paths should be combined or
+        # independently displayed
+        if verbose || paths.map { |p| p.call(model) }.uniq.length != 1
+          callables = OutputMode::Callables.new main.reject(&:combined?)
+        else
+          callables = OutputMode::Callables.new main.reject(&:paths?)
+        end
+      -%>
+      <% callables.pad_each do |callable, padding:| -%>
+      <%
+          # Generates the value
+          # NOTE: The output contains details about how to handle nil/true/false
+          value = pastel.green callable.generator(output).call(model)
+          header = pastel.blue.bold callable.config[:header]
+      -%>
+      <%= padding -%><%= header -%><%= pastel.bold ':' -%> <%= value %>
       <% end -%>
       <%
         submit_outputs = output.procs.select { |proc| proc.config[:section] == :submit }
-        unless submit_outputs.empty?
+        if verbose || output.context[:submit]
       -%>
 
-      <%= pastel.blue.bold "Submit Standard Out" -%><%= pastel.bold ':' %>
+      <%= pastel.blue.bold "Submit Stdout" -%><%= pastel.bold ':' %>
       <%= pastel.green submit_outputs.first.call(model) %>
-      <%= pastel.blue.bold "Submit Standard Error" -%><%= pastel.bold ':' %>
+      <%= pastel.blue.bold "Submit Stderr" -%><%= pastel.bold ':' %>
       <%= pastel.green submit_outputs.last.call(model) %>
       <% end -%>
     ERB
 
     register_attribute(section: :main, header: 'ID') { |j| j.id }
     register_attribute(section: :main, header: 'Script ID') { |j| j.script_id }
-    register_attribute(section: :main, header: 'Alt. ID') { |j| j.scheduler_id }
+    register_attribute(section: :main, header: 'Scheduler ID') { |j| j.scheduler_id }
     register_attribute(section: :main, header: 'State') { |j| j.state }
 
     # Show a boolean in the "simplified" output, and the exit code in the verbose
@@ -57,32 +76,49 @@ module FlightJob
     # NOTE: There is a rendering issue of integers into the TSV output. Needs investigation
     register_attribute(section: :main, header: 'Submit Status', verbose: true) { |j| j.submit_status.to_s }
 
-    # Toggle the format of the created at time
-    register_attribute(section: :main, header: 'Created At', verbose: true) { |j| j.created_at }
-    register_attribute(section: :main, header: 'Created At', verbose: false) do |job|
-      DateTime.rfc3339(job.created_at).strftime('%d/%m/%y %H:%M')
+    register_attribute(section: :main, header: 'Created at') do |job, verbose:|
+      if verbose
+        job.created_at
+      else
+        DateTime.rfc3339(job.created_at).strftime('%d/%m/%y %H:%M')
+      end
     end
 
     # NOTE: These could be the predicted times instead of the actual, consider
     # delineating the two
-    register_attribute(section: :main, header: 'Start Time', verbose: true) { |j| j.start_time }
-    register_attribute(section: :main, header: 'Start Time', verbose: false) do |job|
-      next nil unless job.start_time
-      DateTime.rfc3339(job.start_time).strftime('%d/%m/%y %H:%M')
+    register_attribute(section: :main, header: 'Started at') do |job, verbose:|
+      if job.start_time.nil?
+        nil
+      elsif verbose
+        job.start_time
+      else
+        DateTime.rfc3339(job.start_time).strftime('%d/%m/%y %H:%M')
+      end
     end
-    register_attribute(section: :main, header: 'End Time', verbose: true) { |j| j.end_time }
-    register_attribute(section: :main, header: 'End Time', verbose: false) do |job|
-      next nil unless job.end_time
-      DateTime.rfc3339(job.end_time).strftime('%d/%m/%y %H:%M')
+    register_attribute(section: :main, header: 'Ended at') do |job, verbose:|
+      if job.end_time.nil?
+        nil
+      elsif verbose
+        job.end_time
+      else
+        DateTime.rfc3339(job.end_time).strftime('%d/%m/%y %H:%M')
+      end
     end
 
-    register_attribute(section: :main, header: 'StdOut Path') { |j| j.stdout_path }
-    register_attribute(section: :main, header: 'StdErr Path') { |j| j.stderr_path }
+    # NOTE: In interactive shells, the STDOUT/STDERR are merged together if they
+    #       are the same. The 'modes' are boolean flags (similar to verbose/interactive)
+    #       which are used to select the appropriate attributes.
+    #
+    #       As each attribute is defined independently, the headers can be changed without
+    #       affecting the ability to pad the output.
+    register_attribute(section: :main, modes: [:paths], header: 'Stdout Path') { |j| j.stdout_path }
+    register_attribute(section: :main, modes: [:paths], header: 'Stderr Path') { |j| j.stderr_path }
+    register_attribute(section: :main, interactive: true, modes: [:combined], header: 'Output Path') { |j| j.stdout_path }
 
-    register_attribute(section: :submit, header: 'Submission STDOUT') do |job|
+    register_attribute(section: :submit, header: 'noop') do |job|
       job.submit_stdout
     end
-    register_attribute(section: :submit, header: 'Submission STOUT') do |job|
+    register_attribute(section: :submit, header: 'noop') do |job|
       job.submit_stderr
     end
 
@@ -91,20 +127,7 @@ module FlightJob
       if opts.delete(:json)
         JSONRenderer.new(false, opts[:interactive])
       else
-        super(template: TEMPLATE, **opts).tap do |output|
-          # OutputMode currently doesn't properly support escaping of the newlines
-          # due to how it has wrapped the underlying CSV library
-          case output
-          when OutputMode::Outputs::Delimited
-            output.config.merge! write_converters: [->(f) { f.to_s.dump.sub(/\A"/, '').sub(/"\Z/, '') }]
-
-          # Toggles the STDOUT/STDERR display based on verbosity or if explicitly flagged
-          when OutputMode::Outputs::Templated
-            if !(opts[:verbose] || submit)
-              output.procs.reject! { |c| c.config[:section] == :submit }
-            end
-          end
-        end
+        super(template: TEMPLATE, context: { submit: submit }, **opts)
       end
     end
   end

@@ -326,12 +326,11 @@ module FlightJob
         process_output('monitor', status, stdout) do |data|
           self.state = data['state']
 
-          # Update the start_time
           if ['', nil].include? data['start_time']
             self.start_time = nil
           else
             begin
-              self.start_time = DateTime.parse(data['start_time']).rfc3339
+              self.start_time = Time.parse(data['start_time']).to_datetime.rfc3339
             rescue ArgumentError
               FlightJob.logger.error "Failed to parse start_time: #{data['start_time']}"
               FlightJob.logger.debug $!.full_message
@@ -339,12 +338,15 @@ module FlightJob
             end
           end
 
-          # Update the end_time
-          if ['', nil].include? data['end_time']
+          # For jobs in a non-terminal state, the slurm monitor reports the
+          # "expected end time" as the "actual end time".  Dealing with this
+          # issue here is the simplest fix, but ideally the monitor would
+          # separate expected and actual end times.
+          if ['', nil].include?(data['end_time']) || !TERMINAL_STATES.include?(state)
             self.end_time = nil
           else
             begin
-              self.end_time = DateTime.parse(data['end_time']).rfc3339
+              self.end_time = Time.parse(data['end_time']).to_datetime.rfc3339
             rescue ArgumentError
               FlightJob.logger.error "Failed to parse end_time: #{data['end_time']}"
               FlightJob.logger.debug $!.full_message

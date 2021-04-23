@@ -34,30 +34,41 @@ module FlightJob
 
     register_column(header: 'ID', row_color: :yellow) { |s| s.id }
     register_column(header: 'Script ID', verbose: true) { |j| j.script_id }
-    register_column(header: 'Alt. ID', verbose: true) { |j| j.scheduler_id }
+    register_column(header: 'Sched. ID', verbose: true) { |j| j.scheduler_id }
     register_column(header: 'State') { |j| j.state }
 
     # Show a boolean in the "simplified" output, and the exit code in the verbose
+    # NOTE: The headers are intentionally toggled between outputs
     register_column(header: 'Submitted', verbose: false) { |j| j.submit_status == 0 }
     register_column(header: 'Submit Status', verbose: true) { |j| j.submit_status }
 
-    # Toggle the format of the created at time
-    register_column(header: 'Created At', verbose: true) { |j| j.created_at }
-    register_column(header: 'Created At', verbose: false) do |job|
-      DateTime.rfc3339(job.created_at).strftime('%d/%m/%y %H:%M')
+    register_column(header: 'Created at') do |job, verbose:|
+      if verbose
+        job.created_at
+      else
+        DateTime.rfc3339(job.created_at).strftime('%d/%m/%y %H:%M')
+      end
     end
 
     # NOTE: These could be the predicted times instead of the actual, consider
     # delineating the two
-    register_column(header: 'Start Time', verbose: true) { |j| j.start_time }
-    register_column(header: 'Start Time', verbose: false) do |job|
-      next nil unless job.start_time
-      DateTime.rfc3339(job.start_time).strftime('%d/%m/%y %H:%M')
+    register_column(header: 'Started at') do |job, verbose:|
+      if job.start_time.nil?
+        nil
+      elsif verbose
+        job.start_time
+      else
+        DateTime.rfc3339(job.start_time).strftime('%d/%m/%y %H:%M')
+      end
     end
-    register_column(header: 'End Time', verbose: true) { |j| j.end_time }
-    register_column(header: 'End Time', verbose: false) do |job|
-      next nil unless job.end_time
-      DateTime.rfc3339(job.end_time).strftime('%d/%m/%y %H:%M')
+    register_column(header: 'Ended at') do |job, verbose:|
+      if job.end_time.nil?
+        nil
+      elsif verbose
+        job.end_time
+      else
+        DateTime.rfc3339(job.end_time).strftime('%d/%m/%y %H:%M')
+      end
     end
 
     register_column(header: 'StdOut Path', verbose: true) { |j| j.stdout_path }
@@ -67,12 +78,7 @@ module FlightJob
       if opts.delete(:json)
         JSONRenderer.new(true, opts[:interactive])
       else
-        super(row_color: :cyan, header_color: :bold, **opts).tap do |output|
-          # NOTE: The rotate flag "hopefully" going to be a new feature to TTY::Table
-          # that stops is rotating in small terminals. OutputMode has no concept of this
-          # feature, currently
-          output.config.merge!(rotate: false) if output.is_a? OutputMode::Outputs::Tabulated
-        end
+        super(row_color: :cyan, header_color: :bold, **opts)
       end
     end
   end

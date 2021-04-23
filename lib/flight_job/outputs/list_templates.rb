@@ -39,8 +39,9 @@ module FlightJob
     register_column(header: 'Name') do |template|
       template.id
     end
-    register_column(header: "File (Dir: #{FlightJob.config.templates_dir})", verbose: true) do |template|
-      if $stdout.tty?
+    file_header = "File (Dir: #{FlightJob.config.templates_dir})"
+    register_column(header: file_header, verbose: true) do |template, interactive:|
+      if interactive
         Pathname.new(template.template_path).relative_path_from FlightJob.config.templates_dir
       else
         template.template_path
@@ -51,12 +52,7 @@ module FlightJob
       if opts.delete(:json)
         JSONRenderer.new(true, opts[:interactive])
       else
-        super(row_color: :cyan, header_color: :bold, **opts).tap do |output|
-          # NOTE: The rotate flag "hopefully" going to be a new feature to TTY::Table
-          # that stops is rotating in small terminals. OutputMode has no concept of this
-          # feature, currently
-          output.config.merge!(rotate: false) if output.is_a? OutputMode::Outputs::Tabulated
-        end
+        super(row_color: :cyan, header_color: :bold, **opts)
       end
     end
   end

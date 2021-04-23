@@ -48,10 +48,12 @@ module FlightJob
     register_attribute(section: :main, header: 'File Name') { |s| s.script_name }
     register_attribute(section: :main, header: 'Path') { |s| s.script_path }
 
-    # Toggle the format of the created at time
-    register_attribute(section: :main, header: 'Created At', verbose: true) { |s| s.created_at }
-    register_attribute(section: :main, header: 'Created At', verbose: false) do |script|
-      DateTime.rfc3339(script.created_at).strftime('%d/%m/%y %H:%M')
+    register_attribute(section: :main, header: 'Created at') do |script, verbose:|
+      if verbose
+        script.created_at
+      else
+        DateTime.rfc3339(script.created_at).strftime('%d/%m/%y %H:%M')
+      end
     end
 
     register_attribute(section: :notes, header: 'Notes') { |s| s.notes }
@@ -60,12 +62,7 @@ module FlightJob
       if opts.delete(:json)
         JSONRenderer.new(false, opts[:interactive])
       else
-        super(template: TEMPLATE, **opts).tap do |output|
-          case output
-          when OutputMode::Outputs::Delimited
-            output.config.merge! write_converters: [->(f) { f.to_s.dump.sub(/\A"/, '').sub(/"\Z/, '') }]
-          end
-        end
+        super(template: TEMPLATE, **opts)
       end
     end
   end
