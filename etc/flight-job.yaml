@@ -75,7 +75,7 @@
 # WARNING: Unrecognized flight-job states may prevent the job from being updated.
 # Ensure all flight-job states are valid (see: lib/flight_job/models/script.rb)
 # ==============================================================================
-# monitor_script_path: libexec/slurm/monitor.sh
+# state_map_path: etc/state-maps/slurm.yaml
 
 # ==============================================================================
 # Check Cron Path
