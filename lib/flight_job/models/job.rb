@@ -34,7 +34,8 @@ require 'open3'
 module FlightJob
   class Job < ApplicationModel
     TERMINAL_STATES = ['FAILED', 'COMPLETED', 'CANCELLED', 'UNKNOWN']
-    STATES = ['PENDING', 'RUNNING', *TERMINAL_STATES]
+    RUNNING_STATES = ['RUNNING']
+    STATES = ['PENDING', *RUNNING_STATES, *TERMINAL_STATES]
 
     SCHEMA = JSONSchemer.schema({
       "type" => "object",
@@ -263,6 +264,16 @@ module FlightJob
       { "id" => id }.merge(metadata)
     end
 
+    # Takes the scheduler's state and converts it to an internal flight-job one
+    # NOTE: The `state=` method should be used when updating the internal state directly
+    def update_scheduler_state(scheduler_state)
+      if STATES.include? scheduler_state
+        self.state = scheduler_state
+      else
+        'UNKNOWN'
+      end
+    end
+
     def submit
       unless valid?(:submit)
         FlightJob.config.logger("The script is not in a valid submission state: #{id}\n") do
@@ -324,7 +335,7 @@ module FlightJob
       cmd = [FlightJob.config.monitor_script_path, scheduler_id]
       execute_command(*cmd) do |status, stdout, stderr|
         process_output('monitor', status, stdout) do |data|
-          self.state = data['state']
+          update_monitor_state(data['state'])
 
           if ['', nil].include? data['start_time']
             self.start_time = nil
