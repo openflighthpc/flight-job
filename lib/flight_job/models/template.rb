@@ -49,7 +49,6 @@ module FlightJob
             "properties" => {
               'text' => { "type" => "string" },
               'value' => { "type" => "string" },
-              'priority' => { "type" => 'integer' }
             }
           }
         }
@@ -111,7 +110,8 @@ module FlightJob
         'synopsis' => { "type" => 'string' },
         'description' => { "type" => 'string' },
         'version' => { "type" => 'integer', 'enum' => [0] },
-        'generation_questions' => QUESTIONS_SPEC
+        'generation_questions' => QUESTIONS_SPEC,
+        'priority' => { "type" => 'integer' },
       }
     })
 
