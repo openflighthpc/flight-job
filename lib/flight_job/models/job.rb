@@ -35,6 +35,7 @@ module FlightJob
   class Job < ApplicationModel
     TERMINAL_STATES = ['FAILED', 'COMPLETED', 'CANCELLED', 'UNKNOWN']
     RUNNING_STATES = ['RUNNING']
+    RUNNING_OR_TERMINAL_STATES = [*RUNNING_STATES, *TERMINAL_STATES]
     STATES = ['PENDING', *RUNNING_STATES, *TERMINAL_STATES]
 
     SCHEMA = JSONSchemer.schema({
@@ -335,9 +336,23 @@ module FlightJob
       cmd = [FlightJob.config.monitor_script_path, scheduler_id]
       execute_command(*cmd) do |status, stdout, stderr|
         process_output('monitor', status, stdout) do |data|
-          update_monitor_state(data['state'])
+          update_scheduler_state(data['state'])
 
-          if ['', nil].include? data['start_time']
+          # The slurm monitor script will report the "expected start/end times"
+          # as if they where the actual times. This means "start_time" should
+          # only be updated when in a running or terminal state. Similarly, the
+          # "end_time" should only be updated when in a terminal state.
+          #
+          # NOTE: This *might* give erroneous results if the job transitioned
+          # from pending to terminal. In these cases, they would not have technically
+          # started, but slurm may still set the "start_time"
+          #
+          # It is not possible to detect this condition at this point, as the monitor
+          # runs infrequently. Thus a fast running job may "appear" to have skipped
+          # the RUNNING_STATES.
+          #
+          # Consider refactoring
+          if ['', nil].include? data['start_time'] || !RUNNING_OR_TERMINAL_STATES.include?(state)
             self.start_time = nil
           else
             begin
@@ -349,10 +364,6 @@ module FlightJob
             end
           end
 
-          # For jobs in a non-terminal state, the slurm monitor reports the
-          # "expected end time" as the "actual end time".  Dealing with this
-          # issue here is the simplest fix, but ideally the monitor would
-          # separate expected and actual end times.
           if ['', nil].include?(data['end_time']) || !TERMINAL_STATES.include?(state)
             self.end_time = nil
           else
