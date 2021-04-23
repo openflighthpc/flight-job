@@ -2,7 +2,7 @@ name: Simple serial
 copyright: Copyright (C) 2021 Alces Flight Ltd.
 license: Creative Commons Attribution-ShareAlike 4.0 International
 script_template: simple.sh
-priority: 1000
+priority: 100
 version: 0
 synopsis: Submit a single job.
 description: |
