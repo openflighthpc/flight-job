@@ -60,22 +60,22 @@ PR:             FAILED
 PREEMPTED:      FAILED
 R:              RUNNING
 RUNNING:        RUNNING
-RD:             PENDING # TBC
-RESV_DEL_HOLD:  PENDING # as above
+RD:             PENDING
+RESV_DEL_HOLD:  PENDING
 RF:             PENDING
 REQUEUE_FED:    PENDING
-RH:             PENDING # TBC
-REQUEUE_HOLD:   PENDING # as above
+RH:             PENDING
+REQUEUE_HOLD:   PENDING
 RQ:             PENDING
 REQUEUED:       PENDING
-RS:             RUNNING # TBC
-RESIZING:       RUNNING # as above
+RS:             RUNNING
+RESIZING:       RUNNING
 RV:             FAILED # Currently jobs can not be tracked if they change cluster
 REVOKED:        FAILED # as above
 SI:             RUNNING
 SIGNALING:      RUNNING
-SE:             UNKNOWN # The job is in a custom state, and thus unknown
-SPECIAL_EXIT:   UNKNOWN # as above
+SE:             PENDING
+SPECIAL_EXIT:   PENDING
 SO:             RUNNING
 STAGE_OUT:      RUNNING
 ST:             RUNNING # This is a bit of a misnomer, consider defining a new state
