@@ -106,7 +106,7 @@ module FlightJob
           FlightJob.logger.debug(job.errors)
           nil
         end
-      end.reject(&:nil?)
+      end.reject(&:nil?).sort
     end
 
     def self.load_active
@@ -396,6 +396,16 @@ module FlightJob
       end
     end
 
+    protected
+
+    def <=>(other)
+      if created_at.nil? || other.created_at.nil?
+        0 # This case SHOULD NOT be reached in practice, so further sorting isn't required
+      else
+        Time.parse(created_at) <=> Time.parse(other.created_at)
+      end
+    end
+
     private
 
     def process_output(type, status, out)
@@ -439,6 +449,7 @@ module FlightJob
       cmd_stdout, cmd_stderr, status = Open3.capture3(env, *cmd, unsetenv_others: true, close_others: true)
 
       FlightJob.logger.debug <<~DEBUG
+        COMMAND: #{cmd.join(" ")}
         STATUS: #{status.exitstatus}
         STDOUT:
         #{cmd_stdout}
