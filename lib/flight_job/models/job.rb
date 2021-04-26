@@ -50,6 +50,7 @@ module FlightJob
         "script_id" => { "type" => "string" },
         "created_at" => { "type" => "string", "format" => "date-time" },
         "state" => { "type" => "string", "enum" => STATES },
+        "scheduler_state" => { "type" => "string" },
         # NOTE: In practice this will normally be an integer, however this is not
         # guaranteed. As such it must be stored as a string.
         "scheduler_id" => { "type" => ["string", "null"] },
@@ -266,10 +267,13 @@ module FlightJob
       { "id" => id }.merge(metadata)
     end
 
-    # Takes the scheduler's state and converts it to an internal flight-job one
-    # NOTE: The `state=` method should be used when updating the internal state directly
+    # Takes the scheduler's state and converts it to an internal flight-job
+    # one.
+    # NOTE: The `state=` method should be used when updating the internal
+    # state directly
     def update_scheduler_state(scheduler_state)
       self.state = STATE_MAP.fetch(scheduler_state, 'UNKNOWN')
+      self.scheduler_state = scheduler_state
     end
 
     def submit
