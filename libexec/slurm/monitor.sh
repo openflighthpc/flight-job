@@ -49,14 +49,14 @@ read -r -d '' template <<'TEMPLATE' || true
 TEMPLATE
 
 # Fetch the state of the job
-control=$(scontrol show job "$1" --oneline | head -n 1 | tr ' ' '\n' 2>&1)
+raw_control=$(scontrol show job "$1" --oneline 2>&1)
+exit_status="$?"
+control=$(echo "$raw_control" | head -n 1 | tr ' ' '\n')
 cat <<EOF
-Processed scontrol:
-$control
+scontrol:
+$raw_control
 EOF
 
-
-exit_status="$?"
 if [[ "$exit_status" -eq 0 ]]; then
   state=$( echo "$control" | grep '^JobState=' | cut -d= -f2)
   reason=$(echo "$control" | grep '^Reason='   | cut -d= -f2)
@@ -73,16 +73,16 @@ if [[ "$exit_status" -eq 0 ]]; then
   fi
 
   end_time=$(  echo "$control" | grep '^EndTime='   | cut -d= -f2)
-elif [[ "$control" == "slurm_load_jobs error: Invalid job id specified" ]]; then
+elif [[ "$raw_control" == "slurm_load_jobs error: Invalid job id specified" ]]; then
   # Fallback to sacct if scontrol does not recognise the ID
-  acct=$(sacct --noheader --parsable --jobs "$1" --format State,Reason,START,END,AllocTRES  | head -n1)
+  raw_acct=$(sacct --noheader --parsable --jobs "$1" --format State,Reason,START,END,AllocTRES)
+  exit_status="$?"
+  acct=$(echo "$raw_acct" | head -n1)
   cat <<EOF
 
-  First line of sacct:
-  $acct
+sacct:
+$raw_acct
 EOF
-
-  exit_status="$?"
 
   # Transition the job to "UNKNOWN" is sacct has no record of it
   if [[ "$exit_status" -eq 0 ]] && [ -z "$acct" ]; then
@@ -111,7 +111,6 @@ EOF
   fi
 else
   # Exit the monitor process if scontrol fails to prevent the job being updated
-  echo "$control" >&2
   exit "$exit_status"
 fi
 
