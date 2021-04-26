@@ -54,7 +54,7 @@ exit_status="$?"
 control=$(echo "$raw_control" | head -n 1 | tr ' ' '\n')
 cat <<EOF
 scontrol:
-$raw_control
+$control
 EOF
 
 if [[ "$exit_status" -eq 0 ]]; then
@@ -64,7 +64,7 @@ if [[ "$exit_status" -eq 0 ]]; then
     reason=""
   fi
 
-  if [[ "$(echo "$control" | grep "^NodeList=" | cut -d= -f2)" -eq "(null)" ]]; then
+  if [[ "$(echo "$control" | grep "^NodeList=" | cut -d= -f2)" == "(null)" ]]; then
     # Skip setting the start_time when there is no allocation
     start_time=""
   else
