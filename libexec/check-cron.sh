@@ -26,6 +26,14 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+#-------------------------------------------------------------------------------
+# WARNING - README
+#
+# This is an internally managed file, any changes maybe lost on the next update!
+# Please make any installation specific changes by duplicating this file and
+# reconfiguring the application.
+#-------------------------------------------------------------------------------
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 BIN="$DIR/run-monitor.sh"
 

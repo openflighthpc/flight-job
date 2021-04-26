@@ -92,17 +92,18 @@ EOF
     reason=''
 
   # Extract the output from sacct
-  elif [[ "$exit_status" -eq 0 ]]; then
-    state=$(echo "$acct" | cut -d'|' -f1)
-    reason=$(echo "$acct" | cut -d'|' -f2)
-    if [ "$(echo "$sacct" | cut -d'|' -f5)" ]; then
-      # Set the start_time if any trackable resources where allocated to the job
-      start_time=$(echo "$acct" | cut -d'|' -f3)
-    else
-      # Skip setting the start_time when there are no allocated TRESS
-      start_time=""
-    fi
-    end_time=$(echo "$acct" | cut -d'|' -f4)
+elif [[ "$exit_status" -eq 0 ]]; then
+  # sacct sometimes tacks info onto the end of the state
+  state=$(echo "$acct" | cut -d'|' -f1 | cut -d' ' -f1)
+  reason=$(echo "$acct" | cut -d'|' -f2)
+  if [ "$(echo "$acct" | cut -d'|' -f5)" ]; then
+    # Set the start_time if any trackable resources where allocated to the job
+    start_time=$(echo "$acct" | cut -d'|' -f3)
+  else
+    # Skip setting the start_time when there are no allocated TRESS
+    start_time=""
+  fi
+  end_time=$(echo "$acct" | cut -d'|' -f4)
 
   # Exit the monitor process if sacct fails to prevent the job being updated
   else
