@@ -121,6 +121,15 @@ module FlightJob
         Changes you make will affect any future jobs submitted from this script,
         but will not affect jobs already submitted.
       DESC
+      c.slop.string '--content', <<~MSG.chomp, meta: '@filepath|@-'
+        Provide the content without the use of the editor. The provided file will
+        replace the existing version
+
+        Files are specified as @filepath or STDIN as @-.
+      MSG
+      c.slop.boolean '--force', <<~MSG.chomp
+        Skip the confirmation when using the --content flag
+      MSG
     end
 
     create_command 'edit-script-notes', 'SCRIPT_ID' do |c|
