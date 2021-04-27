@@ -26,6 +26,7 @@
 #==============================================================================
 
 require 'tty-editor'
+require 'tty-prompt'
 
 module FlightJob
   class Commands::EditScript < Command
@@ -33,21 +34,54 @@ module FlightJob
       # Ensure the script exists up front
       script
 
-      # Opens vimish commands with the start line at the top of the editor,
-      # Other common editors will open somewhere near the start line
-      # NOTE: gedit needs x-forwarding over ssh, but it also supports the +line
-      cmd = if ! start_line
-              editor
-            elsif ['vim', 'nvim'].include?(editor)
-              "#{editor} +#{start_line} -c 'normal! kztj'"
-            elsif ['vi', 'emacs', 'nano', 'gedit'].include?(editor)
-              "#{editor} +#{start_line}"
-            else
-              editor
-            end
+      if content = content_flag
+        confirm_prompt
+        File.write script.script_path, content
+      else
+        # Opens vimish commands with the start line at the top of the editor,
+        # Other common editors will open somewhere near the start line
+        # NOTE: gedit needs x-forwarding over ssh, but it also supports the +line
+        cmd = if ! start_line
+                editor
+              elsif ['vim', 'nvim'].include?(editor)
+                "#{editor} +#{start_line} -c 'normal! kztj'"
+              elsif ['vi', 'emacs', 'nano', 'gedit'].include?(editor)
+                "#{editor} +#{start_line}"
+              else
+                editor
+              end
 
-      # Open the file
-      TTY::Editor.open(script.script_path, command: cmd)
+        # Open the file
+        TTY::Editor.open(script.script_path, command: cmd)
+      end
+    end
+
+    def content_flag
+      if stdin_flag?(opts.content)
+        cached_stdin
+      elsif opts.content && opts.content[0] == '@'
+        read_file(opts.content[1..])
+      elsif opts.content
+        raise InputError, "Please prefix the file path with an '@': #{pastel.yellow("--content @" + opts.content)}"
+      else
+        nil
+      end
+    end
+
+    def confirm_prompt
+      if opts.force
+        return
+      elsif $stdout.tty?
+        bool = TTY::Prompt.new.yes? pastel.yellow(<<~WARN.chomp), default: false
+          This action will replace the existing script!
+          Do you wish to continue?
+        WARN
+        raise InputError, <<~ERROR.chomp unless bool
+          Cancelled the update!
+        ERROR
+      else
+        raise InputError, "'Please rerun the command with: #{pastel.yellow('--force --content ' + opts.content)}"
+      end
     end
 
     def script
