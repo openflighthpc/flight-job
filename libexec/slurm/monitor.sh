@@ -96,7 +96,7 @@ elif [[ "$exit_status" -eq 0 ]]; then
   # sacct sometimes tacks info onto the end of the state
   state=$(echo "$acct" | cut -d'|' -f1 | cut -d' ' -f1)
   reason=$(echo "$acct" | cut -d'|' -f2)
-  if [ "$(echo "$acct" | cut -d'|' -f5)" ]; then
+  if [ -n "$(echo "$acct" | cut -d'|' -f5)" ]; then
     # Set the start_time if any trackable resources where allocated to the job
     start_time=$(echo "$acct" | cut -d'|' -f3)
   else
