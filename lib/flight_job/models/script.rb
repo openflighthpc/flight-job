@@ -56,7 +56,7 @@ module FlightJob
           FlightJob.logger.debug(script.errors)
           nil
         end
-      end.reject(&:nil?)
+      end.reject(&:nil?).sort
     end
 
     attr_reader :id
@@ -290,6 +290,16 @@ module FlightJob
 
     def raise_duplicate_id_error
       raise DuplicateError, "The ID already exists!"
+    end
+
+    protected
+
+    def <=>(other)
+      if id.nil? || id.nil?
+        0 # This case SHOULD NOT be reached in practice, so further sorting isn't required
+      else
+        id <=> other.id
+      end
     end
 
     private

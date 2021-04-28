@@ -49,8 +49,14 @@ read -r -d '' template <<'TEMPLATE' || true
 TEMPLATE
 
 # Fetch the state of the job
-control=$(scontrol show job "$1" --oneline | head -n 1 | tr ' ' '\n' 2>&1)
+raw_control=$(scontrol show job "$1" --oneline 2>&1)
 exit_status="$?"
+control=$(echo "$raw_control" | head -n 1 | tr ' ' '\n')
+cat <<EOF >&2
+scontrol:
+$control
+EOF
+
 if [[ "$exit_status" -eq 0 ]]; then
   state=$( echo "$control" | grep '^JobState=' | cut -d= -f2)
   reason=$(echo "$control" | grep '^Reason='   | cut -d= -f2)
@@ -58,12 +64,25 @@ if [[ "$exit_status" -eq 0 ]]; then
     reason=""
   fi
 
-  start_time=$(echo "$control" | grep '^StartTime=' | cut -d= -f2)
+  if [[ "$(echo "$control" | grep "^NodeList=" | cut -d= -f2)" == "(null)" ]]; then
+    # Skip setting the start_time when there is no allocation
+    start_time=""
+  else
+    # Set the start_time if nodes where allocated to the job
+    start_time=$(echo "$control" | grep '^StartTime=' | cut -d= -f2)
+  fi
+
   end_time=$(  echo "$control" | grep '^EndTime='   | cut -d= -f2)
-elif [[ "$control" == "slurm_load_jobs error: Invalid job id specified" ]]; then
+elif [[ "$raw_control" == "slurm_load_jobs error: Invalid job id specified" ]]; then
   # Fallback to sacct if scontrol does not recognise the ID
-  acct=$(sacct --noheader --parsable --jobs "$1" --format State,Reason,START,END  | head -n1)
+  raw_acct=$(sacct --noheader --parsable --jobs "$1" --format State,Reason,START,END,AllocTRES)
   exit_status="$?"
+  acct=$(echo "$raw_acct" | head -n1)
+  cat <<EOF >&2
+
+sacct:
+$raw_acct
+EOF
 
   # Transition the job to "UNKNOWN" is sacct has no record of it
   if [[ "$exit_status" -eq 0 ]] && [ -z "$acct" ]; then
@@ -73,11 +92,18 @@ elif [[ "$control" == "slurm_load_jobs error: Invalid job id specified" ]]; then
     reason=''
 
   # Extract the output from sacct
-  elif [[ "$exit_status" -eq 0 ]]; then
-    state=$(echo "$acct" | cut -d'|' -f1)
-    reason=$(echo "$acct" | cut -d'|' -f2)
+elif [[ "$exit_status" -eq 0 ]]; then
+  # sacct sometimes tacks info onto the end of the state
+  state=$(echo "$acct" | cut -d'|' -f1 | cut -d' ' -f1)
+  reason=$(echo "$acct" | cut -d'|' -f2)
+  if [ -n "$(echo "$acct" | cut -d'|' -f5)" ]; then
+    # Set the start_time if any trackable resources where allocated to the job
     start_time=$(echo "$acct" | cut -d'|' -f3)
-    end_time=$(echo "$acct" | cut -d'|' -f4)
+  else
+    # Skip setting the start_time when there are no allocated TRESS
+    start_time=""
+  fi
+  end_time=$(echo "$acct" | cut -d'|' -f4)
 
   # Exit the monitor process if sacct fails to prevent the job being updated
   else
@@ -86,7 +112,6 @@ elif [[ "$control" == "slurm_load_jobs error: Invalid job id specified" ]]; then
   fi
 else
   # Exit the monitor process if scontrol fails to prevent the job being updated
-  echo "$control" >&2
   exit "$exit_status"
 fi
 
