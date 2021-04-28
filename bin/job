@@ -59,8 +59,9 @@ begin
   end
 rescue Interrupt
   if Kernel.const_defined?(:Paint)
-    $stderr.puts "\n#{Paint['WARNING', :underline, :yellow]}: Cancelled by user"
+    $stderr.print "\n#{Paint['WARNING', :underline, :yellow]}: Cancelled by user"
   else
-    $stderr.puts "\nWARNING: Cancelled by user"
+    $stderr.print "\nWARNING: Cancelled by user"
   end
+  raise SignalException.new(2)
 end
