@@ -52,7 +52,7 @@ TEMPLATE
 raw_control=$(scontrol show job "$1" --oneline 2>&1)
 exit_status="$?"
 control=$(echo "$raw_control" | head -n 1 | tr ' ' '\n')
-cat <<EOF
+cat <<EOF >&2
 scontrol:
 $control
 EOF
@@ -78,7 +78,7 @@ elif [[ "$raw_control" == "slurm_load_jobs error: Invalid job id specified" ]]; 
   raw_acct=$(sacct --noheader --parsable --jobs "$1" --format State,Reason,START,END,AllocTRES)
   exit_status="$?"
   acct=$(echo "$raw_acct" | head -n1)
-  cat <<EOF
+  cat <<EOF >&2
 
 sacct:
 $raw_acct
