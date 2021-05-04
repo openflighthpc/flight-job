@@ -111,6 +111,8 @@ module FlightJob
     #
     #       As each attribute is defined independently, the headers can be changed without
     #       affecting the ability to pad the output.
+    #
+    # PS: The 'path' mode is a misnomer, it refers solely to the standard output/error paths
     register_attribute(section: :main, modes: [:paths], header: 'Stdout Path') { |j| j.stdout_path }
     register_attribute(section: :main, modes: [:paths], header: 'Stderr Path') { |j| j.stderr_path }
     register_attribute(section: :main, interactive: true, modes: [:combined], header: 'Output Path') { |j| j.stdout_path }
@@ -121,6 +123,14 @@ module FlightJob
     register_attribute(section: :submit, header: 'noop') do |job|
       job.submit_stderr
     end
+
+    # NOTE: The following appear after the submit attributes in the non-interactive output. This
+    # maintains the column order and backwards compatibility.
+    #
+    # The submit columns will always be sorted to the bottom in the interactive outputs.
+    #
+    # Consider reordering on the next major version bump.
+    register_attribute(section: :main, header: 'Output Dir') { |j| j.output_dir }
 
     def self.build_output(**opts)
       submit = opts.delete(:submit)
