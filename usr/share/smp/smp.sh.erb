@@ -26,13 +26,13 @@
 # override. Your job will then be executed in the directory from which
 # it was submitted.
 #
-# WORKING_DIR/OUTPUT_PATH environment variables should not be modified.
+# WORKING_DIR/OUTPUT_DIR environment variables should not be modified.
 # Doing so will prevent 'flight-job' from being able to track the output
 # files.
 #
 #SBATCH -D <%= File.expand_path questions.working_dir.answer %>
 WORKING_DIR=<%= File.expand_path questions.working_dir.answer %>
-OUTPUT_PATH="${WORKING_DIR}/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
+OUTPUT_DIR="${WORKING_DIR}/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
 
 #=========================
 #  Environment variables
@@ -186,12 +186,12 @@ OUTPUT_PATH="${WORKING_DIR}/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
 #===========================
 #  Create output directory
 #---------------------------
-# Files saved within the OUTPUT_PATH will be available through the
+# Files saved within the OUTPUT_DIR will be available through the
 # flight-job utility.
 #
-# OUTPUT_PATH: "${WORKING_DIR}/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
-echo "Your output files will be stored in: $OUTPUT_PATH"
-mkdir -p "$OUTPUT_PATH"
+# OUTPUT_DIR: "${WORKING_DIR}/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
+echo "Your output files will be stored in: $OUTPUT_DIR"
+mkdir -p "$OUTPUT_DIR"
 
 #===============================
 #  Application launch commands
@@ -202,6 +202,6 @@ echo "Executing job commands, current working directory is $(pwd)"
 
 # REPLACE THE FOLLOWING WITH YOUR APPLICATION COMMANDS
 
-echo "Hello, <%= questions.workload.answer %>!" > $OUTPUT_PATH/test.output
-echo "This is an example job. It was allocated $SLURM_NTASKS slot(s) on host `hostname -s` (as `whoami`)." >> $OUTPUT_PATH/test.output
-echo "Output file has been generated, please check $OUTPUT_PATH/test.output"
+echo "Hello, <%= questions.workload.answer %>!" > $OUTPUT_DIR/test.output
+echo "This is an example job. It was allocated $SLURM_NTASKS slot(s) on host `hostname -s` (as `whoami`)." >> $OUTPUT_DIR/test.output
+echo "Output file has been generated, please check $OUTPUT_DIR/test.output"
