@@ -45,12 +45,18 @@ read -r -d '' template <<'TEMPLATE' || true
 {
   id: ($id),
   stdout: ($stdout),
-  stderr: ($stderr)
+  stderr: ($stderr),
+  output_dir: ($output_dir)
 }
 TEMPLATE
 
 # Submit the job to the scheduler
 output=$($DIR/sbatch-wrapper.sh "$1")
+cat <<EOF >&2
+sbatch wrapper output:
+$output
+
+EOF
 if [[ $? -ne 0 ]]; then
   exit $?
 fi
@@ -63,6 +69,10 @@ fi
 
 # Fetch the details about the job
 control=$(scontrol show job "$id")
+cat <<EOF >&2
+scontrol output:
+$control
+EOF
 if [[ $? -ne 0 ]]; then
   exit $?
 fi
@@ -71,5 +81,14 @@ fi
 stdout=$(echo "$control" | grep -E "^\s*StdOut=" | sed "s/^\s*StdOut=//g")
 stderr=$(echo "$control" | grep -E "^\s*StdErr=" | sed "s/^\s*StdErr=//g")
 
+# Determine the output directory
+working=$(echo "$control" | grep -E "^\s*WorkDir=" | sed "s/^\s*WorkDir=//g")
+name=$(echo "$control" | grep -E "^JobId=\w*\s*JobName=" | sed "s/^JobId=\w*\s*JobName=//g")
+output_dir="${working}/${name}-outputs/$id"
+
 # Render and return the JSON payload
-echo '{}' | jq --arg id "$id" --arg stdout "$stdout" --arg stderr "$stderr" "$template" | tr -d "\n"
+echo '{}' | jq  --arg id "$id" \
+                --arg stdout "$stdout" \
+                --arg stderr "$stderr" \
+                --arg output_dir "$output_dir" \
+                "$template" | tr -d "\n"
