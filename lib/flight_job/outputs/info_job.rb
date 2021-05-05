@@ -35,22 +35,13 @@ module FlightJob
       <%
         verbose = output.context[:verbose]
         main = output.callables.config_select(:section, :other)
-        paths = main.select(&:paths?)
-
-        # Determine if the STDOUT/STDERR paths should be combined or
-        # independently displayed
-        if verbose || paths.map { |p| p.call(model) }.uniq.length != 1
-          callables = OutputMode::Callables.new main.reject(&:combined?)
-        else
-          callables = OutputMode::Callables.new main.reject(&:paths?)
-        end
       -%>
-      <% callables.pad_each do |callable, padding:| -%>
+      <% main.pad_each(:header, model, verbose) do |callable, padding:, field:| -%>
       <%
           # Generates the value
           # NOTE: The output contains details about how to handle nil/true/false
           value = pastel.green callable.generator(output).call(model)
-          header = pastel.blue.bold callable.config[:header]
+          header = pastel.blue.bold field
       -%>
       <%= padding -%><%= header -%><%= pastel.bold ':' -%> <%= value %>
       <% end -%>
@@ -84,28 +75,50 @@ module FlightJob
       end
     end
 
-    register_attribute(header: 'Started at') do |job, verbose:|
-      job.format_start_time(verbose)
+    start_header = ->(job, verbose) do
+      job.start_time || verbose ? 'Started at' : 'Estimated Start'
     end
-    register_attribute(header: 'Ended at') do |job, verbose:|
-      job.format_end_time(verbose)
+    register_attribute(header: start_header) do |job, verbose:|
+      if job.start_time || verbose
+        job.format_start_time(verbose)
+      else
+        job.format_estimated_start_time(false)
+      end
     end
 
-    # NOTE: In interactive shells, the STDOUT/STDERR are merged together if they
-    #       are the same. The 'modes' are boolean flags (similar to verbose/interactive)
-    #       which are used to select the appropriate attributes.
-    #
-    #       As each attribute is defined independently, the headers can be changed without
-    #       affecting the ability to pad the output.
-    register_attribute(modes: [:paths], header: 'Stdout Path') { |j| j.stdout_path }
-    register_attribute(modes: [:paths], header: 'Stderr Path') { |j| j.stderr_path }
-    register_attribute(interactive: true, modes: [:combined], header: 'Output Path') { |j| j.stdout_path }
+    end_header = ->(job, verbose) do
+      job.end_time || verbose ? 'Ended at' : 'Estimated Finish'
+    end
+    register_attribute(header: end_header) do |job, verbose:|
+      if job.end_time || verbose
+        job.format_end_time(verbose)
+      else
+        job.format_estimated_end_time(false)
+      end
+    end
+
+    path_header = ->(job, verbose) do
+      if job.stdout_path == job.stderr_path && !verbose
+        'Output Path'
+      else
+        'Stdout Path'
+      end
+    end
+    register_attribute(header: path_header) { |j| j.stdout_path }
+    register_attribute(header: 'Stderr Path', verbose: true) { |j| j.stderr_path }
 
     register_attribute(section: :submit, header: 'noop') do |job|
       job.submit_stdout
     end
     register_attribute(section: :submit, header: 'noop') do |job|
       job.submit_stderr
+    end
+
+    register_attribute(verbose: true, header: 'Estimated Start') do |job|
+      job.format_estimated_start_time(true)
+    end
+    register_attribute(verbose: true, header: 'Estimated Finish') do |job|
+      job.format_estimated_end_time(true)
     end
 
     def self.build_output(**opts)
