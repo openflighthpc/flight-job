@@ -74,7 +74,9 @@ module FlightJob
     end
 
     def pager
-      @pager ||= TTY::Pager.new(command: ENV.fetch('LESS', 'less -SFRX'))
+      pager = ENV.fetch('PAGER', 'less')
+      pager = "#{pager} #{ENV.fetch('LESS', '-SFRX -Ps"Press h for help or q to quit"')}" if pager == 'less'
+      @pager ||= TTY::Pager.new(command: pager)
     end
 
     # Check if the given option flag denotes STDIN
