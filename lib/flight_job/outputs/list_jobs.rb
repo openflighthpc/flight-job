@@ -75,6 +75,9 @@ module FlightJob
     register_column(header: 'StdErr Path', verbose: true) { |j| j.stderr_path }
     register_column(header: 'Results Dir', verbose: true) { |j| j.results_dir }
 
+    register_column(header: 'Estimated Start', verbose: true, &:estimated_start_time)
+    register_column(header: 'Estimated Finish', verbose: true, &:estimated_end_time)
+
     def self.build_output(**opts)
       if opts.delete(:json)
         JSONRenderer.new(true, opts[:interactive])
