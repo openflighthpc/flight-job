@@ -34,10 +34,10 @@ require 'open3'
 module FlightJob
   class Job < ApplicationModel
     STATE_MAP = YAML.load(File.read(FlightJob.config.state_map_path))
+    PENDING_STATES = ['PENDING']
     TERMINAL_STATES = ['FAILED', 'COMPLETED', 'CANCELLED', 'UNKNOWN']
     RUNNING_STATES = ['RUNNING']
-    RUNNING_OR_TERMINAL_STATES = [*RUNNING_STATES, *TERMINAL_STATES]
-    STATES = ['PENDING', *RUNNING_STATES, *TERMINAL_STATES]
+    STATES = [*PENDING_STATES, *RUNNING_STATES, *TERMINAL_STATES]
 
     SCHEMA = JSONSchemer.schema({
       "type" => "object",
@@ -58,7 +58,9 @@ module FlightJob
         "stderr_path" => { "type" => ["string", "null"] },
         "reason" => { "type" => ["string", "null"] },
         "start_time" => { "type" => ["string", "null"], "format" => "date-time" },
-        "end_time" => { "type" => ["string", "null"], "format" => "date-time" }
+        "end_time" => { "type" => ["string", "null"], "format" => "date-time" },
+        "estimated_start_time" => { "type" => ["string", "null"], "format" => "date-time" },
+        "estimated_end_time" => { "type" => ["string", "null"], "format" => "date-time" }
       }
     })
 
@@ -91,7 +93,9 @@ module FlightJob
         "state" => { "type" => "string" },
         "reason" => { "type" => ["string", "null"] },
         "start_time" => { "type" => ["string", "null"] },
-        "end_time" => { "type" => ["string", "null"] }
+        "end_time" => { "type" => ["string", "null"] },
+        "estimated_start_time" => { "type" => ["string", "null"] },
+        "estimated_end_time" => { "type" => ["string", "null"] }
       }
     })
 
@@ -258,7 +262,7 @@ module FlightJob
     [
       "submit_status", "submit_stdout", "submit_stderr", "script_id", "state",
       "scheduler_id", "scheduler_state", "stdout_path", "stderr_path", "reason",
-      "start_time", "end_time"
+      "start_time", "end_time", "estimated_start_time", "estimated_end_time"
     ].each do |method|
       define_method(method) { metadata[method] }
       define_method("#{method}=") { |value| metadata[method] = value }
@@ -340,43 +344,10 @@ module FlightJob
         process_output('monitor', status, stdout) do |data|
           update_scheduler_state(data['state'])
 
-          # The slurm monitor script will report the "expected start/end times"
-          # as if they where the actual times. This means "start_time" should
-          # only be updated when in a running or terminal state. Similarly, the
-          # "end_time" should only be updated when in a terminal state.
-          #
-          # NOTE: This *might* give erroneous results if the job transitioned
-          # from pending to terminal. In these cases, they would not have technically
-          # started, but slurm may still set the "start_time"
-          #
-          # It is not possible to detect this condition at this point, as the monitor
-          # runs infrequently. Thus a fast running job may "appear" to have skipped
-          # the RUNNING_STATES.
-          #
-          # Consider refactoring
-          if ['', nil].include?(data['start_time']) || !RUNNING_OR_TERMINAL_STATES.include?(state)
-            self.start_time = nil
-          else
-            begin
-              self.start_time = Time.parse(data['start_time']).to_datetime.rfc3339
-            rescue ArgumentError
-              FlightJob.logger.error "Failed to parse start_time: #{data['start_time']}"
-              FlightJob.logger.debug $!.full_message
-              raise_command_error
-            end
-          end
-
-          if ['', nil].include?(data['end_time']) || !TERMINAL_STATES.include?(state)
-            self.end_time = nil
-          else
-            begin
-              self.end_time = Time.parse(data['end_time']).to_datetime.rfc3339
-            rescue ArgumentError
-              FlightJob.logger.error "Failed to parse end_time: #{data['end_time']}"
-              FlightJob.logger.debug $!.full_message
-              raise_command_error
-            end
-          end
+          process_times data['estimated_start_time'],
+                        data['start_time'],
+                        data['estimated_end_time'],
+                        data['end_time']
 
           if data['reason'] == ''
             self.reason = nil
@@ -407,6 +378,56 @@ module FlightJob
     end
 
     private
+
+    def process_times(est_start, start, est_end, end_time)
+      # The monitor script does not always distinguish between actual/estimated
+      # start/end times. Doing so reliable would require knowledge of the state
+      # mapping file as 'scontrol' does not make a distinction.
+      #
+      # Instead the start_time/end_time/estimated_start_time/estimated_end_time
+      # *may* always be reported back from the monitor.sh script. Instead the
+      # following rules are used to set the times:
+      # * 'estimated_start_time': Is (un)set on pending states,
+      # * 'start_time': Is set on running or terminal states,
+      # * 'estimated_end_time': Is (un)set on pending and running states, and
+      # * 'end_time': Is set on terminal states.
+      #
+      # The estimated times will always be set (or unset) on there corresponding
+      # states. This provides additional control over them, as they may change.
+      # The actual times are considered static and can not be unset, however they
+      # maybe updated.
+
+      # (Un)set the estimated_start_time
+      if PENDING_STATES.include?(state)
+        self.estimated_start_time = parse_time(est_start, type: 'estimated_start_time')
+      end
+
+      # Set the start_time
+      if [*RUNNING_STATES, *TERMINAL_STATES].include?(state)
+        parsed = parse_time(start, type: 'start_time')
+        self.start_time = parsed if parsed
+      end
+
+      # (Un)set the estimated_end_time
+      if [*PENDING_STATES, *RUNNING_STATES].include?(state)
+        self.estimated_end_time = parse_time(est_end, type: 'estimated_end_time')
+      end
+
+      # Set the end_time
+      if TERMINAL_STATES.include?(state)
+        parsed = parse_time(end_time, type: 'end_time')
+        self.end_time = parsed if parsed
+      end
+    end
+
+    def parse_time(time, type:)
+      return nil if ['', nil].include?(time)
+      Time.parse(time).strftime("%Y-%m-%dT%T%:z")
+    rescue ArgumentError
+      FlightJob.logger.error "Failed to parse #{type}: #{time}"
+      FlightJob.logger.debug $!.full_message
+      raise_command_error
+    end
 
     def process_output(type, status, out)
       schema = case type
