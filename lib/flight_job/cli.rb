@@ -155,6 +155,22 @@ module FlightJob
       c.summary = 'List your previously submitted jobs'
     end
 
+    # NOTE: Ideally the method signature would be: JOB_ID [-- LS_OPTIONS...]
+    # but this isn't supported by Commander.
+    #
+    # Consider refactoring
+    create_command 'ls-job-dir', 'JOB_ID [--] [LS_OPTIONS...]' do |c|
+      c.summary = "Run the ls command within the job's output directory"
+      c.description = <<~DESC.chomp
+        Wraps the 'ls' utility within the job's output_directory.
+
+        Flags can be provided to 'ls' by specifying them after the
+        '--' delimiter:
+
+        #{program(:name)} ls-job-dir JOB_ID -- -laR
+      DESC
+    end
+
     create_command 'run-monitor' do |c|
       c.summary = 'Update the internal state of the data cache'
     end
@@ -171,10 +187,11 @@ module FlightJob
       c.summary = 'Permanently remove a job'
     end
 
-    alias_command 'create', 'create-script'
-    alias_command 'submit', 'submit-job'
-    alias_command 'cp',     'copy-template'
-    alias_command 'copy',   'copy-template'
+    alias_command 'create',         'create-script'
+    alias_command 'submit',         'submit-job'
+    alias_command 'cp',             'copy-template'
+    alias_command 'copy',           'copy-template'
+    alias_command 'ls-output-dir',  'ls-job-dir'
 
     if FlightJob.config.development
       create_command 'console' do |c|
