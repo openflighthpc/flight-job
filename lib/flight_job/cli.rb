@@ -183,15 +183,20 @@ module FlightJob
       c.summary = 'Display details about a submitted job'
     end
 
+    create_command 'view-job-file', 'JOB_ID FILENAME' do |c|
+      c.summary = "View a file within the job's output directory"
+    end
+
     create_command 'delete-job', 'JOB_ID' do |c|
       c.summary = 'Permanently remove a job'
     end
 
-    alias_command 'create',         'create-script'
-    alias_command 'submit',         'submit-job'
-    alias_command 'cp',             'copy-template'
-    alias_command 'copy',           'copy-template'
-    alias_command 'ls-output-dir',  'ls-job-dir'
+    alias_command 'create', 'create-script'
+    alias_command 'submit', 'submit-job'
+    alias_command 'cp',     'copy-template'
+    alias_command 'copy',   'copy-template'
+    alias_command 'ls-output-dir',    'ls-job-dir'
+    alias_command 'view-output-file', 'view-job-file'
 
     if FlightJob.config.development
       create_command 'console' do |c|
