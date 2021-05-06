@@ -175,6 +175,8 @@ module FlightJob
     alias_command 'submit', 'submit-job'
     alias_command 'cp',     'copy-template'
     alias_command 'copy',   'copy-template'
+    alias_command 'list',   'list-jobs'
+    alias_command 'info',   'info-job'
 
     if FlightJob.config.development
       create_command 'console' do |c|
