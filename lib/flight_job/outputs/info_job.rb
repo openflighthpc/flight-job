@@ -32,18 +32,14 @@ module FlightJob
     extend OutputMode::TLDR::Show
 
     TEMPLATE = <<~ERB
+      <% verbose = output.context[:verbose] -%>
+      <% each(:default) do |value, padding:, field:| -%>
       <%
-        verbose = output.context[:verbose]
-        main = output.callables.config_select(:section, :other)
+          # Apply the colours
+          value = pastel.green value
+          field = pastel.blue.bold field
       -%>
-      <% main.pad_each(:header, model, verbose) do |callable, padding:, field:| -%>
-      <%
-          # Generates the value
-          # NOTE: The output contains details about how to handle nil/true/false
-          value = pastel.green callable.generator(output).call(model)
-          header = pastel.blue.bold field
-      -%>
-      <%= padding -%><%= header -%><%= pastel.bold ':' -%> <%= value %>
+      <%= padding -%><%= pastel.blue.bold field -%><%= pastel.bold ':' -%> <%= value %>
       <% end -%>
       <%
         submit_outputs = output.procs.select { |proc| proc.config[:section] == :submit }
@@ -63,8 +59,8 @@ module FlightJob
     register_attribute(header: 'State') { |j| j.state }
 
     # Show a boolean in the "simplified" output, and the exit code in the verbose
-    register_attribute(header: 'Submitted', verbose: false) { |j| j.submit_status == 0 }
     # NOTE: There is a rendering issue of integers into the TSV output. Needs investigation
+    register_attribute(header: 'Submitted', verbose: false) { |j| j.submit_status == 0 }
     register_attribute(header: 'Submit Status', verbose: true) { |j| j.submit_status.to_s }
 
     register_attribute(header: 'Submitted at') do |job, verbose:|
@@ -75,7 +71,7 @@ module FlightJob
       end
     end
 
-    start_header = ->(job, verbose) do
+    start_header = ->(job, verbose:) do
       job.start_time || verbose ? 'Started at' : 'Estimated Start'
     end
     register_attribute(header: start_header) do |job, verbose:|
@@ -86,7 +82,7 @@ module FlightJob
       end
     end
 
-    end_header = ->(job, verbose) do
+    end_header = ->(job, verbose:) do
       job.end_time || verbose ? 'Ended at' : 'Estimated Finish'
     end
     register_attribute(header: end_header) do |job, verbose:|
@@ -97,7 +93,7 @@ module FlightJob
       end
     end
 
-    path_header = ->(job, verbose) do
+    path_header = ->(job, verbose:) do
       if job.stdout_path == job.stderr_path && !verbose
         'Output Path'
       else
