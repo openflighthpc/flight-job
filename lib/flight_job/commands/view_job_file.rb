@@ -72,6 +72,12 @@ module FlightJob
         when :stdout
           job.stdout_path
         when :stderr
+          if job.stdout_path == job.stderr_path
+            # TODO: Include the command name once the CLI stabilises
+            raise MissingError, <<~ERROR.chomp
+              Can not display the standard error as it has been merged with standard out!
+            ERROR
+          end
           job.stderr_path
         end
       end
