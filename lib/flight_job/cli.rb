@@ -183,8 +183,35 @@ module FlightJob
       c.summary = 'Display details about a submitted job'
     end
 
+    # TODO: Remove all combine_command handling
+    signature = FlightJob.config.combine_commands ? 'JOB_ID [FILENAME]' : 'JOB_ID FILENAME'
     create_command 'view-job-output-file', 'JOB_ID FILENAME' do |c|
       c.summary = "View a file within the job's output directory"
+      if FlightJob.config.combine_commands
+        c.slop.bool '--stdout', 'Display the standard output'
+        c.slop.bool '--stderr', 'Display the standard error'
+      end
+    end
+
+    # TODO: Formalise into Command classes
+    unless FlightJob.config.combine_commands
+      create_command 'view-job-stdout', 'JOB_ID' do |c|
+        c.summary = 'View the standard output of a job'
+        c.action do |args, opts|
+          require_relative '../flight_job'
+          opts.stdout = true
+          FlightJob::Commands::ViewJobOutputFile.new(args, opts).run!
+        end
+      end
+
+      create_command 'view-job-stderr', 'JOB_ID' do |c|
+        c.summary = 'View the standard output of a job'
+        c.action do |args, opts|
+          require_relative '../flight_job'
+          opts.stderr = true
+          FlightJob::Commands::ViewJobOutputFile.new(args, opts).run!
+        end
+      end
     end
 
     create_command 'delete-job', 'JOB_ID' do |c|
