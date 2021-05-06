@@ -29,20 +29,51 @@ module FlightJob
   module Commands
     class ViewJobFile < Command
       def run
-        # NOTE: The following is required for backwards compatibility
-        # Future major releases may remove it.
-        raise MissingError, <<~ERROR.chomp unless job.output_dir
-          The selected job did not report its output directory
-        ERROR
+        # Ensure the job can be found
+        job
 
         # Determine the file path
-        path = File.join(job.output_dir, args[1])
+        path = file_path
         raise MissingError, <<~ERROR.chomp unless File.exists?(path)
           The selected file does not exists: #{pastel.yellow path}
         ERROR
 
         # Display the file
         pager.page File.read(path)
+      end
+
+      def file_path
+        sources = []
+        sources << :stdout if opts.stdout
+        sources << :stderr if opts.stderr
+        sources << :input if args.length > 1
+
+        # TODO: This may need to be removed if the combined command isn't used
+        if sources.empty?
+          raise InputError, <<~ERROR.chomp
+            Please provide the file you wish to open!
+            #{pastel.yellow "#{CLI.program(:name)} view-job-file #{job.id} FILENAME"}
+          ERROR
+        elsif sources.length > 1
+          raise InputErroor, <<~ERROR.chomp
+            Multiple file inputs detected! Please use only one of the following:
+            #{pastel.yellow 'FILENAME, --stdout, or --stderr'}
+          ERROR
+        end
+
+        case sources.first
+        when :input
+          # NOTE: The following is required for backwards compatibility
+          # Future major releases may remove it.
+          raise MissingError, <<~ERROR.chomp unless job.output_dir
+            The selected job did not report its output directory
+          ERROR
+          File.join(job.output_dir, args[1])
+        when :stdout
+          job.stdout_path
+        when :stderr
+          job.stderr_path
+        end
       end
 
       def job
