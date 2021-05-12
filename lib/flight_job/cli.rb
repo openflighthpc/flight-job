@@ -159,7 +159,7 @@ module FlightJob
     # but this isn't supported by Commander.
     #
     # Consider refactoring
-    create_command 'ls-job-dir', 'JOB_ID [--] [LS_OPTIONS...]' do |c|
+    create_command 'list-job-output-dir', 'JOB_ID [--] [LS_OPTIONS...]' do |c|
       c.summary = "Run the ls command within the job's output directory"
       c.description = <<~DESC.chomp
         Wraps the 'ls' utility within the job's output_directory.
@@ -167,7 +167,7 @@ module FlightJob
         Flags can be provided to 'ls' by specifying them after the
         '--' delimiter:
 
-        #{program(:name)} ls-job-dir JOB_ID -- -laR
+        #{program(:name)} list-job-output-dir JOB_ID -- -laR
       DESC
     end
 
@@ -183,7 +183,7 @@ module FlightJob
       c.summary = 'Display details about a submitted job'
     end
 
-    create_command 'view-job-file', 'JOB_ID FILENAME' do |c|
+    create_command 'view-job-output-file', 'JOB_ID FILENAME' do |c|
       c.summary = "View a file within the job's output directory"
     end
 
@@ -195,8 +195,8 @@ module FlightJob
     alias_command 'submit', 'submit-job'
     alias_command 'cp',     'copy-template'
     alias_command 'copy',   'copy-template'
-    alias_command 'ls-output-dir',    'ls-job-dir'
-    alias_command 'view-output-file', 'view-job-file'
+    alias_command 'ls-job-dir', 'list-job-output-dir'
+    alias_command 'view-job-file', 'view-job-output-file'
 
     if FlightJob.config.development
       create_command 'console' do |c|
