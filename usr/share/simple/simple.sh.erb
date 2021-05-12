@@ -142,6 +142,19 @@
 # Several standard variables, such as SLURM_JOB_ID, SLURM_JOB_NAME and
 # SLURM_NTASKS, are made available by the scheduler.
 
+#=====================
+#  Output directory
+#---------------------
+# By convention, job's submitted with `flight-job` are expected to save their
+# results to OUTPUT_DIR.  `flight-job` provides easy access to any files saved
+# there.
+#
+# If OUTPUT_DIR is modified, `flight-job` will be unable to track the job's
+# output files.
+#
+# WARNING: The script must not change directory prior to this line.
+OUTPUT_DIR="$(pwd)/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
+
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 #  >>>> YOUR WORKLOAD
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
@@ -155,10 +168,17 @@
 #===========================
 #  Create output directory
 #---------------------------
-# Specify and create an output file directory.
-
-OUTPUT_PATH="$(pwd)/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
-mkdir -p "$OUTPUT_PATH"
+# By convention, job's submitted with `flight-job` are expected to save their
+# results to OUTPUT_DIR.  `flight-job` provides easy access to any files saved
+# there.
+#
+# Your job can save its results anywhere you want, but if the results are
+# saved outside of OUTPUT_DIR (or if OUTPUT_DIR is modified), 'flight-job'
+# will be unable to help you access your results.
+#
+# OUTPUT_DIR has already been set to "${WORKING_DIR}/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID".
+echo "Your output files will be stored in: $OUTPUT_DIR"
+mkdir -p "$OUTPUT_DIR"
 
 #===============================
 #  Application launch commands
@@ -169,6 +189,6 @@ echo "Executing job commands, current working directory is $(pwd)"
 
 # REPLACE THE FOLLOWING WITH YOUR APPLICATION COMMANDS
 
-echo "Hello, <%= questions.workload.answer %>!" > $OUTPUT_PATH/test.output
-echo "This is an example job. It ran on `hostname -s` (as `whoami`)." >> $OUTPUT_PATH/test.output
-echo "Output file has been generated, please check $OUTPUT_PATH/test.output"
+echo "Hello, <%= questions.workload.answer %>!" > $OUTPUT_DIR/test.output
+echo "This is an example job. It ran on `hostname -s` (as `whoami`)." >> $OUTPUT_DIR/test.output
+echo "Output file has been generated, please check $OUTPUT_DIR/test.output"

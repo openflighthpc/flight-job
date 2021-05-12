@@ -86,7 +86,7 @@ module FlightJob
     def initialize(runner)
       super(runner)
       # Commander uses a decorate_binding mechanism which is incredible tricky
-      # to use. It proved to be easier to monkey-patch the new methods unto
+      # to use. It proved to be easier to monkey-patch the new methods onto
       # the runner object directly
       s = sections
       cbs = commands_by_section
@@ -98,7 +98,7 @@ module FlightJob
       @sections ||= {
         ['template', 'templates'] => 'Templates:',
         ['script', 'scripts', 'script-notes'] => 'Scripts:',
-        ['job', 'jobs'] => 'Jobs:'
+        ['job', 'jobs', 'job-output-dir', 'job-output-file'] => 'Jobs:'
       }
     end
 
