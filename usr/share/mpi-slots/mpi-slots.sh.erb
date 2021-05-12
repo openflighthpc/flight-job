@@ -26,13 +26,7 @@
 # override. Your job will then be executed in the directory from which
 # it was submitted.
 #
-# WORKING_DIR/OUTPUT_DIR environment variables should not be modified.
-# Doing so will prevent 'flight-job' from being able to track the output
-# files.
-#
 #SBATCH -D <%= File.expand_path questions.working_dir.answer %>
-WORKING_DIR=<%= File.expand_path questions.working_dir.answer %>
-OUTPUT_DIR="${WORKING_DIR}/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
 
 #=========================
 #  Environment variables
@@ -172,6 +166,19 @@ OUTPUT_DIR="${WORKING_DIR}/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
 # Several standard variables, such as SLURM_JOB_ID, SLURM_JOB_NAME and
 # SLURM_NTASKS, are made available by the scheduler.
 
+#=====================
+#  Output directory
+#---------------------
+# By convention, job's submitted with `flight-job` are expected to save their
+# results to OUTPUT_DIR.  `flight-job` provides easy access to any files saved
+# there.
+#
+# If OUTPUT_DIR is modified, `flight-job` will be unable to track the job's
+# output files.
+#
+# WARNING: The script must not change directory prior to this line.
+OUTPUT_DIR="$(pwd)/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
+
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 #  >>>> YOUR WORKLOAD
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
@@ -197,10 +204,15 @@ fi
 #===========================
 #  Create output directory
 #---------------------------
-# Files saved within the OUTPUT_DIR will be available through the
-# flight-job utility.
+# By convention, job's submitted with `flight-job` are expected to save their
+# results to OUTPUT_DIR.  `flight-job` provides easy access to any files saved
+# there.
 #
-# OUTPUT_DIR: "${WORKING_DIR}/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
+# Your job can save its results anywhere you want, but if the results are
+# saved outside of OUTPUT_DIR (or if OUTPUT_DIR is modified), 'flight-job'
+# will be unable to help you access your results.
+#
+# OUTPUT_DIR has already been set to "${WORKING_DIR}/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID".
 echo "Your output files will be stored in: $OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
 
