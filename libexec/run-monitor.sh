@@ -33,7 +33,7 @@
 # Please reconfigure this script on a per installation basis.
 
 if which ruby >/dev/null; then
-  echo "Ruby is not on the PATH! Can not run the monitor" >&2
+  echo "Ruby is not on the PATH! Cannot run the monitor" >&2
   exit 1
 fi
 
