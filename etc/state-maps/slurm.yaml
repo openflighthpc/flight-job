@@ -70,7 +70,7 @@ RQ:             PENDING
 REQUEUED:       PENDING
 RS:             RUNNING
 RESIZING:       RUNNING
-RV:             FAILED # Currently jobs can not be tracked if they change cluster
+RV:             FAILED # Currently jobs cannot be tracked if they change cluster
 REVOKED:        FAILED # as above
 SI:             RUNNING
 SIGNALING:      RUNNING
