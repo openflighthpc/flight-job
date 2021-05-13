@@ -99,7 +99,7 @@ module FlightJob
         ['template', 'templates'] => 'Templates:',
         ['script', 'scripts', 'script-notes'] => 'Scripts:',
         ['job', 'jobs'] => 'Jobs:',
-        ['job-output-dir', 'job-output-file', 'job-stdout', 'job-stderr'] => 'Job Files:',
+        ['job-results', 'job-stdout', 'job-stderr'] => 'Job Files:',
       }
     end
 

@@ -27,13 +27,12 @@
 
 module FlightJob
   module Commands
-    class ViewJobOutputFile < Command
+    class ListJobResults < Command
       def run
         @job = load_job(args.first)
         assert_output_dir_exists
-        file_path = File.join(@job.output_dir, args[1])
-        assert_file_exists(file_path)
-        pager.page(File.read(file_path))
+        FlightJob.logger.debug "Running: ls #{@job.output_dir} #{ls_options.join(" ")}"
+        Kernel.system('ls', @job.output_dir, *ls_options)
       end
 
       private
@@ -46,9 +45,12 @@ module FlightJob
         end
       end
 
-      def assert_file_exists(path)
-        unless File.exists?(path)
-          raise MissingError, "The file does not exists: #{pastel.yellow path}"
+      def ls_options
+        @ls_options ||= begin
+          base = []
+          base << '-laR' if opts.verbose
+          base << '--color' if $stdout.tty?
+          [*base, *args[1..]]
         end
       end
     end
