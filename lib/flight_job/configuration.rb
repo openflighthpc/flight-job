@@ -79,10 +79,6 @@ module FlightJob
               end
     attribute :log_level, default: 'warn'
     attribute :development, default: false, required: false
-
-    # TODO: Remove me!
-    # This feature is for development purposes only
-    attribute :combine_commands, default: false
   end
 
   # NOTE: Defined on the top level FlightJob module

@@ -27,28 +27,38 @@
 
 module FlightJob
   module Commands
-    class ViewJobOutputFile < Command
+    class ViewJobOutput < Command
       def run
         @job = load_job(args.first)
-        assert_output_dir_exists
-        file_path = File.join(@job.output_dir, args[1])
+        assert_type_valid
+        assert_stderr_not_merged if opts.type == :stderr
+        file_path = @job.send("#{opts.type}_path")
         assert_file_exists(file_path)
         pager.page(File.read(file_path))
       end
 
       private
 
-      def assert_output_dir_exists
-        # NOTE: Jobs created with old versions of flight-job will not have an
-        # output directory.
-        unless @job.output_dir
-          raise MissingError, "The job did not report its output directory"
+      def assert_type_valid
+        return if [:stdout, :stderr].include?(opts.type)
+        raise InternalError, "Invalid output type #{opts.type.inspect}" 
+      end
+
+      def assert_stderr_not_merged
+        if @job.stdout_path == @job.stderr_path
+          prog_name = ENV.fetch('FLIGHT_PROGRAM_NAME') { 'bin/job' }
+          raise MissingError, <<~ERROR.chomp
+            Cannot display the job's standard error as it has been merged with standard output.
+            Run '#{prog_name} view-job-stdout #{@job.id}` to view the job's output.
+          ERROR
         end
       end
 
       def assert_file_exists(path)
         unless File.exists?(path)
-          raise MissingError, "The file does not exists: #{pastel.yellow path}"
+          raise MissingError, "The job's standard " \
+            "#{opts.type == :stdout ? 'output' : 'error'} file does not exists: "\
+            "#{pastel.yellow(path)}"
         end
       end
     end
