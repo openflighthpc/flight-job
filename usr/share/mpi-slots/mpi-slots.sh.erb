@@ -167,17 +167,17 @@
 # SLURM_NTASKS, are made available by the scheduler.
 
 #=====================
-#  Output directory
+#  Results directory
 #---------------------
 # By convention, job's submitted with `flight-job` are expected to save their
-# results to OUTPUT_DIR.  `flight-job` provides easy access to any files saved
-# there.
+# results to RESULTS_DIR.  `flight-job` provides easy access to any files
+# saved there.
 #
-# If OUTPUT_DIR is modified, `flight-job` will be unable to track the job's
-# output files.
+# If RESULTS_DIR is modified, `flight-job` will be unable to track the job's
+# results.
 #
 # WARNING: The script must not change directory prior to this line.
-OUTPUT_DIR="$(pwd)/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
+RESULTS_DIR="$(pwd)/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
 
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 #  >>>> YOUR WORKLOAD
@@ -200,21 +200,20 @@ if ! command -v mpirun ; then
     exit 1
 fi
 
-
 #===========================
-#  Create output directory
+#  Create results directory
 #---------------------------
 # By convention, job's submitted with `flight-job` are expected to save their
-# results to OUTPUT_DIR.  `flight-job` provides easy access to any files saved
-# there.
+# results to RESULTS_DIR.  `flight-job` provides easy access to any files
+# saved there.
 #
 # Your job can save its results anywhere you want, but if the results are
-# saved outside of OUTPUT_DIR (or if OUTPUT_DIR is modified), 'flight-job'
+# saved outside of RESULTS_DIR (or if RESULTS_DIR is modified), 'flight-job'
 # will be unable to help you access your results.
 #
-# OUTPUT_DIR has already been set to "${WORKING_DIR}/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID".
-echo "Your output files will be stored in: $OUTPUT_DIR"
-mkdir -p "$OUTPUT_DIR"
+# RESULTS_DIR has already been set to "${WORKING_DIR}/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID".
+echo "Your results will be stored in: $RESULTS_DIR"
+mkdir -p "$RESULTS_DIR"
 
 #===============================
 #  Application launch commands
@@ -225,11 +224,11 @@ echo "Executing job commands, current working directory is $(pwd)"
 
 # REPLACE THE FOLLOWING WITH YOUR APPLICATION COMMANDS
 
-echo "Hello, <%= questions.workload.answer %>!" > $OUTPUT_DIR/test.output
-echo "This is an example job. It was allocated $SLURM_NTASKS slot(s) across $SLURM_JOB_NUM_NODES node(s). The master process ran on `hostname -s` (as `whoami`)." >> $OUTPUT_DIR/test.output
+echo "Hello, <%= questions.workload.answer %>!" > $RESULTS_DIR/test.output
+echo "This is an example job. It was allocated $SLURM_NTASKS slot(s) across $SLURM_JOB_NUM_NODES node(s). The master process ran on `hostname -s` (as `whoami`)." >> $RESULTS_DIR/test.output
 mpirun \
     /bin/bash -c \
     'echo "This process was executed on `hostname -s` with rank $OMPI_COMM_WORLD_RANK."' \
-    >> $OUTPUT_DIR/test.output
+    >> $RESULTS_DIR/test.output
 
-echo "Output file has been generated, please check $OUTPUT_DIR/test.output"
+echo "Output file has been generated, please check $RESULTS_DIR/test.output"

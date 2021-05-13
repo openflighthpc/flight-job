@@ -27,28 +27,32 @@
 
 module FlightJob
   module Commands
-    class ViewJobOutputFile < Command
+    class ListJobResults < Command
       def run
-        # NOTE: The following is required for backwards compatibility
-        # Future major releases may remove it.
-        raise MissingError, <<~ERROR.chomp unless job.output_dir
-          The selected job did not report its output directory
-        ERROR
-
-        # Determine the file path
-        path = File.join(job.output_dir, args[1])
-        raise MissingError, <<~ERROR.chomp unless File.exists?(path)
-          The selected file does not exists: #{pastel.yellow path}
-        ERROR
-
-        # Display the file
-        pager.page File.read(path)
+        @job = load_job(args.first)
+        assert_output_dir_exists
+        FlightJob.logger.debug "Running: ls #{@job.output_dir} #{ls_options.join(" ")}"
+        Kernel.system('ls', @job.output_dir, *ls_options)
       end
 
-      def job
-        @job ||= load_job(args.first)
+      private
+
+      def assert_output_dir_exists
+        # NOTE: Jobs created with old versions of flight-job will not have an
+        # output directory.
+        unless @job.output_dir
+          raise MissingError, "The job did not report its output directory"
+        end
+      end
+
+      def ls_options
+        @ls_options ||= begin
+          base = []
+          base << '-laR' if opts.verbose
+          base << '--color' if $stdout.tty?
+          [*base, *args[1..]]
+        end
       end
     end
   end
 end
-

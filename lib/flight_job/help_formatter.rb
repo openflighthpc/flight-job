@@ -98,7 +98,8 @@ module FlightJob
       @sections ||= {
         ['template', 'templates'] => 'Templates:',
         ['script', 'scripts', 'script-notes'] => 'Scripts:',
-        ['job', 'jobs', 'job-output-dir', 'job-output-file'] => 'Jobs:'
+        ['job', 'jobs'] => 'Jobs:',
+        ['job-results', 'job-stdout', 'job-stderr'] => 'Job Files:',
       }
     end
 
