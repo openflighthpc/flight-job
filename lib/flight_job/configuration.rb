@@ -36,6 +36,10 @@ module FlightJob
 
     root_path File.expand_path('../..', __dir__)
 
+    # XXX: This should probably be implicitly set by FlightConfiguration
+    # Maybe it is in a latter version?
+    env_var_prefix 'flight_JOB'
+
     config_files File.expand_path('etc/flight-job.yaml', root_path),
                  File.expand_path('etc/flight-job.development.yaml', root_path),
                  File.expand_path('etc/flight-job.local.yaml', root_path),
