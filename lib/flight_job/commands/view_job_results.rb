@@ -30,18 +30,18 @@ module FlightJob
     class ViewJobResults < Command
       def run
         @job = load_job(args.first)
-        assert_output_dir_exists
-        file_path = File.join(@job.output_dir, args[1])
+        assert_results_dir_exists
+        file_path = File.join(@job.results_dir, args[1])
         assert_file_exists(file_path)
         pager.page(File.read(file_path))
       end
 
       private
 
-      def assert_output_dir_exists
+      def assert_results_dir_exists
         # NOTE: Jobs created with old versions of flight-job will not have an
         # output directory.
-        unless @job.output_dir
+        unless @job.results_dir
           raise MissingError, "The job did not report its output directory"
         end
       end

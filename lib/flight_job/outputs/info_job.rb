@@ -130,7 +130,7 @@ module FlightJob
     # The submit columns will always be sorted to the bottom in the interactive outputs.
     #
     # Consider reordering on the next major version bump.
-    register_attribute(section: :main, header: 'Results Dir') { |j| j.output_dir }
+    register_attribute(section: :main, header: 'Results Dir') { |j| j.results_dir }
 
     def self.build_output(**opts)
       submit = opts.delete(:submit)

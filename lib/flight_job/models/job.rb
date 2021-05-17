@@ -56,7 +56,7 @@ module FlightJob
         "scheduler_id" => { "type" => ["string", "null"] },
         "stdout_path" => { "type" => ["string", "null"] },
         "stderr_path" => { "type" => ["string", "null"] },
-        "output_dir" => { "type" => ["string", "null"] },
+        "results_dir" => { "type" => ["string", "null"] },
         "reason" => { "type" => ["string", "null"] },
         "start_time" => { "type" => ["string", "null"], "format" => "date-time" },
         "end_time" => { "type" => ["string", "null"], "format" => "date-time" }
@@ -76,12 +76,12 @@ module FlightJob
     SUBMIT_RESPONSE_SCHEMA = JSONSchemer.schema({
       "type" => "object",
       "additionalProperties" => false,
-      "required" => ["id", "stdout", "stderr", "output_dir"],
+      "required" => ["id", "stdout", "stderr", "results_dir"],
       "properties" => {
         "id" => { "type" => "string" },
         "stdout" => { "type" => "string" },
         "stderr" => { "type" => "string" },
-        "output_dir" => { "type" => "string" }
+        "results_dir" => { "type" => "string" }
       }
     })
 
@@ -260,7 +260,7 @@ module FlightJob
     [
       "submit_status", "submit_stdout", "submit_stderr", "script_id", "state",
       "scheduler_id", "scheduler_state", "stdout_path", "stderr_path", "reason",
-      "start_time", "end_time", "output_dir"
+      "start_time", "end_time", "results_dir"
     ].each do |method|
       define_method(method) { metadata[method] }
       define_method("#{method}=") { |value| metadata[method] = value }
@@ -321,7 +321,7 @@ module FlightJob
           self.scheduler_id = data['id']
           self.stdout_path = data['stdout']
           self.stderr_path = data['stderr']
-          self.output_dir = data['output_dir']
+          self.results_dir = data['results_dir']
         end
 
         # Persist the updated version of the metadata
