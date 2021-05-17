@@ -48,8 +48,9 @@ module FlightJob
         if @job.stdout_path == @job.stderr_path
           prog_name = ENV.fetch('FLIGHT_PROGRAM_NAME') { 'bin/job' }
           raise MissingError, <<~ERROR.chomp
-            Cannot display the job's standard error as it has been merged with standard output.
-            Run '#{prog_name} view-job-stdout #{@job.id}` to view the job's output.
+            Cannot display the job's standard error as it has been merged with standard out.
+            Please run the following instead:
+            #{pastel.yellow "#{prog_name} view-job-stdout #{@job.id}"}
           ERROR
         end
       end
