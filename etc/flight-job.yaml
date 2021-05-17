@@ -28,6 +28,7 @@
 # ==============================================================================
 # Templates Directory
 # Specify where the templates will be stored.
+# The environment variable flight_JOB_templates_dir takes precedence.
 #
 # Relative paths are expanded from the install directory.
 # ==============================================================================
@@ -38,6 +39,8 @@
 # Specify where the scripts will be stored.
 #
 # Relative paths are expanded from the install directory.
+#
+# The environment variable flight_JOB_scripts_dir takes precedence.
 # ==============================================================================
 # scripts_dir: ~/.local/share/flight/job/scripts
 
@@ -46,14 +49,18 @@
 # Specify where the scripts will be stored.
 #
 # Relative paths are expanded from the install directory.
+#
+# The environment variable flight_JOB_jobs_dir takes precedence.
 # ==============================================================================
-# scripts_dir: ~/.local/share/flight/job/jobs
+# jobs_dir: ~/.local/share/flight/job/jobs
 
 # ==============================================================================
 # Submit Script Path
 # Specify the path to the script which submits jobs.
 #
 # Relative paths are expanded from the install directory.
+#
+# The environment variable flight_JOB_submit_script_path takes precedence.
 # ==============================================================================
 # submit_script_path: libexec/slurm/monitor.sh
 
@@ -62,6 +69,8 @@
 # Specify the path to the script which monitors jobs.
 #
 # Relative paths are expanded from the install directory.
+#
+# The environment variable flight_JOB_monitor_script_path takes precedence.
 # ==============================================================================
 # monitor_script_path: libexec/slurm/monitor.sh
 
@@ -74,6 +83,8 @@
 #
 # WARNING: Unrecognized flight-job states may prevent the job from being updated.
 # Ensure all flight-job states are valid (see: lib/flight_job/models/script.rb)
+#
+# The environment variable flight_JOB_state_map_path takes precedence.
 # ==============================================================================
 # state_map_path: etc/state-maps/slurm.yaml
 
@@ -86,6 +97,8 @@
 # the "flight job run-monitor" command periodically.
 #
 # Relative paths are expanded from the install directory.
+#
+# The environment variable flight_JOB_check_cron takes precedence.
 # ==============================================================================
 # check_cron: libexec/check-cron.sh
 
@@ -94,12 +107,16 @@
 # The minimum terminal width when wrapping output text. This prevents various
 # edge cases in small terminals. The terminal is responsible for wrapping the
 # text if its width is smaller than the minimum.
+#
+# The environment variable flight_JOB_minimum_terminal_width takes precedence.
 # ==============================================================================
 # minimum_terminal_width: 80
 
 # ==============================================================================
 # Maximum ID Length
 # The maximum allowed length for script IDs
+#
+# The environment variable flight_JOB_max_id_length takes precedence.
 # ==============================================================================
 # max_id_length: 16
 
@@ -107,6 +124,8 @@
 # Maximum Standard Input Size
 # The maximum file size that will be provided to STDIN. The size must be given
 # in Bytes.
+#
+# The environment variable flight_JOB_stdin_size takes precedence.
 # ==============================================================================
 # max_stdin_size: 1048576 # (1 MB)
 
@@ -114,6 +133,8 @@
 # Submission Period
 # The minimum amount of time to wait before a job that is "pending submission"
 # is considered failed.
+#
+# The environment variable flight_JOB_submission_period takes precedence.
 # ==============================================================================
 # submission_period: 3600
 
@@ -123,6 +144,8 @@
 # omitted.
 #
 # Relative paths are expanded from the install directory.
+#
+# The environment variable flight_JOB_log_path takes precedence.
 # ==============================================================================
 # log_path: ~/.cache/flight/log/share/job.log
 
@@ -130,5 +153,7 @@
 # Log level
 # Set at which severity the application will log
 # Valid levels: 'fatal', 'error', 'warn', 'info', 'debug'
+#
+# The environment variable flight_JOB_log_level takes precedence.
 # ==============================================================================
 # log_level: warn
