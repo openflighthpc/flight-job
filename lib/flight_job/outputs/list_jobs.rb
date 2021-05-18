@@ -73,7 +73,7 @@ module FlightJob
 
     register_column(header: 'StdOut Path', verbose: true) { |j| j.stdout_path }
     register_column(header: 'StdErr Path', verbose: true) { |j| j.stderr_path }
-    register_column(header: 'Results Dir', verbose: true) { |j| j.output_dir }
+    register_column(header: 'Results Dir', verbose: true) { |j| j.results_dir }
 
     def self.build_output(**opts)
       if opts.delete(:json)
