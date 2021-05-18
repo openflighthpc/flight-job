@@ -29,21 +29,13 @@ module FlightJob
   module Commands
     class ListJobResults < Command
       def run
-        @job = load_job(args.first)
-        assert_results_dir_exists
-        FlightJob.logger.debug "Running: ls #{@job.results_dir} #{ls_options.join(" ")}"
-        Kernel.system('ls', @job.results_dir, *ls_options)
+        job = load_job(args.first)
+        assert_results_dir_exists(job)
+        FlightJob.logger.debug "Running: ls #{job.results_dir} #{ls_options.join(" ")}"
+        Kernel.system('ls', job.results_dir, *ls_options)
       end
 
       private
-
-      def assert_results_dir_exists
-        # NOTE: Jobs created with old versions of flight-job will not have an
-        # results directory.
-        unless @job.results_dir
-          raise MissingError, "The job did not report its results directory"
-        end
-      end
 
       def ls_options
         @ls_options ||= begin

@@ -187,5 +187,13 @@ module FlightJob
         end
       end
     end
+
+    def assert_results_dir_exists(job)
+      # NOTE: Jobs created with old versions of flight-job will not have a
+      # results directory.
+      unless job.results_dir
+        raise MissingError, "The job did not report its results directory"
+      end
+    end
   end
 end
