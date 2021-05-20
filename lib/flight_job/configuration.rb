@@ -27,60 +27,33 @@
 
 require 'logger'
 
+require 'active_support/string_inquirer'
+require 'active_support/core_ext/object/blank'
+require 'i18n/backend'
+
+require 'active_model'
+
 require 'flight_configuration'
 require_relative 'errors'
 
-module FlightJob
-  class Configuration
-    extend FlightConfiguration::DSL
+module Flight
+  def self.env
+    @env ||= ActiveSupport::StringInquirer.new(
+      ENV["flight_ENVIRONMENT"].presence || "production"
+    )
+  end
 
-    root_path File.expand_path('../..', __dir__)
-
-    # XXX: This should probably be implicitly set by FlightConfiguration
-    # Maybe it is in a latter version?
-    env_var_prefix 'flight_JOB'
-
-    config_files File.expand_path('etc/flight-job.yaml', root_path),
-                 File.expand_path('etc/flight-job.development.yaml', root_path),
-                 File.expand_path('etc/flight-job.local.yaml', root_path),
-                 File.expand_path('~/.config/flight/flight-job.yaml')
-
-    attribute :templates_dir, default: 'usr/share',
-              transform: relative_to(root_path)
-    attribute :scripts_dir, default: '~/.local/share/flight/job/scripts',
-              transform: relative_to(root_path)
-    attribute :jobs_dir, default: '~/.local/share/flight/job/jobs',
-              transform: relative_to(root_path)
-    attribute :state_map_path, default: 'etc/state-maps/slurm.yaml',
-              transform: relative_to(root_path)
-    attribute :submit_script_path, default: 'libexec/slurm/submit.sh',
-              transform: relative_to(root_path)
-    attribute :monitor_script_path, default: 'libexec/slurm/monitor.sh',
-              transform: relative_to(root_path)
-    attribute :submission_period, default: 3600
-    attribute :minimum_terminal_width, default: 80
-    attribute :check_cron, default: 'libexec/check-cron.sh',
-              transform: relative_to(root_path)
-    attribute :max_id_length, default: 16
-    attribute :max_stdin_size, default: 1048576
-    attribute :log_path, required: false,
-              default: '~/.cache/flight/log/share/job.log',
-              transform: ->(path) do
-                if path
-                  relative_to(root_path).call(path).tap do |full_path|
-                    FileUtils.mkdir_p File.dirname(full_path)
-                  end
-                else
-                  $stderr
-                end
-              end
-    attribute :log_level, default: 'warn'
-    attribute :development, default: false, required: false
+  def self.root
+    @root ||= if env.production? && ENV["flight_ROOT"].present?
+      File.expand_path(ENV["flight_ROOT"])
+    else
+      File.expand_path('../..', __dir__)
+    end
   end
 
   # NOTE: Defined on the top level FlightJob module
   def self.config
-    @config ||= Configuration.load
+    @config ||= FlightJob::Configuration.load
   end
 
   def self.logger
@@ -110,5 +83,52 @@ module FlightJob
         log.level = level
       end
     end
+  end
+end
+
+module FlightJob
+  class Configuration
+    extend FlightConfiguration::DSL
+
+    include ActiveModel::Validations
+
+    application_name 'flight-job'
+
+    attribute :templates_dir, default: 'usr/share',
+              transform: relative_to(root_path)
+    attribute :scripts_dir, default: '~/.local/share/flight/job/scripts',
+              transform: relative_to(root_path)
+    attribute :jobs_dir, default: '~/.local/share/flight/job/jobs',
+              transform: relative_to(root_path)
+    attribute :state_map_path, default: 'etc/state-maps/slurm.yaml',
+              transform: relative_to(root_path)
+    attribute :submit_script_path, default: 'libexec/slurm/submit.sh',
+              transform: relative_to(root_path)
+    attribute :monitor_script_path, default: 'libexec/slurm/monitor.sh',
+              transform: relative_to(root_path)
+    attribute :submission_period, default: 3600
+    attribute :minimum_terminal_width, default: 80
+    validates :_minimum_terminal_width, numericality: { only_integers: true }
+    attribute :check_cron, default: 'libexec/check-cron.sh',
+              transform: relative_to(root_path)
+    attribute :max_id_length, default: 16
+    validates :_max_id_length, numericality: { only_integers: true }
+    attribute :max_stdin_size, default: 1048576
+    validates :_max_stdin_size, numericality: { only_integers: true }
+    attribute :log_path, required: false,
+              default: '~/.cache/flight/log/share/job.log',
+              transform: ->(path) do
+                if path
+                  relative_to(root_path).call(path).tap do |full_path|
+                    FileUtils.mkdir_p File.dirname(full_path)
+                  end
+                else
+                  $stderr
+                end
+              end
+
+    attribute :log_level, default: 'warn'
+    # TODO: Replace with flight_ENVIRONMENT
+    attribute :development, default: false, required: false
   end
 end

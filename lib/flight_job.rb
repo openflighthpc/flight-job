@@ -26,10 +26,16 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+require 'active_support/core_ext/module/delegation'
+
 require_relative 'flight_job/configuration'
 require_relative 'flight_job/command'
 
 module FlightJob
+  class << self
+    delegate :config, :env, :logger, :root, to: Flight
+  end
+
   def self.constantize(sym)
     sym.to_s.dup.split(/[-_]/).each { |c| c[0] = c[0].upcase }.join
   end
