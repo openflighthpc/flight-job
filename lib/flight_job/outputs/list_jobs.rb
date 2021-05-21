@@ -42,7 +42,7 @@ module FlightJob
     register_column(header: 'Submitted', verbose: false) { |j| j.submit_status == 0 }
     register_column(header: 'Submit Status', verbose: true) { |j| j.submit_status }
 
-    register_column(header: 'Created at') do |job, verbose:|
+    register_column(header: 'Submitted at') do |job, verbose:|
       if verbose
         job.created_at
       else

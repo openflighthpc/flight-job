@@ -76,7 +76,7 @@ module FlightJob
     # NOTE: There is a rendering issue of integers into the TSV output. Needs investigation
     register_attribute(section: :main, header: 'Submit Status', verbose: true) { |j| j.submit_status.to_s }
 
-    register_attribute(section: :main, header: 'Created at') do |job, verbose:|
+    register_attribute(section: :main, header: 'Submitted at') do |job, verbose:|
       if verbose
         job.created_at
       else
