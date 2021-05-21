@@ -33,7 +33,7 @@ module FlightJob
     extend OutputMode::TLDR::Index
 
     register_column(header: 'ID', row_color: :yellow) { |s| s.id }
-    register_column(header: 'Script ID', verbose: true) { |j| j.script_id }
+    register_column(header: 'Script ID') { |j| j.script_id }
     register_column(header: 'Sched. ID', verbose: true) { |j| j.scheduler_id }
     register_column(header: 'State') { |j| j.state }
 
