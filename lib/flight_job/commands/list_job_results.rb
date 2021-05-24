@@ -30,19 +30,24 @@ require 'open3'
 module FlightJob
   module Commands
     class ListJobResults < Command
+      # The 'ls' command will fail if bad arguments are provided to it. This can
+      # not be easily detected as 'ls' will likely exit 2 regardless. Instead a
+      # generic error is raised instead.
+      HARD_ERROR = "An error occurred when running the 'ls' command!"
+
       def run
         job = load_job(args.first)
         assert_results_dir_exists(job)
         FlightJob.logger.debug "Running: ls #{job.results_dir} #{ls_options.join(" ")}"
         cmd = ['ls', job.results_dir, *ls_options]
 
-        status = if ARGV.include?('--')
+        status = if hard_wrap?
           # When hard wrapping, emit STDOUT/STDERR directly to the terminal
           Kernel.system(*cmd)
         else
           # When soft wrapping, hide the ls error
-          std, status = Open3.capture2e(*cmd)
-          puts std if status.success?
+          stdout, status = Open3.capture2(*cmd)
+          puts stdout if status.success?
           status.success?
         end
 
@@ -51,16 +56,23 @@ module FlightJob
           # to the state
           case job.state
           when *Job::RUNNING_STATES
+            raise InputError, HARD_ERROR if hard_wrap?
             raise InputError, 'Your job is currently running, please try again later...'
           when *Job::TERMINAL_STATES
-            raise MissingError, 'Your job did not create the results directory'
+            raise MissingError, HARD_ERROR if hard_wrap?
+            raise MissingError, 'Your job did not create the results directory!'
           else
+            raise InputError, HARD_ERROR if hard_wrap?
             raise InputError, 'Your job has not started yet, please try again later...'
           end
         end
       end
 
       private
+
+      def hard_wrap?
+        args.length > 1
+      end
 
       def ls_options
         @ls_options ||= begin

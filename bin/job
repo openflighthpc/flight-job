@@ -55,9 +55,6 @@ begin
   # Runs the command within the original directory
   Dir.chdir(ENV.fetch('FLIGHT_CWD', '.')) do
     OpenFlight.set_standard_env rescue nil
-    # NOTE: flight-job uses ARGV internally in list-job-results
-    #       This *should not* cause a problem, but care will need to be taken
-    #       if this bin script is modified.
     FlightJob::CLI.run!(*ARGV)
   end
 rescue Interrupt
