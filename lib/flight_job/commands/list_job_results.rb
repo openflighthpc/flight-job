@@ -25,6 +25,8 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+require 'open3'
+
 module FlightJob
   module Commands
     class ListJobResults < Command
@@ -32,7 +34,30 @@ module FlightJob
         job = load_job(args.first)
         assert_results_dir_exists(job)
         FlightJob.logger.debug "Running: ls #{job.results_dir} #{ls_options.join(" ")}"
-        Kernel.system('ls', job.results_dir, *ls_options)
+        cmd = ['ls', job.results_dir, *ls_options]
+
+        status = if ARGV.include?('--')
+          # When hard wrapping, emit STDOUT/STDERR directly to the terminal
+          Kernel.system(*cmd)
+        else
+          # When soft wrapping, hide the ls error
+          std, status = Open3.capture2e(*cmd)
+          puts std if status.success?
+          status.success?
+        end
+
+        unless status
+          # Assume the directory does not exist, and give an error message according
+          # to the state
+          case job.state
+          when *Job::RUNNING_STATES
+            raise InputError, 'Your job is currently running, please try again later...'
+          when *Job::TERMINAL_STATES
+            raise MissingError, 'Your job did not create the results directory'
+          else
+            raise InputError, 'Your job has not started yet, please try again later...'
+          end
+        end
       end
 
       private
