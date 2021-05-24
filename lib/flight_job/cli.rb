@@ -60,6 +60,7 @@ module FlightJob
     program :description,  'Generate and submit jobs from predefined templates'
     program :version, "v#{FlightJob::VERSION}"
     program :help_paging, false
+    default_command :help
 
     # NOTE: There is a bug in Commander where the help formatter aliases aren't set
     @help_formatter_aliases = {}
