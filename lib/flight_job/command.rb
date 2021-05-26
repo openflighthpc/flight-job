@@ -149,10 +149,10 @@ module FlightJob
         regex = /#{name_or_id}/
         matches = templates.select { |t| regex.match?(t.id) }
         if matches.empty?
-          raise MissingError, "Could not locate: #{name_or_id}"
+          raise MissingTemplateError, "Could not locate: #{name_or_id}"
         else
           output = Outputs::ListTemplates.build_output(**output_options).render(*matches)
-          raise MissingError, <<~ERROR.chomp
+          raise MissingTemplateError, <<~ERROR.chomp
             Could not locate: #{name_or_id}. Did you mean one of the following?
             #{Paint[output, :reset]}
           ERROR

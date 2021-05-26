@@ -34,7 +34,8 @@ module FlightJob
         check_cron
         job = Job.new(script_id: script.id)
         job.submit
-        puts Outputs::InfoJob.build_output(submit: true, **output_options).render(job)
+        show_submit = job.submit_status != 0
+        puts Outputs::InfoJob.build_output(submit: show_submit, **output_options).render(job)
       end
 
       def script

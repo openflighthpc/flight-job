@@ -45,7 +45,7 @@ module FlightJob
           callables = OutputMode::Callables.new main.reject(&:paths?)
         end
       -%>
-      <% callables.pad_each do |callable, padding:| -%>
+      <% callables.pad_each do |callable, padding:, field:| -%>
       <%
           # Generates the value
           # NOTE: The output contains details about how to handle nil/true/false
@@ -76,7 +76,7 @@ module FlightJob
     # NOTE: There is a rendering issue of integers into the TSV output. Needs investigation
     register_attribute(section: :main, header: 'Submit Status', verbose: true) { |j| j.submit_status.to_s }
 
-    register_attribute(section: :main, header: 'Created at') do |job, verbose:|
+    register_attribute(section: :main, header: 'Submitted at') do |job, verbose:|
       if verbose
         job.created_at
       else
@@ -117,10 +117,10 @@ module FlightJob
     register_attribute(section: :main, modes: [:paths], header: 'Stderr Path') { |j| j.stderr_path }
     register_attribute(section: :main, interactive: true, modes: [:combined], header: 'Output Path') { |j| j.stdout_path }
 
-    register_attribute(section: :submit, header: 'noop') do |job|
+    register_attribute(section: :submit, header: 'Submit Stdout') do |job|
       job.submit_stdout
     end
-    register_attribute(section: :submit, header: 'noop') do |job|
+    register_attribute(section: :submit, header: 'Submit Stderr') do |job|
       job.submit_stderr
     end
 
