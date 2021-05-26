@@ -30,6 +30,7 @@ module FlightJob
     class ViewJobOutput < Command
       def run
         @job = load_job(args.first)
+        assert_job_submitted
         assert_type_valid
         assert_stderr_not_merged if opts.type == :stderr
         file_path = @job.send("#{opts.type}_path")
@@ -38,6 +39,13 @@ module FlightJob
       end
 
       private
+
+      def assert_job_submitted
+        return if @job.submit_status == 0
+        raise MissingError, "The job's standard " \
+          "#{opts.type == :stdout ? 'output' : 'error'} is not available as "\
+          "the job did not succesfully submit"
+      end
 
       def assert_type_valid
         return if [:stdout, :stderr].include?(opts.type)
