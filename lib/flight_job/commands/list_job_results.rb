@@ -47,7 +47,15 @@ module FlightJob
         else
           # When soft wrapping, hide the ls error
           stdout, status = Open3.capture2(*cmd)
-          puts stdout if status.success?
+          if status.success? && stdout.empty?
+            if Job::TERMINAL_STATES.include?(job.state)
+              $stderr.puts pastel.yellow 'No job results found.'
+            else
+              $stderr.puts pastel.yellow 'No job results found, please try again latter...'
+            end
+          elsif status.success?
+            puts stdout
+          end
           status.success?
         end
 
