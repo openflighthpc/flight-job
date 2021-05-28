@@ -36,6 +36,9 @@ module FlightJob
         job.submit
         show_submit = job.submit_status != 0
         puts Outputs::InfoJob.build_output(submit: show_submit, **output_options).render(job)
+        unless job.submit_status == 0
+          raise GeneralError, "The job submission failed!"
+        end
       end
 
       def script
