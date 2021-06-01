@@ -41,8 +41,10 @@ begin
   dot_files = [ '../.env.local', '../.env' ].map { |f| File.expand_path(f, __dir__) }
   Dotenv.load(*dot_files)
 
+  require_relative '../lib/flight'
+
   # Attempt to enable development mode if requested
-  if ENV['flight_ENVIRONMENT'] == 'development'
+  if Flight.env.development?
     begin
       Bundler.setup(:default, :development)
       require 'pry'
@@ -59,14 +61,10 @@ begin
   Commander::ErrorHandler.new(name).start do |handler|
     argv = handler.parse_trace(*ARGV) # Allows for --trace handling without slop
 
-    # Loads the config
     require_relative '../lib/flight_job/configuration'
-    Flight.config
+    Flight.load_configuration
 
-    # Loads the CLI
     require_relative '../lib/flight_job/cli'
-
-    # Runs the command within the original directory
     Dir.chdir(ENV.fetch('FLIGHT_CWD', '.')) do
       OpenFlight.set_standard_env rescue nil
       FlightJob::CLI.run(*argv)

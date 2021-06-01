@@ -25,66 +25,12 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require 'logger'
-
-require 'active_support/string_inquirer'
-require 'active_support/core_ext/object/blank'
 require 'i18n/backend'
 
 require 'active_model'
 
 require 'flight_configuration'
 require_relative 'errors'
-
-module Flight
-  def self.env
-    @env ||= ActiveSupport::StringInquirer.new(
-      ENV["flight_ENVIRONMENT"].presence || "production"
-    )
-  end
-
-  def self.root
-    @root ||= if env.production? && ENV["flight_ROOT"].present?
-      File.expand_path(ENV["flight_ROOT"])
-    else
-      File.expand_path('../..', __dir__)
-    end
-  end
-
-  # NOTE: Defined on the top level FlightJob module
-  def self.config
-    @config ||= FlightJob::Configuration.load
-  end
-
-  def self.logger
-    @logger ||= Logger.new(config.log_path).tap do |log|
-      next if config.log_level == 'disabled'
-
-      # Determine the level
-      level = case config.log_level
-      when 'fatal'
-        Logger::FATAL
-      when 'error'
-        Logger::ERROR
-      when 'warn'
-        Logger::WARN
-      when 'info'
-        Logger::INFO
-      when 'debug'
-        Logger::DEBUG
-      end
-
-      if level.nil?
-        # Log bad log levels
-        log.level = Logger::ERROR
-        log.error "Unrecognized log level: #{log_level}"
-      else
-        # Sets good log levels
-        log.level = level
-      end
-    end
-  end
-end
 
 module FlightJob
   class Configuration
