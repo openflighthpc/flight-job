@@ -74,7 +74,5 @@ module FlightJob
               end
 
     attribute :log_level, default: 'warn'
-    # TODO: Replace with flight_ENVIRONMENT
-    attribute :development, default: false, required: false
   end
 end
