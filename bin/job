@@ -35,10 +35,12 @@ begin
   Bundler.setup(:default)
 
   # Limited use of dotenv to support setting flight_ENVIRONMENT=development.
-  # NOTE: The GitHub .env default is 'development', but the underlying default
+  # NOTE: The GitHub .env.development default is 'development', but the underlying default
   #       is 'production' if both env files are omitted.
   require 'dotenv'
-  dot_files = [ '../.env.local', '../.env' ].map { |f| File.expand_path(f, __dir__) }
+  dot_files = [ '../.env.development.local', '../.env.development' ].map do |file|
+    File.expand_path(file, __dir__)
+  end
   Dotenv.load(*dot_files)
 
   require_relative '../lib/flight'
