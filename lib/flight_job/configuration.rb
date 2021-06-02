@@ -54,13 +54,13 @@ module FlightJob
               transform: relative_to(root_path)
     attribute :submission_period, default: 3600
     attribute :minimum_terminal_width, default: 80
-    validates :_minimum_terminal_width, numericality: { only_integers: true }
+    validates :minimum_terminal_width, numericality: { only_integers: true }
     attribute :check_cron, default: 'libexec/check-cron.sh',
               transform: relative_to(root_path)
     attribute :max_id_length, default: 16
-    validates :_max_id_length, numericality: { only_integers: true }
+    validates :max_id_length, numericality: { only_integers: true }
     attribute :max_stdin_size, default: 1048576
-    validates :_max_stdin_size, numericality: { only_integers: true }
+    validates :max_stdin_size, numericality: { only_integers: true }
     attribute :log_path, required: false,
               default: '~/.cache/flight/log/share/job.log',
               transform: ->(path) do
