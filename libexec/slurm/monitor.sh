@@ -136,6 +136,14 @@ if [[ "$end_time" == "Unknown" ]] ; then
 fi
 
 # Render and return the payload
+# NOTE: There is no "$estimated_end_time" variable because it is the same as "$end_time"
+#       The "$estimated_start_time"/"$start_time" distinguish exists to account for jobs
+#       without an allocation
+#
+#       The allocation isn't important for the end_time, which is inferred from the '$state'
+#
+# NOTE: flight-job will only set the start/end times if the job is within the correct state,
+#       This means state checks are not required within this script.
 echo '{}' | jq  --arg state "$state" \
                 --arg reason "$reason" \
                 --arg estimated_start_time "$estimated_start_time" \
