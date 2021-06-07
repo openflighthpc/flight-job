@@ -1,4 +1,5 @@
-etc/flight-job.local.yaml
+etc/job*.local.yaml
 var
 .bundle/*
 vendor
+.env.development.local

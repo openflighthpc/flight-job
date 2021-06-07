@@ -25,7 +25,9 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require 'logger'
+require 'i18n/backend'
+
+require 'active_model'
 
 require 'flight_configuration'
 require_relative 'errors'
@@ -34,16 +36,9 @@ module FlightJob
   class Configuration
     extend FlightConfiguration::DSL
 
-    root_path File.expand_path('../..', __dir__)
+    include ActiveModel::Validations
 
-    # XXX: This should probably be implicitly set by FlightConfiguration
-    # Maybe it is in a latter version?
-    env_var_prefix 'flight_JOB'
-
-    config_files File.expand_path('etc/flight-job.yaml', root_path),
-                 File.expand_path('etc/flight-job.development.yaml', root_path),
-                 File.expand_path('etc/flight-job.local.yaml', root_path),
-                 File.expand_path('~/.config/flight/flight-job.yaml')
+    application_name 'job'
 
     attribute :templates_dir, default: 'usr/share',
               transform: relative_to(root_path)
@@ -57,12 +52,22 @@ module FlightJob
               transform: relative_to(root_path)
     attribute :monitor_script_path, default: 'libexec/slurm/monitor.sh',
               transform: relative_to(root_path)
+
     attribute :submission_period, default: 3600
+    validates :submission_period, numericality: { only_integers: true }
+
     attribute :minimum_terminal_width, default: 80
+    validates :minimum_terminal_width, numericality: { only_integers: true }
+
     attribute :check_cron, default: 'libexec/check-cron.sh',
               transform: relative_to(root_path)
+
     attribute :max_id_length, default: 16
+    validates :max_id_length, numericality: { only_integers: true }
+
     attribute :max_stdin_size, default: 1048576
+    validates :max_stdin_size, numericality: { only_integers: true }
+
     attribute :log_path, required: false,
               default: '~/.cache/flight/log/share/job.log',
               transform: ->(path) do
@@ -74,41 +79,11 @@ module FlightJob
                   $stderr
                 end
               end
+
     attribute :log_level, default: 'warn'
-    attribute :development, default: false, required: false
-  end
-
-  # NOTE: Defined on the top level FlightJob module
-  def self.config
-    @config ||= Configuration.load
-  end
-
-  def self.logger
-    @logger ||= Logger.new(config.log_path).tap do |log|
-      next if config.log_level == 'disabled'
-
-      # Determine the level
-      level = case config.log_level
-      when 'fatal'
-        Logger::FATAL
-      when 'error'
-        Logger::ERROR
-      when 'warn'
-        Logger::WARN
-      when 'info'
-        Logger::INFO
-      when 'debug'
-        Logger::DEBUG
-      end
-
-      if level.nil?
-        # Log bad log levels
-        log.level = Logger::ERROR
-        log.error "Unrecognized log level: #{log_level}"
-      else
-        # Sets good log levels
-        log.level = level
-      end
-    end
+    validates :log_level, inclusion: {
+      within: %w(fatal error warn info debug disabled),
+      message: 'must be one of fatal, error, warn, info, debug or disabled'
+    }
   end
 end

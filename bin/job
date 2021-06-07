@@ -34,28 +34,43 @@ begin
   require 'bundler'
   Bundler.setup(:default)
 
-  # Loads the config
-  require_relative '../lib/flight_job/configuration'
+  # Limited use of dotenv to support setting flight_ENVIRONMENT=development.
+  # NOTE: The GitHub .env.development default is 'development', but the underlying default
+  #       is 'production' if both env files are omitted.
+  require 'dotenv'
+  dot_files = [ '../.env.development.local', '../.env.development' ].map do |file|
+    File.expand_path(file, __dir__)
+  end
+  Dotenv.load(*dot_files)
+
+  require_relative '../lib/flight'
 
   # Attempt to enable development mode if requested
-  if FlightJob.config.development
+  if Flight.env.development?
     begin
       Bundler.setup(:default, :development)
       require 'pry'
       require 'pry-byebug'
     rescue StandardError, LoadError
       Bundler.setup(:default)
-      FlightJob.logger.warn "An error occurred when enabling development mode!"
+      $stderr.puts "An error occurred when enabling development mode!"
     end
   end
 
-  # Builds and runs the CLI
-  require_relative '../lib/flight_job/cli'
+  # Start the error handler
+  require 'commander'
+  name = ENV.fetch('FLIGHT_PROGRAM_NAME', 'bin/job')
+  Commander::ErrorHandler.new(name).start do |handler|
+    argv = handler.parse_trace(*ARGV) # Allows for --trace handling without slop
 
-  # Runs the command within the original directory
-  Dir.chdir(ENV.fetch('FLIGHT_CWD', '.')) do
-    OpenFlight.set_standard_env rescue nil
-    FlightJob::CLI.run!(*ARGV)
+    require_relative '../lib/flight_job/configuration'
+    Flight.load_configuration
+
+    require_relative '../lib/flight_job/cli'
+    Dir.chdir(ENV.fetch('FLIGHT_CWD', '.')) do
+      OpenFlight.set_standard_env rescue nil
+      FlightJob::CLI.run(*argv)
+    end
   end
 rescue Interrupt
   if Kernel.const_defined?(:Paint)
