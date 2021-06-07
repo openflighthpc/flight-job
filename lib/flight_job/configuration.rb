@@ -38,7 +38,7 @@ module FlightJob
 
     include ActiveModel::Validations
 
-    application_name 'flight-job'
+    application_name 'job'
 
     attribute :templates_dir, default: 'usr/share',
               transform: relative_to(root_path)
