@@ -48,7 +48,7 @@ read -r -d '' template <<'TEMPLATE' || true
   start_time: ($start_time),
   end_time: ($end_time),
   estimated_start_time: ($estimated_start_time),
-  estimated_end_time: ($end_time)
+  estimated_end_time: ($estimated_end_time)
 }
 TEMPLATE
 
@@ -135,6 +135,10 @@ if [[ "$end_time" == "Unknown" ]] ; then
   end_time=""
 fi
 
+# Slurm does not make the distinguish between estimated/actual end times clear.
+# Instead flight-job will infer which one is correct from the state mapping file
+estimated_end_time="$end_time"
+
 # Render and return the payload
 # NOTE: There is no "$estimated_end_time" variable because it is the same as "$end_time"
 #       The "$estimated_start_time"/"$start_time" distinguish exists to account for jobs
@@ -147,6 +151,7 @@ fi
 echo '{}' | jq  --arg state "$state" \
                 --arg reason "$reason" \
                 --arg estimated_start_time "$estimated_start_time" \
+                --arg estimated_end_time "$estimated_end_time" \
                 --arg start_time "$start_time" \
                 --arg end_time "$end_time" \
                 "$template" | tr -d "\n"
