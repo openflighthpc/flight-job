@@ -72,22 +72,22 @@ module FlightJob
     end
 
     start_header = ->(job, verbose:) do
-      job.start_time || verbose ? 'Started at' : 'Estimated Start'
+      job.actual_start_time || verbose ? 'Started at' : 'Estimated Start'
     end
     register_attribute(header: start_header) do |job, verbose:|
-      if job.start_time || verbose
-        job.format_start_time(verbose)
+      if job.actual_start_time || verbose
+        job.format_actual_start_time(verbose)
       else
         job.format_estimated_start_time(false)
       end
     end
 
     end_header = ->(job, verbose:) do
-      job.end_time || verbose ? 'Ended at' : 'Estimated Finish'
+      job.actual_end_time || verbose ? 'Ended at' : 'Estimated Finish'
     end
     register_attribute(header: end_header) do |job, verbose:|
-      if job.end_time || verbose
-        job.format_end_time(verbose)
+      if job.actual_end_time || verbose
+        job.format_actual_end_time(verbose)
       else
         job.format_estimated_end_time(false)
       end

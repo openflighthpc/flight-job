@@ -39,6 +39,10 @@ module FlightJob
     RUNNING_STATES = ['RUNNING']
     STATES = [*PENDING_STATES, *RUNNING_STATES, *TERMINAL_STATES]
 
+    STATES_LOOKUP = {}.merge(PENDING_STATES.map { |s| [s, :pending] }.to_h)
+                      .merge(RUNNING_STATES.map { |s| [s, :running] }.to_h)
+                      .merge(TERMINAL_STATES.map { |s| [s, :terminal] }.to_h)
+
     SCHEMA = JSONSchemer.schema({
       "type" => "object",
       "additionalProperties" => false,
@@ -59,9 +63,7 @@ module FlightJob
         "results_dir" => { "type" => ["string", "null"] },
         "reason" => { "type" => ["string", "null"] },
         "start_time" => { "type" => ["string", "null"], "format" => "date-time" },
-        "end_time" => { "type" => ["string", "null"], "format" => "date-time" },
-        "estimated_start_time" => { "type" => ["string", "null"], "format" => "date-time" },
-        "estimated_end_time" => { "type" => ["string", "null"], "format" => "date-time" }
+        "end_time" => { "type" => ["string", "null"], "format" => "date-time" }
       }
     })
 
@@ -261,32 +263,52 @@ module FlightJob
       metadata['created_at']
     end
 
+    def actual_start_time
+      return nil if STATES_LOOKUP[state] == :pending
+      start_time
+    end
+
+    def estimated_start_time
+      return nil unless STATES_LOOKUP[state] == :pending
+      start_time
+    end
+
+    def actual_end_time
+      return nil unless STATES_LOOKUP[state] == :terminal
+      end_time
+    end
+
+    def estimated_end_time
+      return nil if STATES_LOOKUP[state] == :terminal
+      end_time
+    end
+
     [
       "submit_status", "submit_stdout", "submit_stderr", "script_id", "state",
       "scheduler_id", "scheduler_state", "stdout_path", "stderr_path", "reason",
-      "start_time", "end_time", "estimated_start_time", "estimated_end_time", "results_dir"
+      "start_time", "end_time", "results_dir"
     ].each do |method|
       define_method(method) { metadata[method] }
       define_method("#{method}=") { |value| metadata[method] = value }
     end
 
-    def format_start_time(verbose)
-      if start_time.nil?
+    def format_actual_start_time(verbose)
+      if actual_start_time.nil?
         nil
       elsif verbose
-        start_time
+        actual_start_time
       else
-        DateTime.rfc3339(start_time).strftime('%d/%m/%y %H:%M')
+        DateTime.rfc3339(actual_start_time).strftime('%d/%m/%y %H:%M')
       end
     end
 
-    def format_end_time(verbose)
-      if end_time.nil?
+    def format_actual_end_time(verbose)
+      if actual_end_time.nil?
         nil
       elsif verbose
-        end_time
+        actual_end_time
       else
-        DateTime.rfc3339(end_time).strftime('%d/%m/%y %H:%M')
+        DateTime.rfc3339(actual_end_time).strftime('%d/%m/%y %H:%M')
       end
     end
 
@@ -311,7 +333,13 @@ module FlightJob
     end
 
     def serializable_hash
-      { "id" => id }.merge(metadata)
+      {
+        "id" => id,
+        "actual_start_time" => actual_start_time,
+        "estimated_start_time" => estimated_start_time,
+        "actual_end_time" => actual_end_time,
+        "estimated_end_time" => estimated_end_time
+      }.merge(metadata)
     end
 
     # Takes the scheduler's state and converts it to an internal flight-job
@@ -427,39 +455,21 @@ module FlightJob
       # start/end times. Doing so reliable would require knowledge of the state
       # mapping file as 'scontrol' does not make a distinction.
       #
-      # Instead the start_time/end_time/estimated_start_time/estimated_end_time
-      # *may* always be reported back from the monitor.sh script. Instead the
-      # following rules are used to set the times:
-      # * 'estimated_start_time': Is (un)set on pending states,
-      # * 'start_time': Is set on running or terminal states,
-      # * 'estimated_end_time': Is (un)set on pending and running states, and
-      # * 'end_time': Is set on terminal states.
-      #
-      # The estimated times will always be set (or unset) on there corresponding
-      # states. This provides additional control over them, as they may change.
-      # The actual times are considered static and can not be unset, however they
-      # maybe updated.
+      # Instead the estimated/actual times are inferred by the state. To prevent
+      # transient dependencies between attributes, their is only one version of
+      # the `start_time`/`end_time` fields are stored each. The state is then
+      # used to infer which is correct.
 
-      # (Un)set the estimated_start_time
-      if PENDING_STATES.include?(state)
-        self.estimated_start_time = parse_time(est_start, type: 'estimated_start_time')
-      end
-
-      # Set the start_time
-      if [*RUNNING_STATES, *TERMINAL_STATES].include?(state)
-        parsed = parse_time(start, type: 'start_time')
-        self.start_time = parsed if parsed
-      end
-
-      # (Un)set the estimated_end_time
-      if [*PENDING_STATES, *RUNNING_STATES].include?(state)
-        self.estimated_end_time = parse_time(est_end, type: 'estimated_end_time')
-      end
-
-      # Set the end_time
-      if TERMINAL_STATES.include?(state)
-        parsed = parse_time(end_time, type: 'end_time')
-        self.end_time = parsed if parsed
+      case state
+      when *PENDING_STATES
+        self.start_time = parse_time(est_start, type: "estimated_start_time")
+        self.end_time = parse_time(est_end, type: "estimated_end_time")
+      when *RUNNING_STATES
+        self.start_time = parse_time(start, type: "actual_start_time")
+        self.end_time = parse_time(est_end, type: "estimated_end_time")
+      else
+        self.start_time = parse_time(start, type: "actual_start_time")
+        self.end_time = parse_time(end_time, type: "actual_end_time")
       end
     end
 
