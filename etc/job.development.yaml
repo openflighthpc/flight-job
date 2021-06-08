@@ -26,3 +26,5 @@
 #==============================================================================
 log_path: null
 log_level: debug
+jobs_dir: var/jobs
+scripts_dir: var/scripts
