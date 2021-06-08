@@ -135,19 +135,15 @@ if [[ "$end_time" == "Unknown" ]] ; then
   end_time=""
 fi
 
-# Slurm does not make the distinguish between estimated/actual end times clear.
-# Instead flight-job will infer which one is correct from the state mapping file
+# NOTE: Slurm does not make the distinguish between estimated/actual end times clear.
+#       Instead flight-job will infer which one is correct from the state mapping file
+#
+#       A similar principle is used to distinguish between the estimated/actual start
+#       times. The main difference being, jobs without an "allocation" will not have
+#       an "actual" start_time. This is because slurm sets a StartTime when the job
+#       is cancelled even when PENDING.
 estimated_end_time="$end_time"
 
-# Render and return the payload
-# NOTE: There is no "$estimated_end_time" variable because it is the same as "$end_time"
-#       The "$estimated_start_time"/"$start_time" distinguish exists to account for jobs
-#       without an allocation
-#
-#       The allocation isn't important for the end_time, which is inferred from the '$state'
-#
-# NOTE: flight-job will only set the start/end times if the job is within the correct state,
-#       This means state checks are not required within this script.
 echo '{}' | jq  --arg state "$state" \
                 --arg reason "$reason" \
                 --arg estimated_start_time "$estimated_start_time" \
