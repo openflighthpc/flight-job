@@ -32,27 +32,14 @@ module FlightJob
     extend OutputMode::TLDR::Show
 
     TEMPLATE = <<~ERB
+      <% verbose = output.context[:verbose] -%>
+      <% each(:default) do |value, padding:, field:| -%>
       <%
-        verbose = output.context[:verbose]
-        main = output.callables.config_select(:section, :main)
-        paths = main.select(&:paths?)
-
-        # Determine if the STDOUT/STDERR paths should be combined or
-        # independently displayed
-        if verbose || paths.map { |p| p.call(model) }.uniq.length != 1
-          callables = OutputMode::Callables.new main.reject(&:combined?)
-        else
-          callables = OutputMode::Callables.new main.reject(&:paths?)
-        end
+          # Apply the colours
+          value = pastel.green value
+          field = pastel.blue.bold field
       -%>
-      <% callables.pad_each do |callable, padding:, field:| -%>
-      <%
-          # Generates the value
-          # NOTE: The output contains details about how to handle nil/true/false
-          value = pastel.green callable.generator(output).call(model)
-          header = pastel.blue.bold callable.config[:header]
-      -%>
-      <%= padding -%><%= header -%><%= pastel.bold ':' -%> <%= value %>
+      <%= padding -%><%= pastel.blue.bold field -%><%= pastel.bold ':' -%> <%= value %>
       <% end -%>
       <%
         submit_outputs = output.procs.select { |proc| proc.config[:section] == :submit }
@@ -66,17 +53,17 @@ module FlightJob
       <% end -%>
     ERB
 
-    register_attribute(section: :main, header: 'ID') { |j| j.id }
-    register_attribute(section: :main, header: 'Script ID') { |j| j.script_id }
-    register_attribute(section: :main, header: 'Scheduler ID') { |j| j.scheduler_id }
-    register_attribute(section: :main, header: 'State') { |j| j.state }
+    register_attribute(header: 'ID') { |j| j.id }
+    register_attribute(header: 'Script ID') { |j| j.script_id }
+    register_attribute(header: 'Scheduler ID') { |j| j.scheduler_id }
+    register_attribute(header: 'State') { |j| j.state }
 
     # Show a boolean in the "simplified" output, and the exit code in the verbose
-    register_attribute(section: :main, header: 'Submitted', verbose: false) { |j| j.submit_status == 0 }
     # NOTE: There is a rendering issue of integers into the TSV output. Needs investigation
-    register_attribute(section: :main, header: 'Submit Status', verbose: true) { |j| j.submit_status.to_s }
+    register_attribute(header: 'Submitted', verbose: false) { |j| j.submit_status == 0 }
+    register_attribute(header: 'Submit Status', verbose: true) { |j| j.submit_status.to_s }
 
-    register_attribute(section: :main, header: 'Submitted at') do |job, verbose:|
+    register_attribute(header: 'Submitted at') do |job, verbose:|
       if verbose
         job.created_at
       else
@@ -84,38 +71,37 @@ module FlightJob
       end
     end
 
-    # NOTE: These could be the predicted times instead of the actual, consider
-    # delineating the two
-    register_attribute(section: :main, header: 'Started at') do |job, verbose:|
-      if job.start_time.nil?
-        nil
-      elsif verbose
-        job.start_time
-      else
-        DateTime.rfc3339(job.start_time).strftime('%d/%m/%y %H:%M')
-      end
+    start_header = ->(job, verbose:) do
+      job.actual_start_time || verbose ? 'Started at' : 'Estimated Start'
     end
-    register_attribute(section: :main, header: 'Ended at') do |job, verbose:|
-      if job.end_time.nil?
-        nil
-      elsif verbose
-        job.end_time
+    register_attribute(header: start_header) do |job, verbose:|
+      if job.actual_start_time || verbose
+        job.format_actual_start_time(verbose)
       else
-        DateTime.rfc3339(job.end_time).strftime('%d/%m/%y %H:%M')
+        job.format_estimated_start_time(false)
       end
     end
 
-    # NOTE: In interactive shells, the STDOUT/STDERR are merged together if they
-    #       are the same. The 'modes' are boolean flags (similar to verbose/interactive)
-    #       which are used to select the appropriate attributes.
-    #
-    #       As each attribute is defined independently, the headers can be changed without
-    #       affecting the ability to pad the output.
-    #
-    # PS: The 'path' mode is a misnomer, it refers solely to the standard output/error paths
-    register_attribute(section: :main, modes: [:paths], header: 'Stdout Path') { |j| j.stdout_path }
-    register_attribute(section: :main, modes: [:paths], header: 'Stderr Path') { |j| j.stderr_path }
-    register_attribute(section: :main, interactive: true, modes: [:combined], header: 'Output Path') { |j| j.stdout_path }
+    end_header = ->(job, verbose:) do
+      job.actual_end_time || verbose ? 'Ended at' : 'Estimated Finish'
+    end
+    register_attribute(header: end_header) do |job, verbose:|
+      if job.actual_end_time || verbose
+        job.format_actual_end_time(verbose)
+      else
+        job.format_estimated_end_time(false)
+      end
+    end
+
+    path_header = ->(job, verbose:) do
+      if job.stdout_path == job.stderr_path && !verbose
+        'Output Path'
+      else
+        'Stdout Path'
+      end
+    end
+    register_attribute(header: path_header) { |j| j.stdout_path }
+    register_attribute(header: 'Stderr Path', verbose: true) { |j| j.stderr_path }
 
     register_attribute(section: :submit, header: 'Submit Stdout') do |job|
       job.submit_stdout
@@ -130,7 +116,13 @@ module FlightJob
     # The submit columns will always be sorted to the bottom in the interactive outputs.
     #
     # Consider reordering on the next major version bump.
-    register_attribute(section: :main, header: 'Results Dir') { |j| j.results_dir }
+    register_attribute(header: 'Results Dir') { |j| j.results_dir }
+    register_attribute(verbose: true, header: 'Estimated start') do |job|
+      job.format_estimated_start_time(true)
+    end
+    register_attribute(verbose: true, header: 'Estimated end') do |job|
+      job.format_estimated_end_time(true)
+    end
 
     def self.build_output(**opts)
       submit = opts.delete(:submit)

@@ -39,12 +39,16 @@ which "jq" >/dev/null
 set +e
 
 # Specify the template for the JSON response
+# NOTE: scontrol does not distinguish between actual/estimated times. Instead
+#       flight-job will set the times according to the state
 read -r -d '' template <<'TEMPLATE' || true
 {
   state: ($state),
   reason: ($reason),
-  start_time: (if $start_time == "" then null else $start_time end),
-  end_time: (if $end_time == "" then null else $end_time end)
+  start_time: ($start_time),
+  end_time: ($end_time),
+  estimated_start_time: ($estimated_start_time),
+  estimated_end_time: ($estimated_end_time)
 }
 TEMPLATE
 
@@ -64,12 +68,13 @@ if [[ "$exit_status" -eq 0 ]]; then
     reason=""
   fi
 
+  estimated_start_time=$(echo "$control" | grep '^StartTime=' | cut -d= -f2)
   if [[ "$(echo "$control" | grep "^NodeList=" | cut -d= -f2)" == "(null)" ]]; then
     # Skip setting the start_time when there is no allocation
     start_time=""
   else
     # Set the start_time if nodes where allocated to the job
-    start_time=$(echo "$control" | grep '^StartTime=' | cut -d= -f2)
+    start_time="$estimated_start_time"
   fi
 
   end_time=$(  echo "$control" | grep '^EndTime='   | cut -d= -f2)
@@ -105,6 +110,10 @@ elif [[ "$exit_status" -eq 0 ]]; then
   fi
   end_time=$(echo "$acct" | cut -d'|' -f4)
 
+  # The job will be in a terminal state if in sacct and thus the
+  # estimated_start_time is not important.
+  estimated_start_time=''
+
   # Exit the monitor process if sacct fails to prevent the job being updated
   else
     echo "$sacct" >&3
@@ -119,13 +128,26 @@ fi
 if [[ "$start_time" == "Unknown" ]] ; then
   start_time=""
 fi
+if [[ "$estimated_start_time" == "Unknown" ]] ; then
+  estimated_start_time=""
+fi
 if [[ "$end_time" == "Unknown" ]] ; then
   end_time=""
 fi
 
-# Render and return the payload
+# NOTE: Slurm does not make the distinguish between estimated/actual end times clear.
+#       Instead flight-job will infer which one is correct from the state mapping file
+#
+#       A similar principle is used to distinguish between the estimated/actual start
+#       times. The main difference being, jobs without an "allocation" will not have
+#       an "actual" start_time. This is because slurm sets a StartTime when the job
+#       is cancelled even when PENDING.
+estimated_end_time="$end_time"
+
 echo '{}' | jq  --arg state "$state" \
                 --arg reason "$reason" \
+                --arg estimated_start_time "$estimated_start_time" \
+                --arg estimated_end_time "$estimated_end_time" \
                 --arg start_time "$start_time" \
                 --arg end_time "$end_time" \
                 "$template" | tr -d "\n"

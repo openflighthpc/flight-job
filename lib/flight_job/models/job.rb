@@ -34,10 +34,14 @@ require 'open3'
 module FlightJob
   class Job < ApplicationModel
     STATE_MAP = YAML.load(File.read(FlightJob.config.state_map_path))
+    PENDING_STATES = ['PENDING']
     TERMINAL_STATES = ['FAILED', 'COMPLETED', 'CANCELLED', 'UNKNOWN']
     RUNNING_STATES = ['RUNNING']
-    RUNNING_OR_TERMINAL_STATES = [*RUNNING_STATES, *TERMINAL_STATES]
-    STATES = ['PENDING', *RUNNING_STATES, *TERMINAL_STATES]
+    STATES = [*PENDING_STATES, *RUNNING_STATES, *TERMINAL_STATES]
+
+    STATES_LOOKUP = {}.merge(PENDING_STATES.map { |s| [s, :pending] }.to_h)
+                      .merge(RUNNING_STATES.map { |s| [s, :running] }.to_h)
+                      .merge(TERMINAL_STATES.map { |s| [s, :terminal] }.to_h)
 
     SCHEMA = JSONSchemer.schema({
       "type" => "object",
@@ -93,7 +97,9 @@ module FlightJob
         "state" => { "type" => "string" },
         "reason" => { "type" => ["string", "null"] },
         "start_time" => { "type" => ["string", "null"] },
-        "end_time" => { "type" => ["string", "null"] }
+        "end_time" => { "type" => ["string", "null"] },
+        "estimated_start_time" => { "type" => ["string", "null"] },
+        "estimated_end_time" => { "type" => ["string", "null"] }
       }
     })
 
@@ -257,6 +263,26 @@ module FlightJob
       metadata['created_at']
     end
 
+    def actual_start_time
+      return nil if STATES_LOOKUP[state] == :pending
+      start_time
+    end
+
+    def estimated_start_time
+      return nil unless STATES_LOOKUP[state] == :pending
+      start_time
+    end
+
+    def actual_end_time
+      return nil unless STATES_LOOKUP[state] == :terminal
+      end_time
+    end
+
+    def estimated_end_time
+      return nil if STATES_LOOKUP[state] == :terminal
+      end_time
+    end
+
     [
       "submit_status", "submit_stdout", "submit_stderr", "script_id", "state",
       "scheduler_id", "scheduler_state", "stdout_path", "stderr_path", "reason",
@@ -266,8 +292,54 @@ module FlightJob
       define_method("#{method}=") { |value| metadata[method] = value }
     end
 
+    def format_actual_start_time(verbose)
+      if actual_start_time.nil?
+        nil
+      elsif verbose
+        actual_start_time
+      else
+        DateTime.rfc3339(actual_start_time).strftime('%d/%m/%y %H:%M')
+      end
+    end
+
+    def format_actual_end_time(verbose)
+      if actual_end_time.nil?
+        nil
+      elsif verbose
+        actual_end_time
+      else
+        DateTime.rfc3339(actual_end_time).strftime('%d/%m/%y %H:%M')
+      end
+    end
+
+    def format_estimated_start_time(verbose)
+      if estimated_start_time.nil?
+        nil
+      elsif verbose
+        estimated_start_time
+      else
+        DateTime.rfc3339(estimated_start_time).strftime('%d/%m/%y %H:%M')
+      end
+    end
+
+    def format_estimated_end_time(verbose)
+      if estimated_end_time.nil?
+        nil
+      elsif verbose
+        estimated_end_time
+      else
+        DateTime.rfc3339(estimated_end_time).strftime('%d/%m/%y %H:%M')
+      end
+    end
+
     def serializable_hash
-      { "id" => id }.merge(metadata)
+      {
+        "id" => id,
+        "actual_start_time" => actual_start_time,
+        "estimated_start_time" => estimated_start_time,
+        "actual_end_time" => actual_end_time,
+        "estimated_end_time" => estimated_end_time
+      }.merge(metadata)
     end
 
     # Takes the scheduler's state and converts it to an internal flight-job
@@ -343,43 +415,10 @@ module FlightJob
         process_output('monitor', status, stdout) do |data|
           update_scheduler_state(data['state'])
 
-          # The slurm monitor script will report the "expected start/end times"
-          # as if they where the actual times. This means "start_time" should
-          # only be updated when in a running or terminal state. Similarly, the
-          # "end_time" should only be updated when in a terminal state.
-          #
-          # NOTE: This *might* give erroneous results if the job transitioned
-          # from pending to terminal. In these cases, they would not have technically
-          # started, but slurm may still set the "start_time"
-          #
-          # It is not possible to detect this condition at this point, as the monitor
-          # runs infrequently. Thus a fast running job may "appear" to have skipped
-          # the RUNNING_STATES.
-          #
-          # Consider refactoring
-          if ['', nil].include?(data['start_time']) || !RUNNING_OR_TERMINAL_STATES.include?(state)
-            self.start_time = nil
-          else
-            begin
-              self.start_time = Time.parse(data['start_time']).to_datetime.rfc3339
-            rescue ArgumentError
-              FlightJob.logger.error "Failed to parse start_time: #{data['start_time']}"
-              FlightJob.logger.debug $!.full_message
-              raise_command_error
-            end
-          end
-
-          if ['', nil].include?(data['end_time']) || !TERMINAL_STATES.include?(state)
-            self.end_time = nil
-          else
-            begin
-              self.end_time = Time.parse(data['end_time']).to_datetime.rfc3339
-            rescue ArgumentError
-              FlightJob.logger.error "Failed to parse end_time: #{data['end_time']}"
-              FlightJob.logger.debug $!.full_message
-              raise_command_error
-            end
-          end
+          process_times data['estimated_start_time'],
+                        data['start_time'],
+                        data['estimated_end_time'],
+                        data['end_time']
 
           if data['reason'] == ''
             self.reason = nil
@@ -410,6 +449,38 @@ module FlightJob
     end
 
     private
+
+    def process_times(est_start, start, est_end, end_time)
+      # The monitor script does not always distinguish between actual/estimated
+      # start/end times. Doing so reliable would require knowledge of the state
+      # mapping file as 'scontrol' does not make a distinction.
+      #
+      # Instead the estimated/actual times are inferred by the state. To prevent
+      # transient dependencies between attributes, their is only one version of
+      # the `start_time`/`end_time` fields are stored each. The state is then
+      # used to infer which is correct.
+
+      case state
+      when *PENDING_STATES
+        self.start_time = parse_time(est_start, type: "estimated_start_time")
+        self.end_time = parse_time(est_end, type: "estimated_end_time")
+      when *RUNNING_STATES
+        self.start_time = parse_time(start, type: "actual_start_time")
+        self.end_time = parse_time(est_end, type: "estimated_end_time")
+      else
+        self.start_time = parse_time(start, type: "actual_start_time")
+        self.end_time = parse_time(end_time, type: "actual_end_time")
+      end
+    end
+
+    def parse_time(time, type:)
+      return nil if ['', nil].include?(time)
+      Time.parse(time).strftime("%Y-%m-%dT%T%:z")
+    rescue ArgumentError
+      FlightJob.logger.error "Failed to parse #{type}: #{time}"
+      FlightJob.logger.debug $!.full_message
+      raise_command_error
+    end
 
     def process_output(type, status, out)
       schema = case type

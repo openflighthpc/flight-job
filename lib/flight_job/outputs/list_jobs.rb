@@ -50,30 +50,19 @@ module FlightJob
       end
     end
 
-    # NOTE: These could be the predicted times instead of the actual, consider
-    # delineating the two
     register_column(header: 'Started at') do |job, verbose:|
-      if job.start_time.nil?
-        nil
-      elsif verbose
-        job.start_time
-      else
-        DateTime.rfc3339(job.start_time).strftime('%d/%m/%y %H:%M')
-      end
+      job.format_actual_start_time(verbose)
     end
     register_column(header: 'Ended at') do |job, verbose:|
-      if job.end_time.nil?
-        nil
-      elsif verbose
-        job.end_time
-      else
-        DateTime.rfc3339(job.end_time).strftime('%d/%m/%y %H:%M')
-      end
+      job.format_actual_end_time(verbose)
     end
 
     register_column(header: 'StdOut Path', verbose: true) { |j| j.stdout_path }
     register_column(header: 'StdErr Path', verbose: true) { |j| j.stderr_path }
     register_column(header: 'Results Dir', verbose: true) { |j| j.results_dir }
+
+    register_column(header: 'Estimated Start', verbose: true, &:estimated_start_time)
+    register_column(header: 'Estimated Finish', verbose: true, &:estimated_end_time)
 
     def self.build_output(**opts)
       if opts.delete(:json)

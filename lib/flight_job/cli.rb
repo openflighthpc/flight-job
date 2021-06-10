@@ -215,6 +215,8 @@ module FlightJob
     alias_command 'cp',     'copy-template'
     alias_command 'copy',   'copy-template'
     alias_command 'ls-job-results', 'list-job-results'
+    alias_command 'list',   'list-jobs'
+    alias_command 'info',   'info-job'
 
     if Flight.env.development?
       create_command 'console' do |c|
