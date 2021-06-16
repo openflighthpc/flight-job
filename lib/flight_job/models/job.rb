@@ -332,7 +332,7 @@ module FlightJob
       end
     end
 
-    def serializable_hash
+    def serializable_hash(_ = {})
       {
         "id" => id,
         "actual_start_time" => actual_start_time,

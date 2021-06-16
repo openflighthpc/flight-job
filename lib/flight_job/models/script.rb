@@ -279,7 +279,7 @@ module FlightJob
       FileUtils.chmod(0600, notes_path)
     end
 
-    def serializable_hash
+    def serializable_hash(_ = {})
       answers # Ensure the answers have been set
       {
         "id" => id,

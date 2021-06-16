@@ -29,11 +29,7 @@
 module FlightJob
   JSONRenderer = Struct.new(:array, :interactive) do
     def render(*objects)
-      data = if array
-        objects.map(&:serializable_hash)
-      else
-        objects.first.serializable_hash
-      end
+      data = objects.as_json
       interactive ? JSON.pretty_generate(data) : JSON.dump(data)
     end
   end

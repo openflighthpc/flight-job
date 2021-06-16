@@ -218,7 +218,7 @@ module FlightJob
       {}
     end
 
-    def serializable_hash
+    def serializable_hash(_ = {})
       {
         'id' => id,
         'path' => template_path,
