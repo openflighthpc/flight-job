@@ -31,12 +31,15 @@ require 'active_support/core_ext/object/blank'
 
 module Flight
   class << self
-    attr_reader :config
-
-    def load_configuration
+    def config
+      return @config if @config
       @config = FlightJob::Configuration.load
-      FlightJob::Configuration.log_warnings
+      @config.__logs__.each do |type, msgs|
+        msgs.each { |msg| logger.send(type, msg) }
+      end
+      @config
     end
+    alias_method :load_configuration, :config
 
     def env
       @env ||= ActiveSupport::StringInquirer.new(
