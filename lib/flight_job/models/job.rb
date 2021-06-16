@@ -332,14 +332,19 @@ module FlightJob
       end
     end
 
-    def serializable_hash(_ = {})
+    def serializable_hash(opts = nil)
+      opts ||= {}
       {
         "id" => id,
         "actual_start_time" => actual_start_time,
         "estimated_start_time" => estimated_start_time,
         "actual_end_time" => actual_end_time,
         "estimated_end_time" => estimated_end_time
-      }.merge(metadata)
+      }.merge(metadata).tap do |hash|
+        if opts.fetch(:include, []).include? 'script'
+          hash['script'] = load_script
+        end
+      end
     end
 
     # Takes the scheduler's state and converts it to an internal flight-job
