@@ -390,7 +390,7 @@ module FlightJob
         end
 
         # Render the script output
-        puts Outputs::InfoScript.build_output(**output_options).render(script)
+        puts render_output(Outputs::InfoScript, script)
       end
 
       def render_and_save(name, answers, notes)

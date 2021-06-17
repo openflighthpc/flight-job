@@ -29,7 +29,7 @@ module FlightJob
   module Commands
     class InfoScript < Command
       def run
-        puts Outputs::InfoScript.build_output(**output_options).render(script)
+        puts render_output(Outputs::InfoScript, script)
       end
 
       def script

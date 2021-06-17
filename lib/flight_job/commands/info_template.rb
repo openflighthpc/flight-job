@@ -33,7 +33,7 @@ module FlightJob
   module Commands
     class InfoTemplate < Command
       def run
-        puts Outputs::InfoTemplate.build_output(**output_options).render(template)
+        puts render_output(Outputs::InfoTemplate, template)
       end
 
       def template

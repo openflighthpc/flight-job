@@ -29,9 +29,11 @@ module FlightJob
   module Commands
     class ListTemplates < Command
       def run
-        result = Outputs::ListTemplates.build_output(**output_options).render(*templates)
-        $stderr.puts 'Nothing To Display' if templates.empty?
-        puts result unless result.empty?
+        if templates.empty?
+          $stderr.puts 'Nothing To Display'
+        else
+          puts render_output(Outputs::ListTemplates, *templates)
+        end
       end
 
       def templates
