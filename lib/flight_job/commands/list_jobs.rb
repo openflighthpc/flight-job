@@ -32,7 +32,7 @@ module FlightJob
         if jobs.empty?
           $stderr.puts 'Nothing To Display'
         else
-          puts render_output(Outputs::ListJobs, *jobs)
+          puts render_output(Outputs::ListJobs, jobs)
         end
       end
 

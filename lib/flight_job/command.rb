@@ -109,7 +109,7 @@ module FlightJob
       self.class.new_editor(pastel)
     end
 
-    def render_output(klass, *data)
+    def render_output(klass, data)
       if opts.json
         json = data.as_json(include: opts.include)
         output_options[:interactive] ? JSON.pretty_generate(json) : JSON.dump(json)

@@ -32,7 +32,7 @@ module FlightJob
         if templates.empty?
           $stderr.puts 'Nothing To Display'
         else
-          puts render_output(Outputs::ListTemplates, *templates)
+          puts render_output(Outputs::ListTemplates, templates)
         end
       end
 

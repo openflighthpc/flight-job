@@ -32,7 +32,7 @@ module FlightJob
         if scripts.empty?
           $stderr.puts 'Nothing To Display'
         else
-          puts render_output(Outputs::ListScripts, *scripts)
+          puts render_output(Outputs::ListScripts, scripts)
         end
       end
 
