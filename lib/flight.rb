@@ -31,6 +31,14 @@ require 'active_support/core_ext/object/blank'
 
 module Flight
   class << self
+    def config
+      return @config if @config
+      @config = FlightJob::Configuration.load
+      @config.__logs__.log_with(logger)
+      @config
+    end
+    alias_method :load_configuration, :config
+
     def env
       @env ||= ActiveSupport::StringInquirer.new(
         ENV["flight_ENVIRONMENT"].presence || "production"
@@ -44,11 +52,6 @@ module Flight
         File.expand_path('..', __dir__)
       end
     end
-
-    def config
-      @config ||= FlightJob::Configuration.load
-    end
-    alias_method :load_configuration, :config
 
     def logger
       @logger ||= Logger.new(config.log_path).tap do |log|
