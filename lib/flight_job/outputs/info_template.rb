@@ -55,13 +55,9 @@ module FlightJob
     end
 
     def render(template)
-      if @opts[:json]
-        JSONRenderer.new(false, @opts[:interactive]).render(template)
-      else
-        bind = nil
-        template.instance_exec { bind = self.binding }
-        MarkdownRenderer.new(TEMPLATE.result(bind)).wrap_markdown
-      end
+      bind = nil
+      template.instance_exec { bind = self.binding }
+      MarkdownRenderer.new(TEMPLATE.result(bind)).wrap_markdown
     end
   end
 end

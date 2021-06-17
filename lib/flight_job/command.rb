@@ -109,12 +109,20 @@ module FlightJob
       self.class.new_editor(pastel)
     end
 
+    def render_output(klass, *data)
+      if opts.json
+        json = data.as_json
+        output_options[:interactive] ? JSON.pretty_generate(json) : JSON.dump(json)
+      else
+        klass.build_output(**output_options).render(*data)
+      end
+    end
+
     def output_options
       @output_options ||= {
         verbose: (opts.verbose ? true : nil),
         ascii: (opts.ascii ? true : nil),
-        interactive: (opts.ascii || opts.pretty || $stdout.tty? ? true : nil),
-        json: (opts.json ? true : nil)
+        interactive: (opts.ascii || opts.pretty || $stdout.tty? ? true : nil)
       }
     end
 
@@ -193,14 +201,6 @@ module FlightJob
       # results directory.
       unless job.results_dir
         raise MissingError, "The job did not report its results directory"
-      end
-    end
-
-    def render_output(klass, *data)
-      if opts.json
-        data.to_json
-      else
-        klass.build_output(**output_options).render(*data)
       end
     end
   end

@@ -65,11 +65,7 @@ module FlightJob
     register_column(header: 'Estimated Finish', verbose: true, &:estimated_end_time)
 
     def self.build_output(**opts)
-      if opts.delete(:json)
-        JSONRenderer.new(true, opts[:interactive])
-      else
-        super(row_color: :cyan, header_color: :bold, **opts)
-      end
+      super(row_color: :cyan, header_color: :bold, **opts)
     end
   end
 end

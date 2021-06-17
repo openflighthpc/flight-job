@@ -46,11 +46,7 @@ module FlightJob
     register_column(header: 'Path', verbose: true) { |s| s.script_path }
 
     def self.build_output(**opts)
-      if opts.delete(:json)
-        JSONRenderer.new(true, opts[:interactive])
-      else
-        super(row_color: :cyan, header_color: :bold, **opts)
-      end
+      super(row_color: :cyan, header_color: :bold, **opts)
     end
   end
 end

@@ -49,11 +49,7 @@ module FlightJob
     end
 
     def self.build_output(**opts)
-      if opts.delete(:json)
-        JSONRenderer.new(true, opts[:interactive])
-      else
-        super(row_color: :cyan, header_color: :bold, **opts)
-      end
+      super(row_color: :cyan, header_color: :bold, **opts)
     end
   end
 end
