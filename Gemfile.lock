@@ -1,7 +1,7 @@
 GIT
   remote: https://github.com/openflighthpc/flight_configuration.git
-  revision: 89fb77cd8d1017ea98fd2ed5adfad086f5255290
-  branch: 89fb77cd8d1017ea98fd2ed5adfad086f5255290
+  revision: f8bbc20af982f180264841044444648ec131bafa
+  branch: dev/warnings
   specs:
     flight_configuration (0.1.0)
 

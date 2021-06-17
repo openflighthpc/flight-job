@@ -34,9 +34,7 @@ module Flight
     def config
       return @config if @config
       @config = FlightJob::Configuration.load
-      @config.__logs__.each do |type, msgs|
-        msgs.each { |msg| logger.send(type, msg) }
-      end
+      @config.__logs__.log_with(logger)
       @config
     end
     alias_method :load_configuration, :config
