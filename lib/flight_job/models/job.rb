@@ -332,6 +332,18 @@ module FlightJob
       end
     end
 
+    def stdout_readable?
+      return false unless stdout_path
+      return false unless File.exists? stdout_path
+      File.stat(stdout_path).readable?
+    end
+
+    def stderr_readable?
+      return false unless stderr_path
+      return false unless File.exists? stderr_path
+      File.stat(stderr_path).readable?
+    end
+
     def serializable_hash(opts = nil)
       opts ||= {}
       {
@@ -339,7 +351,12 @@ module FlightJob
         "actual_start_time" => actual_start_time,
         "estimated_start_time" => estimated_start_time,
         "actual_end_time" => actual_end_time,
-        "estimated_end_time" => estimated_end_time
+        "estimated_end_time" => estimated_end_time,
+        # NOTE: The API uses the 'size' attributes as a proxy check to exists/readability
+        #       as well as getting the size. Non-readable stdout/stderr would be
+        #       unusual, and can be ignored
+        "stdout_size" => stdout_readable? ? File.size(stdout_path) : nil,
+        "stderr_size" => stderr_readable? ? File.size(stderr_path) : nil
       }.merge(metadata).tap do |hash|
         if opts.fetch(:include, []).include? 'script'
           hash['script'] = load_script
@@ -351,7 +368,7 @@ module FlightJob
                         .map { |p| Pathname.new(p) }
                         .reject(&:directory?)
                         .reject(&:symlink?)
-                        .select(&:readable?) # XXX: Non-readable files would be an odd occurrence
+                        .select(&:readable?) # These would be unusual and should be rejected
                         .map { |p| { file: p.to_s, size: p.size } }
             hash['result_files'] = files
           else
