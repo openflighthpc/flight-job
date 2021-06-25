@@ -367,7 +367,6 @@ module FlightJob
           files =  Dir.glob(File.join(results_dir, '**/*'))
                       .map { |p| Pathname.new(p) }
                       .reject(&:directory?)
-                      .reject(&:symlink?)
                       .select(&:readable?) # These would be unusual and should be rejected
                       .map { |p| { file: p.to_s, size: p.size } }
           hash['result_files'] = files
