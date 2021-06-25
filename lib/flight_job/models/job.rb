@@ -362,18 +362,17 @@ module FlightJob
           hash['script'] = load_script
         end
 
-        if opts.fetch(:include, []).include? 'result_files'
-          if results_dir && Dir.exist?(results_dir)
-            files =  Dir.glob(File.join(results_dir, '**/*'))
-                        .map { |p| Pathname.new(p) }
-                        .reject(&:directory?)
-                        .reject(&:symlink?)
-                        .select(&:readable?) # These would be unusual and should be rejected
-                        .map { |p| { file: p.to_s, size: p.size } }
-            hash['result_files'] = files
-          else
-            hash['result_files'] = nil
-          end
+        # Always serialize the result_files
+        if results_dir && Dir.exist?(results_dir)
+          files =  Dir.glob(File.join(results_dir, '**/*'))
+                      .map { |p| Pathname.new(p) }
+                      .reject(&:directory?)
+                      .reject(&:symlink?)
+                      .select(&:readable?) # These would be unusual and should be rejected
+                      .map { |p| { file: p.to_s, size: p.size } }
+          hash['result_files'] = files
+        else
+          hash['result_files'] = nil
         end
       end
     end
