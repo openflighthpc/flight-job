@@ -218,11 +218,17 @@ module FlightJob
       {}
     end
 
-    def serializable_hash
+    def serializable_hash(opts = nil)
+      opts ||= {}
       {
         'id' => id,
         'path' => template_path,
-      }.merge(metadata)
+      }.merge(metadata).tap do |hash|
+        if opts.fetch(:include, []).include? 'scripts'
+          # NOTE: Consider using a file registry instead
+          hash['scripts'] = Script.load_all.select { |s| s.template_id == id }
+        end
+      end
     end
 
     def questions_data

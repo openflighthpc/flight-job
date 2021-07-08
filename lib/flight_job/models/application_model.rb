@@ -30,6 +30,6 @@ require 'active_model'
 module FlightJob
   class ApplicationModel
     include ActiveModel::Model
-    include ActiveModel::Serialization
+    include ActiveModel::Serializers::JSON
   end
 end

@@ -279,13 +279,22 @@ module FlightJob
       FileUtils.chmod(0600, notes_path)
     end
 
-    def serializable_hash
+    def serializable_hash(opts = nil)
+      opts ||= {}
       answers # Ensure the answers have been set
       {
         "id" => id,
         "notes" => notes,
         "path" => script_path
-      }.merge(metadata)
+      }.merge(metadata).tap do |hash|
+        if opts.fetch(:include, []).include? 'template'
+          hash['template'] = load_template
+        end
+        if opts.fetch(:include, []).include? 'jobs'
+          # NOTE: Consider using a file registry instead
+          hash['jobs'] = Job.load_all.select { |s| s.script_id == id }
+        end
+      end
     end
 
     def raise_duplicate_id_error

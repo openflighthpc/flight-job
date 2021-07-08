@@ -126,11 +126,7 @@ module FlightJob
 
     def self.build_output(**opts)
       submit = opts.delete(:submit)
-      if opts.delete(:json)
-        JSONRenderer.new(false, opts[:interactive])
-      else
-        super(template: TEMPLATE, context: { submit: submit }, **opts)
-      end
+      super(template: TEMPLATE, context: { submit: submit }, **opts)
     end
   end
 end

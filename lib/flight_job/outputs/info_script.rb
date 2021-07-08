@@ -59,11 +59,7 @@ module FlightJob
     register_attribute(section: :notes, header: 'Notes') { |s| s.notes }
 
     def self.build_output(**opts)
-      if opts.delete(:json)
-        JSONRenderer.new(false, opts[:interactive])
-      else
-        super(template: TEMPLATE, **opts)
-      end
+      super(template: TEMPLATE, **opts)
     end
   end
 end

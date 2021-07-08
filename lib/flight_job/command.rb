@@ -109,12 +109,20 @@ module FlightJob
       self.class.new_editor(pastel)
     end
 
+    def render_output(klass, data)
+      if opts.json
+        json = data.as_json(include: opts.include)
+        output_options[:interactive] ? JSON.pretty_generate(json) : JSON.dump(json)
+      else
+        klass.build_output(**output_options).render(*data)
+      end
+    end
+
     def output_options
-      {
+      @output_options ||= {
         verbose: (opts.verbose ? true : nil),
         ascii: (opts.ascii ? true : nil),
-        interactive: (opts.ascii || opts.pretty || $stdout.tty? ? true : nil),
-        json: (opts.json ? true : nil)
+        interactive: (opts.ascii || opts.pretty || $stdout.tty? ? true : nil)
       }
     end
 
@@ -151,7 +159,7 @@ module FlightJob
         if matches.empty?
           raise MissingTemplateError, "Could not locate: #{name_or_id}"
         else
-          output = Outputs::ListTemplates.build_output(**output_options).render(*matches)
+          output = render_output(Outputs::ListTemplates, *matches)
           raise MissingTemplateError, <<~ERROR.chomp
             Could not locate: #{name_or_id}. Did you mean one of the following?
             #{Paint[output, :reset]}

@@ -34,8 +34,14 @@ module FlightJob
         check_cron
         job = Job.new(script_id: script.id)
         job.submit
+
+        # Patches the submit flag on to output_options
+        # NOTE: There is probably a better way to do this in general,
+        #       but this is a once off
         show_submit = job.submit_status != 0
-        puts Outputs::InfoJob.build_output(submit: show_submit, **output_options).render(job)
+        output_options.merge!(submit: show_submit)
+
+        puts render_output(Outputs::InfoJob, job)
         unless job.submit_status == 0
           raise GeneralError, "The job submission failed!"
         end

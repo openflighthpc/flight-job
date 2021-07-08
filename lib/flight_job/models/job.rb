@@ -332,14 +332,54 @@ module FlightJob
       end
     end
 
-    def serializable_hash
+    def stdout_readable?
+      return false unless stdout_path
+      return false unless File.exists? stdout_path
+      File.stat(stdout_path).readable?
+    end
+
+    def stderr_readable?
+      return false if stderr_merged?
+      return false unless stderr_path
+      return false unless File.exists? stderr_path
+      File.stat(stderr_path).readable?
+    end
+
+    def stderr_merged?
+      stdout_path == stderr_path
+    end
+
+    def serializable_hash(opts = nil)
+      opts ||= {}
       {
         "id" => id,
         "actual_start_time" => actual_start_time,
         "estimated_start_time" => estimated_start_time,
         "actual_end_time" => actual_end_time,
-        "estimated_end_time" => estimated_end_time
-      }.merge(metadata)
+        "estimated_end_time" => estimated_end_time,
+      }.merge(metadata).tap do |hash|
+        # NOTE: The API uses the 'size' attributes as a proxy check to exists/readability
+        #       as well as getting the size. Non-readable stdout/stderr would be
+        #       unusual, and can be ignored
+        hash["stdout_size"] = File.size(stdout_path) if stdout_readable?
+        hash["stderr_size"] = File.size(stderr_path) if stderr_readable?
+
+        if opts.fetch(:include, []).include? 'script'
+          hash['script'] = load_script
+        end
+
+        # Always serialize the result_files
+        if results_dir && Dir.exist?(results_dir)
+          files =  Dir.glob(File.join(results_dir, '**/*'))
+                      .map { |p| Pathname.new(p) }
+                      .reject(&:directory?)
+                      .select(&:readable?) # These would be unusual and should be rejected
+                      .map { |p| { file: p.to_s, size: p.size } }
+          hash['result_files'] = files
+        else
+          hash['result_files'] = nil
+        end
+      end
     end
 
     # Takes the scheduler's state and converts it to an internal flight-job
