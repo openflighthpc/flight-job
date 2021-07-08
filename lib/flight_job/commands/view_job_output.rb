@@ -53,7 +53,7 @@ module FlightJob
       end
 
       def assert_stderr_not_merged
-        if @job.stdout_path == @job.stderr_path
+        if @job.stderr_merged?
           prog_name = ENV.fetch('FLIGHT_PROGRAM_NAME') { 'bin/job' }
           raise MissingError, <<~ERROR.chomp
             Cannot display the job's standard error as it has been merged with standard out.

@@ -339,9 +339,14 @@ module FlightJob
     end
 
     def stderr_readable?
+      return false if stderr_merged?
       return false unless stderr_path
       return false unless File.exists? stderr_path
       File.stat(stderr_path).readable?
+    end
+
+    def stderr_merged?
+      stdout_path == stderr_path
     end
 
     def serializable_hash(opts = nil)
@@ -352,12 +357,13 @@ module FlightJob
         "estimated_start_time" => estimated_start_time,
         "actual_end_time" => actual_end_time,
         "estimated_end_time" => estimated_end_time,
+      }.merge(metadata).tap do |hash|
         # NOTE: The API uses the 'size' attributes as a proxy check to exists/readability
         #       as well as getting the size. Non-readable stdout/stderr would be
         #       unusual, and can be ignored
-        "stdout_size" => stdout_readable? ? File.size(stdout_path) : nil,
-        "stderr_size" => stderr_readable? ? File.size(stderr_path) : nil
-      }.merge(metadata).tap do |hash|
+        hash["stdout_size"] = File.size(stdout_path) if stdout_readable?
+        hash["stderr_size"] = File.size(stderr_path) if stderr_readable?
+
         if opts.fetch(:include, []).include? 'script'
           hash['script'] = load_script
         end
