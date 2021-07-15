@@ -58,7 +58,7 @@ module FlightJob
     validates :scheduler, presence: true
 
     attribute :state_map_path,
-              default: ->(config) { "etc/job/state-maps/#{config.scheduler}.yaml" },
+              default: ->(config) { File.join("etc/job/state-maps", "#{config.scheduler}.yaml") },
               transform: relative_to(root_path)
     validates :state_map_path, presence: true
 
