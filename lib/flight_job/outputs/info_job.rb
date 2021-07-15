@@ -76,9 +76,9 @@ module FlightJob
     end
     register_attribute(header: start_header) do |job, verbose:|
       if job.actual_start_time || verbose
-        job.format_actual_start_time(verbose)
+        Outputs.format_time(job.actual_start_time, verbose)
       else
-        job.format_estimated_start_time(false)
+        Outputs.format_time(job.estimated_start_time, false)
       end
     end
 
@@ -87,9 +87,9 @@ module FlightJob
     end
     register_attribute(header: end_header) do |job, verbose:|
       if job.actual_end_time || verbose
-        job.format_actual_end_time(verbose)
+        Outputs.format_time(job.actual_end_time, verbose)
       else
-        job.format_estimated_end_time(false)
+        Outputs.format_time(job.estimated_end_time, false)
       end
     end
 
@@ -118,10 +118,10 @@ module FlightJob
     # Consider reordering on the next major version bump.
     register_attribute(header: 'Results Dir') { |j| j.results_dir }
     register_attribute(verbose: true, header: 'Estimated start') do |job|
-      job.format_estimated_start_time(true)
+      Outputs.format_time(job.estimated_start_time, false)
     end
     register_attribute(verbose: true, header: 'Estimated end') do |job|
-      job.format_estimated_end_time(true)
+      Outputs.format_time(job.estimated_end_time, false)
     end
 
     def self.build_output(**opts)

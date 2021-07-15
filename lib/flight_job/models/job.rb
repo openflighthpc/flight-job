@@ -292,46 +292,6 @@ module FlightJob
       define_method("#{method}=") { |value| metadata[method] = value }
     end
 
-    def format_actual_start_time(verbose)
-      if actual_start_time.nil?
-        nil
-      elsif verbose
-        actual_start_time
-      else
-        DateTime.rfc3339(actual_start_time).strftime('%d/%m/%y %H:%M')
-      end
-    end
-
-    def format_actual_end_time(verbose)
-      if actual_end_time.nil?
-        nil
-      elsif verbose
-        actual_end_time
-      else
-        DateTime.rfc3339(actual_end_time).strftime('%d/%m/%y %H:%M')
-      end
-    end
-
-    def format_estimated_start_time(verbose)
-      if estimated_start_time.nil?
-        nil
-      elsif verbose
-        estimated_start_time
-      else
-        DateTime.rfc3339(estimated_start_time).strftime('%d/%m/%y %H:%M')
-      end
-    end
-
-    def format_estimated_end_time(verbose)
-      if estimated_end_time.nil?
-        nil
-      elsif verbose
-        estimated_end_time
-      else
-        DateTime.rfc3339(estimated_end_time).strftime('%d/%m/%y %H:%M')
-      end
-    end
-
     def stdout_readable?
       return false unless stdout_path
       return false unless File.exists? stdout_path
