@@ -363,7 +363,7 @@ module FlightJob
       FlightJob.logger.info("Submitting Job: #{id}")
       cmd = [
         FlightJob.config.submit_script_path,
-        script.script_path
+        script.workload_path
       ]
 
       # Quasi-persist the job in the active "state"

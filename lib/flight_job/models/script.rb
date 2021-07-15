@@ -87,9 +87,16 @@ module FlightJob
         next
       end
 
-      # Ensures the script file exists
-      unless File.exists? script_path
-        @errors.add(:script_path, 'does not exist')
+      # Ensures the workload exists
+      unless File.exists? workload_path
+        legacy_path = File.join(Flight.config.scripts_dir, id, script_name)
+        if File.exists?(legacy_path)
+          # Migrate legacy scripts to the workload_path
+          FileUtils.ln_s File.basename(legacy_path), workload_path
+        else
+          # Error as it is missing
+          @errors.add(:workload_path, 'does not exist')
+        end
       end
     end
 
@@ -171,15 +178,8 @@ module FlightJob
       end
     end
 
-    def script_path
-      if ! @script_path.nil?
-        @script_path
-      elsif id && script_name
-        @script_path = File.join(FlightJob.config.scripts_dir, id, script_name)
-      else
-        @errors.add(:script_path, 'cannot be determined')
-        @script_path = false
-      end
+    def workload_path
+      @workload_path ||= File.join(FlightJob.config.scripts_dir, id, 'workload.sh')
     end
 
     def notes_path
@@ -203,7 +203,6 @@ module FlightJob
     end
 
     def script_name=(name)
-      @script_path = nil
       metadata['script_name'] = name
     end
 
@@ -262,10 +261,10 @@ module FlightJob
       # Writes the data to disk
       save_metadata
       save_notes
-      File.write(script_path, content)
+      File.write(workload_path, content)
 
       # Makes the script executable and metadata read/write
-      FileUtils.chmod(0700, script_path)
+      FileUtils.chmod(0700, workload_path)
       FileUtils.chmod(0600, metadata_path)
     end
 
@@ -285,7 +284,8 @@ module FlightJob
       {
         "id" => id,
         "notes" => notes,
-        "path" => script_path
+        "path" => workload_path,
+        "workload_path" => workload_path
       }.merge(metadata).tap do |hash|
         if opts.fetch(:include, []).include? 'template'
           hash['template'] = load_template
