@@ -52,7 +52,7 @@ module FlightJob
               end
 
         # Open the file
-        TTY::Editor.open(script.payload_path, command: cmd)
+        TTY::Editor.open(script.alternative_payload_path, command: cmd)
       end
     end
 
@@ -89,6 +89,8 @@ module FlightJob
     end
 
     # Determine which line to open the script on
+    # NOTE: This can be dropped at some point in the future as the payload/directives have
+    # been split. It is being maintained "temporarily" for legacy scripts.
     def start_line
       File.open(script.payload_path) do |file|
         _, idx = file.each_line.each_with_index.find do |line, _|

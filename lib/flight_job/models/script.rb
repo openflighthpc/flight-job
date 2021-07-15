@@ -90,7 +90,7 @@ module FlightJob
       # Migrate legacy scripts to the new file format
       if !File.exists?(payload_path) && File.exists?(legacy_script_path)
         FileUtils.touch(directive_path)
-        FileUtils.cp legacy_script_path, payload_path
+        FileUtils.mv legacy_script_path, payload_path
       end
 
       # Ensures the directive exists
@@ -194,6 +194,18 @@ module FlightJob
 
     def directive_path
       @directive_path ||= File.join(FlightJob.config.scripts_dir, id, 'directive')
+    end
+
+    # Creates a symlink to the payload path based on the script_name file extension
+    # This prompts the editor to use the correct syntax highlighting
+    def alternative_payload_path
+      ext = File.extname(script_name || '')
+      return payload_path if ext.empty?
+      (payload_path + ext).tap do |path|
+        unless File.exists?(path)
+          FileUtils.ln_s('payload', path)
+        end
+      end
     end
 
     # XXX: Remove me!
