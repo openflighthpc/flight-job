@@ -60,6 +60,7 @@ module FlightJob
         "scheduler_id" => { "type" => ["string", "null"] },
         "stdout_path" => { "type" => ["string", "null"] },
         "stderr_path" => { "type" => ["string", "null"] },
+        "script_path" => { "type" => ["string", "null"] },
         "results_dir" => { "type" => ["string", "null"] },
         "reason" => { "type" => ["string", "null"] },
         "start_time" => { "type" => ["string", "null"], "format" => "date-time" },
@@ -285,8 +286,8 @@ module FlightJob
 
     [
       "submit_status", "submit_stdout", "submit_stderr", "script_id", "state",
-      "scheduler_id", "scheduler_state", "stdout_path", "stderr_path", "reason",
-      "start_time", "end_time", "results_dir"
+      "scheduler_id", "scheduler_state", "stdout_path", "stderr_path", "script_path",
+      "reason", "start_time", "end_time", "results_dir"
     ].each do |method|
       define_method(method) { metadata[method] }
       define_method("#{method}=") { |value| metadata[method] = value }
@@ -360,11 +361,16 @@ module FlightJob
       end
       script = load_script
 
+      # Generate the script
+      self.script_path = File.join(Flight.config.jobs_dir, id, script.script_name)
+      content = [script.directive_path, script.payload_path].map { |p| File.read(p) }
+                                                            .reject(&:empty?)
+                                                            .join("\n")
+      File.write script_path, content
+      FileUtils.chmod(0700, script_path)
+
       FlightJob.logger.info("Submitting Job: #{id}")
-      cmd = [
-        FlightJob.config.submit_script_path,
-        script.payload_path
-      ]
+      cmd = [FlightJob.config.submit_script_path, script_path]
 
       # Quasi-persist the job in the active "state"
       FileUtils.mkdir_p File.dirname(active_path)

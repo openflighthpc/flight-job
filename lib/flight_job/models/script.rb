@@ -295,9 +295,11 @@ module FlightJob
       save_metadata
       save_notes
       File.write(payload_path, content)
+      FileUtils.touch(directive_path)
 
-      # Makes the script executable and metadata read/write
-      FileUtils.chmod(0700, payload_path)
+      # Update the various file permissions
+      FileUtils.chmod(0600, payload_path)
+      FileUtils.chmod(0600, directive_path)
       FileUtils.chmod(0600, metadata_path)
     end
 
