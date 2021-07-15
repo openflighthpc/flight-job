@@ -90,7 +90,14 @@ module FlightJob
 
       # Ensures the script file exists
       unless File.exists? script_path
-        errors.add(:script_path, 'does not exist')
+        legacy_path = File.join(Flight.config.scripts_dir, id, script_name)
+        if File.exists?(legacy_path)
+          # Migrate legacy scripts to the script_path
+          FileUtils.ln_s script_name, script_path
+        else
+          # Error as it is missing
+          @errors.add(:script_path, 'does not exist')
+        end
       end
     end
 
@@ -165,22 +172,11 @@ module FlightJob
     end
 
     def metadata_path
-      if ! @metadata_path.nil?
-        @metadata_path
-      else
-        @metadata_path ||= File.join(FlightJob.config.scripts_dir, id, 'metadata.yaml')
-      end
+      @metadata_path ||= File.join(FlightJob.config.scripts_dir, id, 'metadata.yaml')
     end
 
     def script_path
-      if ! @script_path.nil?
-        @script_path
-      elsif id && script_name
-        @script_path = File.join(FlightJob.config.scripts_dir, id, script_name)
-      else
-        errors.add(:script_path, 'cannot be determined')
-        @script_path = false
-      end
+      @script_path ||= File.join(FlightJob.config.scripts_dir, id, 'script.sh')
     end
 
     def notes_path
@@ -212,7 +208,6 @@ module FlightJob
     end
 
     def script_name=(name)
-      @script_path = nil
       metadata['script_name'] = name
     end
 
