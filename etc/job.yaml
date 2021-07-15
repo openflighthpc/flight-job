@@ -30,7 +30,7 @@
 # Specify where the templates will be stored.
 # The environment variable flight_JOB_templates_dir takes precedence.
 #
-# Relative paths are expanded from the install directory.
+# Relative paths are expanded from flight_ROOT. **
 # ==============================================================================
 # templates_dir: usr/share
 
@@ -38,7 +38,7 @@
 # Scripts Directory
 # Specify where the scripts will be stored.
 #
-# Relative paths are expanded from the install directory.
+# Relative paths are expanded from flight_ROOT. **
 #
 # The environment variable flight_JOB_scripts_dir takes precedence.
 # ==============================================================================
@@ -48,7 +48,7 @@
 # Jobs Directory
 # Specify where the scripts will be stored.
 #
-# Relative paths are expanded from the install directory.
+# Relative paths are expanded from flight_ROOT. **
 #
 # The environment variable flight_JOB_jobs_dir takes precedence.
 # ==============================================================================
@@ -71,7 +71,7 @@
 # The default value will automatic use the 'scheduler' config. This feature
 # is not supported when overridden.
 #
-# Relative paths are expanded from the install directory.
+# Relative paths are expanded from flight_ROOT. **
 #
 # The environment variable flight_JOB_submit_script_path takes precedence.
 # ==============================================================================
@@ -84,7 +84,7 @@
 # The default value will automatic use the 'scheduler' config. This feature
 # is not supported when overridden.
 #
-# Relative paths are expanded from the install directory.
+# Relative paths are expanded from flight_ROOT. **
 #
 # The environment variable flight_JOB_monitor_script_path takes precedence.
 # ==============================================================================
@@ -98,7 +98,7 @@
 # The default value will automatic use the 'scheduler' config. This feature
 # is not supported when overridden.
 #
-# Relative paths are expanded from the install directory.
+# Relative paths are expanded from flight_ROOT. **
 #
 # WARNING: Unrecognized flight-job states may prevent the job from being updated.
 # Ensure all flight-job states are valid (see: lib/flight_job/models/script.rb)
@@ -115,7 +115,7 @@
 # If cron has not been setup, it is responsible for setting the crontab to run
 # the "flight job run-monitor" command periodically.
 #
-# Relative paths are expanded from the install directory.
+# Relative paths are expanded from flight_ROOT. **
 #
 # The environment variable flight_JOB_check_cron takes precedence.
 # ==============================================================================
@@ -162,7 +162,7 @@
 # The file the logger will write to. It will write to standard error if
 # omitted.
 #
-# Relative paths are expanded from the install directory.
+# Relative paths are expanded from flight_ROOT. **
 #
 # The environment variable flight_JOB_log_path takes precedence.
 # ==============================================================================
@@ -176,3 +176,11 @@
 # The environment variable flight_JOB_log_level takes precedence.
 # ==============================================================================
 # log_level: warn
+
+# ==============================================================================
+# ** Relative Paths to flight_ROOT
+#
+# NOTES:
+# 1. This only applies in production and if flight_ROOT is set, otherwise
+# 2. It will default to the installation directory.
+# ==============================================================================
