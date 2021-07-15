@@ -31,6 +31,8 @@ require 'pastel'
 require 'active_support/string_inquirer'
 require 'active_support/core_ext/object/blank'
 
+require_relative 'flight_job/errors'
+
 module Flight
   class << self
     def config

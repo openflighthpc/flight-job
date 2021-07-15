@@ -32,6 +32,25 @@ require 'active_model'
 require 'flight_configuration'
 require_relative 'errors'
 
+class FlightConfiguration::SourceStruct
+  def value
+    if type == :default && @default_set.nil?
+      @default_set = true
+      default = attribute[:default]
+      self.value = if default.respond_to?(:call) && default.arity == 0
+        default.call
+      elsif default.respond_to?(:call)
+        default.call(config)
+      else
+        default
+      end
+    else
+      # Structs don't have a super method
+      values[3]
+    end
+  end
+end
+
 module FlightJob
   class ConfigError < InternalError; end
 
@@ -39,6 +58,12 @@ module FlightJob
     extend FlightConfiguration::DSL
     include FlightConfiguration::RichActiveValidationErrorMessage
     include ActiveModel::Validations
+
+    # Disable the 'defaults' hash. This prevents them being resolved up-front
+    # Instead, this is done by FlightConfiguration::SourceStruct patch
+    def self.defaults
+      @attributes.each { |k, _| [k, nil] }.to_h
+    end
 
     application_name 'job'
 
@@ -48,11 +73,16 @@ module FlightJob
               transform: relative_to(root_path)
     attribute :jobs_dir, default: '~/.local/share/flight/job/jobs',
               transform: relative_to(root_path)
-    attribute :state_map_path, default: 'etc/state-maps/slurm.yaml',
+
+    attribute :scheduler, default: 'slurm'
+    attribute :state_map_path,
+              default: ->(config) { "etc/state-maps/#{config.scheduler}.yaml" },
               transform: relative_to(root_path)
-    attribute :submit_script_path, default: 'libexec/slurm/submit.sh',
+    attribute :submit_script_path,
+              default: ->(config) { File.join('libexec', config.scheduler, 'submit.sh') },
               transform: relative_to(root_path)
-    attribute :monitor_script_path, default: 'libexec/slurm/monitor.sh',
+    attribute :monitor_script_path,
+              default: ->(config) { File.join('libexec', config.scheduler, 'monitor.sh') },
               transform: relative_to(root_path)
 
     attribute :submission_period, default: 3600
@@ -89,5 +119,12 @@ module FlightJob
       within: %w(fatal error warn info debug disabled),
       message: 'must be one of fatal, error, warn, info, debug or disabled'
     }
+
+    # NOTE: The directives_name doesn't need to be configurable (currently?)
+    #       However the config is required to generate it, so it is best
+    #       located here.
+    def directives_name
+      "directives.#{scheduler}.erb"
+    end
   end
 end
