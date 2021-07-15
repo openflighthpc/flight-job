@@ -88,8 +88,8 @@ module FlightJob
       end
 
       # Ensures the script file exists
-      unless File.exists? script_path
-        @errors.add(:script_path, 'does not exist')
+      unless File.exists? payload_path
+        @errors.add(:payload_path, 'does not exist')
       end
     end
 
@@ -171,15 +171,22 @@ module FlightJob
       end
     end
 
-    def script_path
-      if ! @script_path.nil?
-        @script_path
+    def payload_path
+      if ! @payload_path.nil?
+        @payload_path
       elsif id && script_name
-        @script_path = File.join(FlightJob.config.scripts_dir, id, script_name)
+        @payload_path = File.join(FlightJob.config.scripts_dir, id, script_name)
       else
-        @errors.add(:script_path, 'cannot be determined')
-        @script_path = false
+        @errors.add(:payload_path, 'cannot be determined')
+        @payload_path = false
       end
+    end
+
+    # XXX: Remove me!
+    def script_path
+      Flight.logger.warn "DEPRECATED: Script#script_path has been removed in favour of payload_path"
+      Flight.logger.warn caller[0]
+      payload_path
     end
 
     def notes_path
@@ -203,7 +210,7 @@ module FlightJob
     end
 
     def script_name=(name)
-      @script_path = nil
+      @payload_path = nil
       metadata['script_name'] = name
     end
 
@@ -262,10 +269,10 @@ module FlightJob
       # Writes the data to disk
       save_metadata
       save_notes
-      File.write(script_path, content)
+      File.write(payload_path, content)
 
       # Makes the script executable and metadata read/write
-      FileUtils.chmod(0700, script_path)
+      FileUtils.chmod(0700, payload_path)
       FileUtils.chmod(0600, metadata_path)
     end
 
@@ -285,7 +292,8 @@ module FlightJob
       {
         "id" => id,
         "notes" => notes,
-        "path" => script_path
+        "path" => payload_path,
+        "payload_path" => payload_path
       }.merge(metadata).tap do |hash|
         if opts.fetch(:include, []).include? 'template'
           hash['template'] = load_template
