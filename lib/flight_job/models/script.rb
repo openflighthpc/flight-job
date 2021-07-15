@@ -87,7 +87,18 @@ module FlightJob
         next
       end
 
-      # Ensures the script file exists
+      # Migrate legacy scripts to the new file format
+      if !File.exists?(payload_path) && File.exists?(legacy_script_path)
+        FileUtils.touch(directive_path)
+        FileUtils.cp legacy_script_path, payload_path
+      end
+
+      # Ensures the directive exists
+      unless File.exists?(directive_path)
+        @errors.add(:directive_path, 'does not exist')
+      end
+
+      # Ensures the payload exists
       unless File.exists? payload_path
         @errors.add(:payload_path, 'does not exist')
       end
@@ -171,15 +182,18 @@ module FlightJob
       end
     end
 
+    # Used to migrate the script to the new format
+    # NOTE: This does not need to be cached as it is rarely used
+    def legacy_script_path
+      File.join(Flight.config.scripts_dir, id, script_name)
+    end
+
     def payload_path
-      if ! @payload_path.nil?
-        @payload_path
-      elsif id && script_name
-        @payload_path = File.join(FlightJob.config.scripts_dir, id, script_name)
-      else
-        @errors.add(:payload_path, 'cannot be determined')
-        @payload_path = false
-      end
+      @payload_path ||= File.join(FlightJob.config.scripts_dir, id, 'payload')
+    end
+
+    def directive_path
+      @directive_path ||= File.join(FlightJob.config.scripts_dir, id, 'directive')
     end
 
     # XXX: Remove me!
@@ -210,7 +224,6 @@ module FlightJob
     end
 
     def script_name=(name)
-      @payload_path = nil
       metadata['script_name'] = name
     end
 
