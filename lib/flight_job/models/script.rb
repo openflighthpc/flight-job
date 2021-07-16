@@ -98,7 +98,7 @@ module FlightJob
       end
     end
 
-    validate on: [:id_check, :render] do
+    validate on: :id_check do
       # Ensure the ID has not been taken
       # NOTE: This negates the need to check if metadata_path exists
       if Dir.exists? File.expand_path(id, FlightJob.config.scripts_dir)
@@ -252,8 +252,6 @@ module FlightJob
     end
 
     def render_and_save
-      workload = renderer.render_workload
-
       # Ensures it claims the ID
       # NOTE: As this is done after validation, it may trigger a race condition
       #       This could cause the command to fail, whilst the other succeeds
@@ -268,7 +266,7 @@ module FlightJob
       # Writes the data to disk
       save_metadata
       save_notes
-      File.write(workload_path, workload)
+      File.write(workload_path, renderer.render_workload)
 
       # Update the various file permissions
       FileUtils.chmod(0600, workload_path)
@@ -316,14 +314,7 @@ module FlightJob
         FlightJob.logger.error("The script is invalid:\n") do
           errors.full_messages.join("\n")
         end
-        duplicate_errors = errors.find do |error|
-          error.attribute == :id && error.type == :already_exists
-        end
-        if duplicate_errors
-          raise_duplicate_id_error
-        else
-          raise InternalError, 'Unexpectedly failed to render the script!'
-        end
+        raise InternalError, 'Unexpectedly failed to render the script!'
       end
 
       @renderer ||= FlightJob::RenderContext.new(
