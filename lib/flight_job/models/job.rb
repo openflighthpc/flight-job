@@ -364,13 +364,7 @@ module FlightJob
       # Generate the script
       self.script_path = File.join(Flight.config.jobs_dir, id, script.script_name)
 
-      content = [
-        script.renderer.render_directives,
-        script.renderer.render_adapter,
-        File.read(script.workload_path)
-      ].join("\n")
-
-      File.write script_path, content
+      File.write script_path, script.render
       FileUtils.chmod(0700, script_path)
 
       FlightJob.logger.info("Submitting Job: #{id}")

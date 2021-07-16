@@ -244,11 +244,12 @@ module FlightJob
       Template.new(id: template_id)
     end
 
-    # NOTE: This is a legacy render method which will concatenate the directives
-    #       to the workload. This is used to present the two files as a single
-    #       "script" in the `cp-template` method.
     def render
-      renderer.render
+      [
+        renderer.render_directives,
+        renderer.render_adapter,
+        File.read(workload_path)
+      ].join("\n")
     end
 
     def render_and_save
