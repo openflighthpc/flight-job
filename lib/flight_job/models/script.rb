@@ -187,7 +187,7 @@ module FlightJob
     end
 
     # NOTE: This is the currently cached version of the script, which
-    # will be re-rendered periodically. It is not used in the job submission
+    # will be re-rendered on an ad-hoc basis. It is not used in the job submission
     def cached_path
       @cached_path ||= File.join(FlightJob.config.scripts_dir, id, 'cache', script_name)
     end
@@ -202,13 +202,6 @@ module FlightJob
           FileUtils.ln_s('workload', path)
         end
       end
-    end
-
-    # XXX: Remove me!
-    def script_path
-      Flight.logger.warn "DEPRECATED: Script#script_path has been removed in favour of workload_path"
-      Flight.logger.warn caller[0]
-      workload_path
     end
 
     def notes_path
