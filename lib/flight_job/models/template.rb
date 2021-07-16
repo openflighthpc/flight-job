@@ -259,10 +259,6 @@ module FlightJob
       end
     end
 
-    def to_erb
-      ERB.new(File.read(template_path), nil, '-')
-    end
-
     def priority
       metadata['priority']
     end

@@ -47,8 +47,19 @@ module FlightJob
       @answers = answers
     end
 
+    # Legacy method which will render the directives/payload into a single file
     def render
-      @template.to_erb.result(binding)
+      [render_payload, render_directives].reject(&:empty?).join("\n")
+    end
+
+    def render_payload
+      ERB.new(File.read(@template.template_path), nil, '-')
+         .result(binding)
+    end
+
+    def render_directives
+      ERB.new(File.read(@template.directives_path), nil, '-')
+         .result(binding)
     end
 
     def question
