@@ -158,10 +158,19 @@ module FlightJob
       end
     end
 
-    # Validates the script
+    # Validates the template_path and directives_path
     validate do
+      # Symlink the legacy script path into place, if required
+      if !File.exists?(template_path) && File.exists?(legacy_template_path)
+        FileUtils.ln_s File.basename(legacy_template_path), template_path
+      end
+
       unless File.exists? template_path
-        errors.add(:template, "has not been saved")
+        errors.add(:template_path, "does not exist")
+      end
+
+      unless File.exists? directives_path
+        errors.add(:directives_path, "does not exist")
       end
     end
 
@@ -195,8 +204,16 @@ module FlightJob
       File.join(FlightJob.config.templates_dir, id, "metadata.yaml")
     end
 
-    def template_path
+    def legacy_template_path
       File.join(FlightJob.config.templates_dir, id, "#{script_template_name}.erb")
+    end
+
+    def template_path
+      File.join(FlightJob.config.templates_dir, id, "payload.erb")
+    end
+
+    def directives_path
+      File.join(FlightJob.config.templates_dir, id, Flight.config.directives_name)
     end
 
     def script_template_name

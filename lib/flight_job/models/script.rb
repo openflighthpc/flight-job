@@ -90,7 +90,7 @@ module FlightJob
       # Migrate legacy scripts to the new file format
       if !File.exists?(payload_path) && File.exists?(legacy_script_path)
         FileUtils.touch(directive_path)
-        FileUtils.mv legacy_script_path, payload_path
+        FileUtils.ln_s File.basename(legacy_script_path), payload_path
       end
 
       # Ensures the directive exists
