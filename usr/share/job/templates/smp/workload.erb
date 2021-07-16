@@ -1,0 +1,35 @@
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+#  >>>> YOUR WORKLOAD
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
+#=======================
+#  Environment modules
+#-----------------------
+# e.g.:
+# module load apps/imb
+
+#===========================
+#  Create results directory
+#---------------------------
+# By convention, job's submitted with `flight-job` are expected to save their
+# results to RESULTS_DIR.  `flight-job` provides easy access to any files
+# saved there.
+#
+# Your job can save its results anywhere you want, but if the results are
+# saved outside of RESULTS_DIR (or if RESULTS_DIR is modified), 'flight-job'
+# will be unable to help you access your results.
+echo "Your results will be stored in: $RESULTS_DIR"
+mkdir -p "$RESULTS_DIR"
+
+#===============================
+#  Application launch commands
+#-------------------------------
+# Customize this section to suit your needs.
+
+echo "Executing job commands, current working directory is $(pwd)"
+
+# REPLACE THE FOLLOWING WITH YOUR APPLICATION COMMANDS
+
+echo "Hello, <%= questions.workload.answer %>!" > $RESULTS_DIR/test.output
+echo "This is an example job. It was allocated $SLURM_NTASKS slot(s) on host `hostname -s` (as `whoami`)." >> $RESULTS_DIR/test.output
+echo "Output file has been generated, please check $RESULTS_DIR/test.output"
