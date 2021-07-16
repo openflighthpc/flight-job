@@ -43,7 +43,7 @@ module FlightJob
       end
     end
 
-    register_column(header: 'Path', verbose: true) { |s| s.payload_path }
+    register_column(header: 'Path', verbose: true) { |s| s.workload_path }
 
     def self.build_output(**opts)
       super(row_color: :cyan, header_color: :bold, **opts)

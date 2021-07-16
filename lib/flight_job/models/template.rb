@@ -209,7 +209,7 @@ module FlightJob
     end
 
     def template_path
-      File.join(FlightJob.config.templates_dir, id, "payload.erb")
+      File.join(FlightJob.config.templates_dir, id, "workload.erb")
     end
 
     def directives_path

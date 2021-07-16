@@ -93,7 +93,7 @@
 # ==============================================================================
 # Script Adapter Path
 # Specify the path to the script adapter/shim. This adapter will be rendered
-# between the 'directives' and 'payload' sections of the job's script. It is
+# between the 'directives' and 'workload' sections of the job's script. It is
 # used to apply FlightJob specific features.
 #
 # It is primarily used to set the RESULTS_DIR to match the value returned

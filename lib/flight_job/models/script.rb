@@ -88,13 +88,13 @@ module FlightJob
       end
 
       # Migrate legacy scripts to the new file format
-      if !File.exists?(payload_path) && File.exists?(legacy_script_path)
-        FileUtils.ln_s File.basename(legacy_script_path), payload_path
+      if !File.exists?(workload_path) && File.exists?(legacy_script_path)
+        FileUtils.ln_s File.basename(legacy_script_path), workload_path
       end
 
-      # Ensures the payload exists
-      unless File.exists? payload_path
-        @errors.add(:payload_path, 'does not exist')
+      # Ensures the workload exists
+      unless File.exists? workload_path
+        @errors.add(:workload_path, 'does not exist')
       end
     end
 
@@ -182,27 +182,27 @@ module FlightJob
       File.join(Flight.config.scripts_dir, id, script_name)
     end
 
-    def payload_path
-      @payload_path ||= File.join(FlightJob.config.scripts_dir, id, 'payload')
+    def workload_path
+      @workload_path ||= File.join(FlightJob.config.scripts_dir, id, 'workload')
     end
 
-    # Creates a symlink to the payload path based on the script_name file extension
+    # Creates a symlink to the workload path based on the script_name file extension
     # This prompts the editor to use the correct syntax highlighting
-    def alternative_payload_path
+    def alternative_workload_path
       ext = File.extname(script_name || '')
-      return payload_path if ext.empty?
-      (payload_path + ext).tap do |path|
+      return workload_path if ext.empty?
+      (workload_path + ext).tap do |path|
         unless File.exists?(path)
-          FileUtils.ln_s('payload', path)
+          FileUtils.ln_s('workload', path)
         end
       end
     end
 
     # XXX: Remove me!
     def script_path
-      Flight.logger.warn "DEPRECATED: Script#script_path has been removed in favour of payload_path"
+      Flight.logger.warn "DEPRECATED: Script#script_path has been removed in favour of workload_path"
       Flight.logger.warn caller[0]
-      payload_path
+      workload_path
     end
 
     def notes_path
@@ -245,14 +245,14 @@ module FlightJob
     end
 
     # NOTE: This is a legacy render method which will concatenate the directives
-    #       to the payload. This is used to present the two files as a single
+    #       to the workload. This is used to present the two files as a single
     #       "script" in the `cp-template` method.
     def render
       renderer.render
     end
 
     def render_and_save
-      payload = renderer.render_payload
+      workload = renderer.render_workload
 
       # Ensures it claims the ID
       # NOTE: As this is done after validation, it may trigger a race condition
@@ -268,10 +268,10 @@ module FlightJob
       # Writes the data to disk
       save_metadata
       save_notes
-      File.write(payload_path, payload)
+      File.write(workload_path, workload)
 
       # Update the various file permissions
-      FileUtils.chmod(0600, payload_path)
+      FileUtils.chmod(0600, workload_path)
       FileUtils.chmod(0600, metadata_path)
     end
 
@@ -291,8 +291,8 @@ module FlightJob
       {
         "id" => id,
         "notes" => notes,
-        "path" => payload_path,
-        "payload_path" => payload_path
+        "path" => workload_path,
+        "workload_path" => workload_path
       }.merge(metadata).tap do |hash|
         if opts.fetch(:include, []).include? 'template'
           hash['template'] = load_template

@@ -367,7 +367,7 @@ module FlightJob
       content = [
         script.renderer.render_directives,
         script.renderer.render_adapter,
-        File.read(script.payload_path)
+        File.read(script.workload_path)
       ].join("\n")
 
       File.write script_path, content
