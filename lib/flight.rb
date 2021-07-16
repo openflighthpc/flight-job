@@ -29,11 +29,13 @@ require 'logger'
 require 'active_support/string_inquirer'
 require 'active_support/core_ext/object/blank'
 
+require_relative 'flight_job/errors'
+
 module Flight
   class << self
     def config
       return @config if @config
-      @config = FlightJob::Configuration.load
+      @config = FlightJob::Configuration.load2
       @config.__logs__.log_with(logger)
       @config
     end

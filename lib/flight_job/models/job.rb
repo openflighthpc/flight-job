@@ -60,6 +60,7 @@ module FlightJob
         "scheduler_id" => { "type" => ["string", "null"] },
         "stdout_path" => { "type" => ["string", "null"] },
         "stderr_path" => { "type" => ["string", "null"] },
+        "script_path" => { "type" => ["string", "null"] },
         "results_dir" => { "type" => ["string", "null"] },
         "reason" => { "type" => ["string", "null"] },
         "start_time" => { "type" => ["string", "null"], "format" => "date-time" },
@@ -285,51 +286,11 @@ module FlightJob
 
     [
       "submit_status", "submit_stdout", "submit_stderr", "script_id", "state",
-      "scheduler_id", "scheduler_state", "stdout_path", "stderr_path", "reason",
-      "start_time", "end_time", "results_dir"
+      "scheduler_id", "scheduler_state", "stdout_path", "stderr_path", "script_path",
+      "reason", "start_time", "end_time", "results_dir"
     ].each do |method|
       define_method(method) { metadata[method] }
       define_method("#{method}=") { |value| metadata[method] = value }
-    end
-
-    def format_actual_start_time(verbose)
-      if actual_start_time.nil?
-        nil
-      elsif verbose
-        actual_start_time
-      else
-        DateTime.rfc3339(actual_start_time).strftime('%d/%m/%y %H:%M')
-      end
-    end
-
-    def format_actual_end_time(verbose)
-      if actual_end_time.nil?
-        nil
-      elsif verbose
-        actual_end_time
-      else
-        DateTime.rfc3339(actual_end_time).strftime('%d/%m/%y %H:%M')
-      end
-    end
-
-    def format_estimated_start_time(verbose)
-      if estimated_start_time.nil?
-        nil
-      elsif verbose
-        estimated_start_time
-      else
-        DateTime.rfc3339(estimated_start_time).strftime('%d/%m/%y %H:%M')
-      end
-    end
-
-    def format_estimated_end_time(verbose)
-      if estimated_end_time.nil?
-        nil
-      elsif verbose
-        estimated_end_time
-      else
-        DateTime.rfc3339(estimated_end_time).strftime('%d/%m/%y %H:%M')
-      end
     end
 
     def stdout_readable?
@@ -400,11 +361,14 @@ module FlightJob
       end
       script = load_script
 
+      # Generate the script
+      self.script_path = File.join(Flight.config.jobs_dir, id, script.script_name)
+
+      File.write script_path, script.render
+      FileUtils.chmod(0700, script_path)
+
       FlightJob.logger.info("Submitting Job: #{id}")
-      cmd = [
-        FlightJob.config.submit_script_path,
-        script.script_path
-      ]
+      cmd = [FlightJob.config.submit_script_path, script_path]
 
       # Quasi-persist the job in the active "state"
       FileUtils.mkdir_p File.dirname(active_path)

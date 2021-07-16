@@ -76,7 +76,12 @@ module FlightJob
       end
 
       def render_content
-        Script.new(template_id: template.id, script_name: template.script_template_name).render
+        renderer = Script.new(template_id: template.id, script_name: template.script_template_name).renderer
+        [
+          renderer.render_directives,
+          renderer.render_adapter,
+          renderer.render_workload
+        ].join("\n")
       end
     end
   end

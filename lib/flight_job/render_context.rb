@@ -25,6 +25,8 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+require 'ostruct'
+
 module FlightJob
   class RenderContext
     class AnswerDecorator
@@ -47,8 +49,23 @@ module FlightJob
       @answers = answers
     end
 
-    def render
-      @template.to_erb.result(binding)
+    def core
+      @core ||= OpenStruct.new(YAML.load(File.read(Flight.config.template_map_path)))
+    end
+
+    def render_workload
+      ERB.new(File.read(@template.template_path), nil, '-')
+         .result(binding)
+    end
+
+    def render_adapter
+      ERB.new(File.read(Flight.config.adapter_script_path), nil, '-')
+         .result(binding)
+    end
+
+    def render_directives
+      ERB.new(File.read(@template.directives_path), nil, '-')
+         .result(binding)
     end
 
     def question

@@ -54,6 +54,18 @@ module FlightJob
 
   # Setup the autoloads for outputs
   module Outputs
+    # NOTE: This method is a bit out of place, but there currently isn't
+    # a better location for it
+    def self.format_time(rfc3339_time, verbose)
+      if rfc3339_time.nil?
+        nil
+      elsif verbose
+        rfc3339_time
+      else
+        DateTime.rfc3339(rfc3339_time).strftime('%d/%m/%y %H:%M')
+      end
+    end
+
     Dir.glob(File.expand_path('flight_job/outputs/*.rb', __dir__)).each do |path|
       autoload FlightJob.constantize(File.basename(path, '.*')), path
     end

@@ -30,27 +30,40 @@ require 'i18n/backend'
 require 'active_model'
 
 require 'flight_configuration'
+require_relative 'configuration_patch'
 require_relative 'errors'
 
 module FlightJob
   class Configuration
     extend FlightConfiguration::DSL
+    include ConfigurationPatch
 
     include ActiveModel::Validations
 
     application_name 'job'
 
-    attribute :templates_dir, default: 'usr/share',
+    attribute :templates_dir, default: 'usr/share/job',
               transform: relative_to(root_path)
     attribute :scripts_dir, default: '~/.local/share/flight/job/scripts',
               transform: relative_to(root_path)
     attribute :jobs_dir, default: '~/.local/share/flight/job/jobs',
               transform: relative_to(root_path)
-    attribute :state_map_path, default: 'etc/state-maps/slurm.yaml',
+
+    attribute :scheduler, default: 'slurm'
+    attribute :state_map_path,
+              default: ->(config) { "etc/job/state-maps/#{config.scheduler}.yaml" },
               transform: relative_to(root_path)
-    attribute :submit_script_path, default: 'libexec/slurm/submit.sh',
+    attribute :template_map_path,
+              default: ->(config) { "etc/job/template-maps/#{config.scheduler}.yaml" },
               transform: relative_to(root_path)
-    attribute :monitor_script_path, default: 'libexec/slurm/monitor.sh',
+    attribute :submit_script_path,
+              default: ->(config) { File.join('libexec/job', config.scheduler, 'submit.sh') },
+              transform: relative_to(root_path)
+    attribute :monitor_script_path,
+              default: ->(config) { File.join('libexec/job', config.scheduler, 'monitor.sh') },
+              transform: relative_to(root_path)
+    attribute :adapter_script_path,
+              default: ->(config) { File.join("usr/share/job/adapter.#{config.scheduler}.erb") },
               transform: relative_to(root_path)
 
     attribute :submission_period, default: 3600
@@ -85,5 +98,17 @@ module FlightJob
       within: %w(fatal error warn info debug disabled),
       message: 'must be one of fatal, error, warn, info, debug or disabled'
     }
+
+    # NOTE: The directives_name doesn't need to be configurable (currently?)
+    #       However the config is required to generate it, so it is best
+    #       located here.
+    def directives_name
+      "directives.#{scheduler}.erb"
+    end
+
+    # Apply the various patch methods, remove once ported
+    remove_accessors
+    redefine_accessor
+    redefine_before_type_cast
   end
 end

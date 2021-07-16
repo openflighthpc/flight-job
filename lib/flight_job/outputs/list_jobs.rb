@@ -51,10 +51,10 @@ module FlightJob
     end
 
     register_column(header: 'Started at') do |job, verbose:|
-      job.format_actual_start_time(verbose)
+      Outputs.format_time(job.actual_start_time, verbose)
     end
     register_column(header: 'Ended at') do |job, verbose:|
-      job.format_actual_end_time(verbose)
+      Outputs.format_time(job.actual_end_time, verbose)
     end
 
     register_column(header: 'StdOut Path', verbose: true) { |j| j.stdout_path }

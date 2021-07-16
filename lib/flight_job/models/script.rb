@@ -87,13 +87,18 @@ module FlightJob
         next
       end
 
-      # Ensures the script file exists
-      unless File.exists? script_path
-        @errors.add(:script_path, 'does not exist')
+      # Migrate legacy scripts to the new file format
+      if !File.exists?(workload_path) && File.exists?(legacy_script_path)
+        FileUtils.ln_s File.basename(legacy_script_path), workload_path
+      end
+
+      # Ensures the workload exists
+      unless File.exists? workload_path
+        @errors.add(:workload_path, 'does not exist')
       end
     end
 
-    validate on: [:id_check, :render] do
+    validate on: :id_check do
       # Ensure the ID has not been taken
       # NOTE: This negates the need to check if metadata_path exists
       if Dir.exists? File.expand_path(id, FlightJob.config.scripts_dir)
@@ -171,14 +176,31 @@ module FlightJob
       end
     end
 
-    def script_path
-      if ! @script_path.nil?
-        @script_path
-      elsif id && script_name
-        @script_path = File.join(FlightJob.config.scripts_dir, id, script_name)
-      else
-        @errors.add(:script_path, 'cannot be determined')
-        @script_path = false
+    # Used to migrate the script to the new format
+    # NOTE: This does not need to be cached as it is rarely used
+    def legacy_script_path
+      File.join(Flight.config.scripts_dir, id, script_name)
+    end
+
+    def workload_path
+      @workload_path ||= File.join(FlightJob.config.scripts_dir, id, 'workload')
+    end
+
+    # NOTE: This is the currently cached version of the script, which
+    # will be re-rendered on an ad-hoc basis. It is not used in the job submission
+    def cached_path
+      @cached_path ||= File.join(FlightJob.config.scripts_dir, id, 'cache', script_name)
+    end
+
+    # Creates a symlink to the workload path based on the script_name file extension
+    # This prompts the editor to use the correct syntax highlighting
+    def workload_path_with_ext
+      ext = File.extname(script_name || '')
+      return workload_path if ext.empty?
+      (workload_path + ext).tap do |path|
+        unless File.exists?(path)
+          FileUtils.ln_s('workload', path)
+        end
       end
     end
 
@@ -203,7 +225,6 @@ module FlightJob
     end
 
     def script_name=(name)
-      @script_path = nil
       metadata['script_name'] = name
     end
 
@@ -222,32 +243,18 @@ module FlightJob
       Template.new(id: template_id)
     end
 
-    # NOTE: This method is used to generate a rendered template without saving
     def render
-      # Ensure the script is in a valid state
-      unless valid?(:render)
-        FlightJob.logger.error("The script is invalid:\n") do
-          errors.full_messages.join("\n")
-        end
-        duplicate_errors = errors.find do |error|
-          error.attribute == :id && error.type == :already_exists
-        end
-        if duplicate_errors
-          raise_duplicate_id_error
-        else
-          raise InternalError, 'Unexpectedly failed to render the script!'
-        end
+      [
+        renderer.render_directives,
+        renderer.render_adapter,
+        File.read(workload_path)
+      ].join("\n").tap do |content|
+        FileUtils.mkdir_p File.dirname(cached_path)
+        File.write cached_path, content
       end
-
-      # Render the content
-      FlightJob::RenderContext.new(
-        template: load_template, answers: answers
-      ).render
     end
 
     def render_and_save
-      content = render
-
       # Ensures it claims the ID
       # NOTE: As this is done after validation, it may trigger a race condition
       #       This could cause the command to fail, whilst the other succeeds
@@ -262,11 +269,14 @@ module FlightJob
       # Writes the data to disk
       save_metadata
       save_notes
-      File.write(script_path, content)
+      File.write(workload_path, renderer.render_workload)
 
-      # Makes the script executable and metadata read/write
-      FileUtils.chmod(0700, script_path)
+      # Update the various file permissions
+      FileUtils.chmod(0600, workload_path)
       FileUtils.chmod(0600, metadata_path)
+
+      # Render the script
+      render
     end
 
     def save_metadata
@@ -285,7 +295,8 @@ module FlightJob
       {
         "id" => id,
         "notes" => notes,
-        "path" => script_path
+        "path" => cached_path,
+        "workload_path" => workload_path
       }.merge(metadata).tap do |hash|
         if opts.fetch(:include, []).include? 'template'
           hash['template'] = load_template
@@ -299,6 +310,22 @@ module FlightJob
 
     def raise_duplicate_id_error
       raise DuplicateError, "The ID already exists!"
+    end
+
+    def renderer
+      return @renderer if @renderer
+
+      # Ensure the script is in a valid state
+      unless valid?(:render)
+        FlightJob.logger.error("The script is invalid:\n") do
+          errors.full_messages.join("\n")
+        end
+        raise InternalError, 'Unexpectedly failed to render the script!'
+      end
+
+      @renderer ||= FlightJob::RenderContext.new(
+        template: load_template, answers: answers
+      )
     end
 
     protected

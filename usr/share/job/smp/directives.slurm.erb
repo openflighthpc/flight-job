@@ -9,7 +9,7 @@
 #==============================================================================
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 #                        SLURM SUBMISSION SCRIPT
-#                       AVERAGE QUEUE TIME: Short
+#                    AVERAGE QUEUE TIME: Short/Medium
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
@@ -128,81 +128,32 @@
 # likely to schedule your job sooner, but note that your job **may
 # be terminated if it exceeds the specified allocation**.
 #
-# Note that this setting is specified in megabytes.
-# e.g. specify `1024` for 1 gigabyte.
+# Note that:
+#
+#  1. You may specify a total amount of memory for the job using
+#     `--mem`, or an amount of memory per CPU by specifying
+#     `--mem-per-cpu`.
+#
+#  2. This setting is specified in megabytes. e.g. specify `1024` for
+#     1 gigabyte.
 #
 #SBATCH --mem=<%= questions.memory_limit.answer %>
+
+#==========================
+#  Processing requirements
+#--------------------------
+# Specify the number of processing slots required for your job.
 #
-#=======================
-#  Array configuration
-#-----------------------
-# Enter the number of tasks and how many to schedule at once.
+# You should request a processing slot for each simultaneous thread
+# (or process) that your script and/or application executes.  Note
+# that requesting a larger number of slots will mean that your job
+# could take longer to launch.  Also note that you should avoid
+# requesting more slots than are available on any one node as, in
+# that situation, the scheduler will not be able to find any node on
+# which to execute your job and **it will queue indefinitely**.
 #
-# For example 1-10%4 will run 10 jobs, numbered from 1 to 10 and limit
-# the number of simultaneous jobs to 4.
+# Note that `--nodes=1` should be specified to ensure that all tasks
+# are scheduled on a single node for a SMP job.
 #
-#SBATCH --array=<%= questions.array_configuration.answer %>
-
-
-# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-#  >>>> SET TASK ENVIRONMENT VARIABLES
-# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-# If necessary, set up further environment variables that are not
-# specific to your workload here.
-#
-# Several array variables, such as SLURM_ARRAY_JOB_ID,
-# SLURM_ARRAY_TASK_ID, SLURM_ARRAY_TASK_COUNT, SLURM_ARRAY_TASK_MAX
-# and SLURM_ARRAY_TASK_MIN as well as the usual standard variables,
-# SLURM_JOB_ID, SLURM_JOB_NAME and SLURM_NTASKS, are made available by
-# the scheduler.
-
-#=====================
-#  Results directory
-#---------------------
-# By convention, job's submitted with `flight-job` are expected to save their
-# results to RESULTS_DIR.  `flight-job` provides easy access to any files
-# saved there.
-#
-# If RESULTS_DIR is modified, `flight-job` will be unable to track the job's
-# results.
-#
-# WARNING: The script must not change directory prior to this line.
-RESULTS_DIR="$(pwd)/${SLURM_JOB_NAME}-outputs/$SLURM_ARRAY_JOB_ID"
-
-# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-#  >>>> YOUR WORKLOAD
-# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-
-#=======================
-#  Environment modules
-#-----------------------
-# e.g.:
-# module load apps/imb
-
-#===========================
-#  Create results directory
-#---------------------------
-# By convention, job's submitted with `flight-job` are expected to save their
-# results to RESULTS_DIR.  `flight-job` provides easy access to any files
-# saved there.
-#
-# Your job can save its results anywhere you want, but if the results are
-# saved outside of RESULTS_DIR (or if RESULTS_DIR is modified), 'flight-job'
-# will be unable to help you access your results.
-#
-# RESULTS_DIR has already been set to "${WORKING_DIR}/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID".
-echo "Your results will be stored in: $RESULTS_DIR"
-mkdir -p "$RESULTS_DIR"
-
-#===============================
-#  Application launch commands
-#-------------------------------
-# Customize this section to suit your needs.
-
-echo "Executing job commands, current working directory is $(pwd)"
-
-# REPLACE THE FOLLOWING WITH YOUR APPLICATION COMMANDS
-
-echo "Hello, <%= questions.workload.answer %>!" > $RESULTS_DIR/test.output.$SLURM_ARRAY_TASK_ID
-echo "This is an example array job. This process was task number $SLURM_ARRAY_TASK_ID and it ran on `hostname -s` (as `whoami`)." >> $RESULTS_DIR/test.output.$SLURM_ARRAY_TASK_ID
-echo "Output file has been generated, please check $RESULTS_DIR/test.output"
+#SBATCH --nodes=1
+#SBATCH --ntasks=<%= questions.number_of_slots.answer %>

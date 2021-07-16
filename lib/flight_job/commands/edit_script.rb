@@ -36,7 +36,7 @@ module FlightJob
 
       if content = content_flag
         confirm_prompt
-        File.write script.script_path, content
+        File.write script.workload_path, content
       else
         # Opens vimish commands with the start line at the top of the editor,
         # Other common editors will open somewhere near the start line
@@ -52,8 +52,11 @@ module FlightJob
               end
 
         # Open the file
-        TTY::Editor.open(script.script_path, command: cmd)
+        TTY::Editor.open(script.workload_path_with_ext, command: cmd)
       end
+
+      # Re-render the script
+      script.render
     end
 
     def content_flag
@@ -89,8 +92,10 @@ module FlightJob
     end
 
     # Determine which line to open the script on
+    # NOTE: This can be dropped at some point in the future as the workload/directives have
+    # been split. It is being maintained "temporarily" for legacy scripts.
     def start_line
-      File.open(script.script_path) do |file|
+      File.open(script.workload_path) do |file|
         _, idx = file.each_line.each_with_index.find do |line, _|
           /^# *>{4,}.*WORKLOAD/.match?(line)
         end
