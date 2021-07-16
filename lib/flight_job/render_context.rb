@@ -54,7 +54,7 @@ module FlightJob
     end
 
     def render_workload
-      ERB.new(File.read(@template.template_path), nil, '-')
+      ERB.new(File.read(@template.workload_path), nil, '-')
          .result(binding)
     end
 

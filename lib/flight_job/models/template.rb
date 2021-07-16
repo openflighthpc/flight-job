@@ -158,15 +158,15 @@ module FlightJob
       end
     end
 
-    # Validates the template_path and directives_path
+    # Validates the workload_path and directives_path
     validate do
       # Symlink the legacy script path into place, if required
-      if !File.exists?(template_path) && File.exists?(legacy_template_path)
-        FileUtils.ln_s File.basename(legacy_template_path), template_path
+      if !File.exists?(workload_path) && File.exists?(legacy_template_path)
+        FileUtils.ln_s File.basename(legacy_template_path), workload_path
       end
 
-      unless File.exists? template_path
-        errors.add(:template_path, "does not exist")
+      unless File.exists? workload_path
+        errors.add(:workload_path, "does not exist")
       end
 
       unless File.exists? directives_path
@@ -208,7 +208,7 @@ module FlightJob
       File.join(FlightJob.config.templates_dir, id, "#{script_template_name}.erb")
     end
 
-    def template_path
+    def workload_path
       File.join(FlightJob.config.templates_dir, id, "workload.erb")
     end
 
@@ -239,7 +239,7 @@ module FlightJob
       opts ||= {}
       {
         'id' => id,
-        'path' => template_path,
+        'path' => workload_path,
       }.merge(metadata).tap do |hash|
         if opts.fetch(:include, []).include? 'scripts'
           # NOTE: Consider using a file registry instead
