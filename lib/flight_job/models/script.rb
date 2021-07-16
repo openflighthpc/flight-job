@@ -89,13 +89,7 @@ module FlightJob
 
       # Migrate legacy scripts to the new file format
       if !File.exists?(payload_path) && File.exists?(legacy_script_path)
-        FileUtils.touch(directive_path)
         FileUtils.ln_s File.basename(legacy_script_path), payload_path
-      end
-
-      # Ensures the directive exists
-      unless File.exists?(directive_path)
-        @errors.add(:directive_path, 'does not exist')
       end
 
       # Ensures the payload exists
@@ -192,10 +186,6 @@ module FlightJob
       @payload_path ||= File.join(FlightJob.config.scripts_dir, id, 'payload')
     end
 
-    def directive_path
-      @directive_path ||= File.join(FlightJob.config.scripts_dir, id, 'directive')
-    end
-
     # Creates a symlink to the payload path based on the script_name file extension
     # This prompts the editor to use the correct syntax highlighting
     def alternative_payload_path
@@ -258,13 +248,11 @@ module FlightJob
     #       to the payload. This is used to present the two files as a single
     #       "script" in the `cp-template` method.
     def render
-      generate_render_context.render
+      renderer.render
     end
 
     def render_and_save
-      ctx = generate_render_context
-      directives = ctx.render_directives
-      payload = ctx.render_payload
+      payload = renderer.render_payload
 
       # Ensures it claims the ID
       # NOTE: As this is done after validation, it may trigger a race condition
@@ -281,11 +269,9 @@ module FlightJob
       save_metadata
       save_notes
       File.write(payload_path, payload)
-      File.write(directive_path, directives)
 
       # Update the various file permissions
       FileUtils.chmod(0600, payload_path)
-      FileUtils.chmod(0600, directive_path)
       FileUtils.chmod(0600, metadata_path)
     end
 
@@ -322,6 +308,29 @@ module FlightJob
       raise DuplicateError, "The ID already exists!"
     end
 
+    def renderer
+      return @renderer if @renderer
+
+      # Ensure the script is in a valid state
+      unless valid?(:render)
+        FlightJob.logger.error("The script is invalid:\n") do
+          errors.full_messages.join("\n")
+        end
+        duplicate_errors = errors.find do |error|
+          error.attribute == :id && error.type == :already_exists
+        end
+        if duplicate_errors
+          raise_duplicate_id_error
+        else
+          raise InternalError, 'Unexpectedly failed to render the script!'
+        end
+      end
+
+      @renderer ||= FlightJob::RenderContext.new(
+        template: load_template, answers: answers
+      )
+    end
+
     protected
 
     def <=>(other)
@@ -343,27 +352,6 @@ module FlightJob
                     else
                       { 'created_at' => DateTime.now.rfc3339 }
                     end
-    end
-
-    def generate_render_context
-      # Ensure the script is in a valid state
-      unless valid?(:render)
-        FlightJob.logger.error("The script is invalid:\n") do
-          errors.full_messages.join("\n")
-        end
-        duplicate_errors = errors.find do |error|
-          error.attribute == :id && error.type == :already_exists
-        end
-        if duplicate_errors
-          raise_duplicate_id_error
-        else
-          raise InternalError, 'Unexpectedly failed to render the script!'
-        end
-      end
-
-      FlightJob::RenderContext.new(
-        template: load_template, answers: answers
-      )
     end
   end
 end

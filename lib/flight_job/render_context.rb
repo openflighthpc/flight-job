@@ -56,12 +56,17 @@ module FlightJob
     # Legacy method which will render the directives/payload into a single file
     def render
       [render_directives,
-       File.read(Flight.config.adapter_script_path),
+       render_adapter,
        render_payload].join("\n")
     end
 
     def render_payload
       ERB.new(File.read(@template.template_path), nil, '-')
+         .result(binding)
+    end
+
+    def render_adapter
+      ERB.new(File.read(Flight.config.adapter_script_path), nil, '-')
          .result(binding)
     end
 

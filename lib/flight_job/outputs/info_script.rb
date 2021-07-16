@@ -46,7 +46,7 @@ module FlightJob
     # NOTE: The verbose output is at the end to avoid the order changing
     register_attribute(section: :main, header: 'Template ID') { |s| s.template_id }
     register_attribute(section: :main, header: 'File Name') { |s| s.script_name }
-    register_attribute(section: :main, header: 'Path', verbose: true) { |s| s.payload_path }
+    register_attribute(section: :main, header: 'Path') { |s| s.payload_path }
 
     register_attribute(section: :main, header: 'Created at') do |script, verbose:|
       if verbose
@@ -57,7 +57,6 @@ module FlightJob
     end
 
     register_attribute(section: :notes, header: 'Notes') { |s| s.notes }
-    register_attribute(section: :main, header: 'Directives Path', verbose: true) { |s| s.directive_path }
 
     def self.build_output(**opts)
       super(template: TEMPLATE, **opts)

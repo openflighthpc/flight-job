@@ -364,15 +364,11 @@ module FlightJob
       # Generate the script
       self.script_path = File.join(Flight.config.jobs_dir, id, script.script_name)
 
-      # Legacy scripts will have an empty directive_path, they should be rendered
-      # without the adapter.
-      payload = File.read script.payload_path
-      directives = File.read script.directive_path
-      content = if directives.empty?
-        payload
-      else
-        [directives, File.read(Flight.config.adapter_script_path), payload].join("\n")
-      end
+      content = [
+        script.renderer.render_directives,
+        script.renderer.render_adapter,
+        File.read(script.payload_path)
+      ].join("\n")
 
       File.write script_path, content
       FileUtils.chmod(0700, script_path)
