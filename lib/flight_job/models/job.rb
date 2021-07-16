@@ -363,9 +363,17 @@ module FlightJob
 
       # Generate the script
       self.script_path = File.join(Flight.config.jobs_dir, id, script.script_name)
-      content = [script.directive_path, script.payload_path].map { |p| File.read(p) }
-                                                            .reject(&:empty?)
-                                                            .join("\n")
+
+      # Legacy scripts will have an empty directive_path, they should be rendered
+      # without the adapter.
+      payload = File.read script.payload_path
+      directives = File.read script.directive_path
+      content = if directives.empty?
+        payload
+      else
+        [directives, File.read(Flight.config.adapter_script_path), payload].join("\n")
+      end
+
       File.write script_path, content
       FileUtils.chmod(0700, script_path)
 

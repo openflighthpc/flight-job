@@ -55,7 +55,9 @@ module FlightJob
 
     # Legacy method which will render the directives/payload into a single file
     def render
-      [render_payload, render_directives].reject(&:empty?).join("\n")
+      [render_directives,
+       File.read(Flight.config.adapter_script_path),
+       render_payload].join("\n")
     end
 
     def render_payload
