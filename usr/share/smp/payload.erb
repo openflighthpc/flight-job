@@ -1,4 +1,13 @@
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+#  >>>> SET TASK ENVIRONMENT VARIABLES
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+# If necessary, set up further environment variables that are not
+# specific to your workload here.
+#
+# Several standard variables, such as <%= core.job_id %>, <%= core.job_name %> and
+# <%= core.ntasks %>, are made available by the scheduler.
+
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 #  >>>> YOUR WORKLOAD
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
@@ -18,6 +27,8 @@
 # Your job can save its results anywhere you want, but if the results are
 # saved outside of RESULTS_DIR (or if RESULTS_DIR is modified), 'flight-job'
 # will be unable to help you access your results.
+#
+# RESULTS_DIR has already been set to <%= core.results_dir %>.
 echo "Your results will be stored in: $RESULTS_DIR"
 mkdir -p "$RESULTS_DIR"
 
@@ -31,5 +42,5 @@ echo "Executing job commands, current working directory is $(pwd)"
 # REPLACE THE FOLLOWING WITH YOUR APPLICATION COMMANDS
 
 echo "Hello, <%= questions.workload.answer %>!" > $RESULTS_DIR/test.output
-echo "This is an example job. It was allocated $SLURM_NTASKS slot(s) on host `hostname -s` (as `whoami`)." >> $RESULTS_DIR/test.output
+echo "This is an example job. It was allocated $<%= core.ntasks %> slot(s) on host `hostname -s` (as `whoami`)." >> $RESULTS_DIR/test.output
 echo "Output file has been generated, please check $RESULTS_DIR/test.output"

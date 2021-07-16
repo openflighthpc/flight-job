@@ -91,6 +91,23 @@
 # monitor_script_path: libexec/<scheduler>/monitor.sh
 
 # ==============================================================================
+# Template Map Path
+# Specify the path the template map path. This should contain scheduler specific
+# environment variables that will be rendered into the templates.
+#
+# This allows the templates to be written in a platform agnostic manner, but
+# rendered with familiar variables.
+#
+# The default value will automatic use the 'scheduler' config. This feature
+# is not supported when overridden.
+#
+# Relative paths are expanded from flight_ROOT. **
+#
+# The environment variable flight_JOB_template_map_path takes precedence.
+# ==============================================================================
+# template_map_path: etc/template-maps/<scheduler>.yaml
+
+# ==============================================================================
 # State Map Path
 # Specify the path to the state map file. This file should contain a list of
 # "scheduler states" and the corresponding "flight job state".

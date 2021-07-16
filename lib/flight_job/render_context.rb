@@ -25,6 +25,8 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+require 'ostruct'
+
 module FlightJob
   class RenderContext
     class AnswerDecorator
@@ -45,6 +47,10 @@ module FlightJob
     def initialize(template:, answers:)
       @template = template
       @answers = answers
+    end
+
+    def core
+      @core ||= OpenStruct.new(YAML.load(File.read(Flight.config.template_map_path)))
     end
 
     # Legacy method which will render the directives/payload into a single file

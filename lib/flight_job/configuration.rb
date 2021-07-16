@@ -90,6 +90,9 @@ module FlightJob
     attribute :state_map_path,
               default: ->(config) { "etc/state-maps/#{config.scheduler}.yaml" },
               transform: relative_to(root_path)
+    attribute :template_map_path,
+              default: ->(config) { "etc/template-maps/#{config.scheduler}.yaml" },
+              transform: relative_to(root_path)
     attribute :submit_script_path,
               default: ->(config) { File.join('libexec', config.scheduler, 'submit.sh') },
               transform: relative_to(root_path)
