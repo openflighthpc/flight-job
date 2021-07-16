@@ -33,7 +33,8 @@ module FlightJob
       end
 
       def script
-        @script ||= load_script(args.first)
+        # Re-render the script to update the cache
+        @script ||= load_script(args.first).tap(&:render)
       end
     end
   end

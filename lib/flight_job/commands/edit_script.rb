@@ -54,6 +54,9 @@ module FlightJob
         # Open the file
         TTY::Editor.open(script.alternative_workload_path, command: cmd)
       end
+
+      # Re-render the script
+      script.render
     end
 
     def content_flag

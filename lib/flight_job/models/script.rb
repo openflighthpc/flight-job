@@ -186,6 +186,12 @@ module FlightJob
       @workload_path ||= File.join(FlightJob.config.scripts_dir, id, 'workload')
     end
 
+    # NOTE: This is the currently cached version of the script, which
+    # will be re-rendered periodically. It is not used in the job submission
+    def cached_path
+      @cached_path ||= File.join(FlightJob.config.scripts_dir, id, 'cache', script_name)
+    end
+
     # Creates a symlink to the workload path based on the script_name file extension
     # This prompts the editor to use the correct syntax highlighting
     def alternative_workload_path
@@ -249,7 +255,10 @@ module FlightJob
         renderer.render_directives,
         renderer.render_adapter,
         File.read(workload_path)
-      ].join("\n")
+      ].join("\n").tap do |content|
+        FileUtils.mkdir_p File.dirname(cached_path)
+        File.write cached_path, content
+      end
     end
 
     def render_and_save
@@ -272,6 +281,9 @@ module FlightJob
       # Update the various file permissions
       FileUtils.chmod(0600, workload_path)
       FileUtils.chmod(0600, metadata_path)
+
+      # Render the script
+      render
     end
 
     def save_metadata
@@ -290,7 +302,7 @@ module FlightJob
       {
         "id" => id,
         "notes" => notes,
-        "path" => workload_path,
+        "path" => cached_path,
         "workload_path" => workload_path
       }.merge(metadata).tap do |hash|
         if opts.fetch(:include, []).include? 'template'
