@@ -52,7 +52,7 @@ module FlightJob
               end
 
         # Open the file
-        TTY::Editor.open(script.alternative_workload_path, command: cmd)
+        TTY::Editor.open(script.workload_path_with_ext, command: cmd)
       end
 
       # Re-render the script

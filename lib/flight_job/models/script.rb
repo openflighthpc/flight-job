@@ -194,7 +194,7 @@ module FlightJob
 
     # Creates a symlink to the workload path based on the script_name file extension
     # This prompts the editor to use the correct syntax highlighting
-    def alternative_workload_path
+    def workload_path_with_ext
       ext = File.extname(script_name || '')
       return workload_path if ext.empty?
       (workload_path + ext).tap do |path|
