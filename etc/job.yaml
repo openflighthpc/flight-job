@@ -109,7 +109,7 @@
 #
 # The environment variable flight_JOB_adapter_script_path takes precedence.
 # ==============================================================================
-# adapter_script_path: libexec/<scheduler>/adapter.sh
+# adapter_script_path: usr/share/adapter.<scheduler>.erb
 
 # ==============================================================================
 # Template Map Path

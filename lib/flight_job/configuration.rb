@@ -100,7 +100,7 @@ module FlightJob
               default: ->(config) { File.join('libexec', config.scheduler, 'monitor.sh') },
               transform: relative_to(root_path)
     attribute :adapter_script_path,
-              default: ->(config) { File.join('libexec', config.scheduler, 'adapter.sh') },
+              default: ->(config) { File.join("usr/share/adapter.#{config.scheduler}.erb") },
               transform: relative_to(root_path)
 
     attribute :submission_period, default: 3600
