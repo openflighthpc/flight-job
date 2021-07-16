@@ -42,7 +42,7 @@ module FlightJob
 
     application_name 'job'
 
-    attribute :templates_dir, default: 'usr/share',
+    attribute :templates_dir, default: 'usr/share/job',
               transform: relative_to(root_path)
     attribute :scripts_dir, default: '~/.local/share/flight/job/scripts',
               transform: relative_to(root_path)
@@ -51,19 +51,19 @@ module FlightJob
 
     attribute :scheduler, default: 'slurm'
     attribute :state_map_path,
-              default: ->(config) { "etc/state-maps/#{config.scheduler}.yaml" },
+              default: ->(config) { "etc/job/state-maps/#{config.scheduler}.yaml" },
               transform: relative_to(root_path)
     attribute :template_map_path,
-              default: ->(config) { "etc/template-maps/#{config.scheduler}.yaml" },
+              default: ->(config) { "etc/job/template-maps/#{config.scheduler}.yaml" },
               transform: relative_to(root_path)
     attribute :submit_script_path,
-              default: ->(config) { File.join('libexec', config.scheduler, 'submit.sh') },
+              default: ->(config) { File.join('libexec/job', config.scheduler, 'submit.sh') },
               transform: relative_to(root_path)
     attribute :monitor_script_path,
-              default: ->(config) { File.join('libexec', config.scheduler, 'monitor.sh') },
+              default: ->(config) { File.join('libexec/job', config.scheduler, 'monitor.sh') },
               transform: relative_to(root_path)
     attribute :adapter_script_path,
-              default: ->(config) { File.join("usr/share/adapter.#{config.scheduler}.erb") },
+              default: ->(config) { File.join("usr/share/job/adapter.#{config.scheduler}.erb") },
               transform: relative_to(root_path)
 
     attribute :submission_period, default: 3600

@@ -109,7 +109,7 @@
 #
 # The environment variable flight_JOB_adapter_script_path takes precedence.
 # ==============================================================================
-# adapter_script_path: usr/share/adapter.<scheduler>.erb
+# adapter_script_path: usr/share/job/adapter.<scheduler>.erb
 
 # ==============================================================================
 # Template Map Path
@@ -126,7 +126,7 @@
 #
 # The environment variable flight_JOB_template_map_path takes precedence.
 # ==============================================================================
-# template_map_path: etc/template-maps/<scheduler>.yaml
+# template_map_path: etc/job/template-maps/<scheduler>.yaml
 
 # ==============================================================================
 # State Map Path
@@ -143,7 +143,7 @@
 #
 # The environment variable flight_JOB_state_map_path takes precedence.
 # ==============================================================================
-# state_map_path: etc/state-maps/<scheduler>.yaml
+# state_map_path: etc/job/state-maps/<scheduler>.yaml
 
 # ==============================================================================
 # Check Cron Path
@@ -157,7 +157,7 @@
 #
 # The environment variable flight_JOB_check_cron takes precedence.
 # ==============================================================================
-# check_cron: libexec/check-cron.sh
+# check_cron: libexec/job/check-cron.sh
 
 # ==============================================================================
 # Minimum Terminal Width
