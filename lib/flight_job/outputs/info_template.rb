@@ -30,7 +30,7 @@ require_relative '../markdown_renderer'
 module FlightJob
   class Outputs::InfoTemplate
     TEMPLATE = ERB.new(<<~ERB, nil, '-')
-      # <%= template_path -%> -- <%= id %>
+      # <%= workload_path -%> -- <%= id %>
 
       ## DESCRIPTION
 

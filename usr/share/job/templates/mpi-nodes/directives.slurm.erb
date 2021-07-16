@@ -9,7 +9,7 @@
 #==============================================================================
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 #                        SLURM SUBMISSION SCRIPT
-#                       AVERAGE QUEUE TIME: Short
+#                        AVERAGE QUEUE TIME: Long
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
@@ -128,10 +128,32 @@
 # likely to schedule your job sooner, but note that your job **may
 # be terminated if it exceeds the specified allocation**.
 #
-# Note that this setting is specified in megabytes.
-# e.g. specify `1024` for 1 gigabyte.
+# Note that:
+#
+#  1. For this type of job you would usually request all available
+#     memory of a node in order to prevent the job being terminated.
+#
+#  2. This setting is specified in megabytes. e.g. specify `2048` for
+#     2 gigabytes.
 #
 #SBATCH --mem=<%= questions.memory_limit.answer %>
+
+#==========================
+#  Processing requirements
+#--------------------------
+# Specify the number of processing slots required for your job.
+#
+# You should request a processing slot for each simultaneous thread
+# (or process) that your script and/or application executes.  Note
+# that requesting a larger number of slots will mean that your job
+# could take longer to launch.
+#
+# You should request the number of nodes required using the `--nodes`
+# parameter.  You will receive access to all the available cores on
+# each allocated node.
+#
+#SBATCH --nodes=<%= questions.number_of_nodes.answer %>
+
 
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 #  >>>> SET TASK ENVIRONMENT VARIABLES
@@ -155,40 +177,3 @@
 # WARNING: The script must not change directory prior to this line.
 RESULTS_DIR="$(pwd)/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
 
-# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-#  >>>> YOUR WORKLOAD
-# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-
-#=======================
-#  Environment modules
-#-----------------------
-# e.g.:
-# module load apps/imb
-
-#===========================
-#  Create results directory
-#---------------------------
-# By convention, job's submitted with `flight-job` are expected to save their
-# results to RESULTS_DIR.  `flight-job` provides easy access to any files
-# saved there.
-#
-# Your job can save its results anywhere you want, but if the results are
-# saved outside of RESULTS_DIR (or if RESULTS_DIR is modified), 'flight-job'
-# will be unable to help you access your results.
-#
-# RESULTS_DIR has already been set to "${WORKING_DIR}/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID".
-echo "Your results will be stored in: $RESULTS_DIR"
-mkdir -p "$RESULTS_DIR"
-
-#===============================
-#  Application launch commands
-#-------------------------------
-# Customize this section to suit your needs.
-
-echo "Executing job commands, current working directory is $(pwd)"
-
-# REPLACE THE FOLLOWING WITH YOUR APPLICATION COMMANDS
-
-echo "Hello, <%= questions.workload.answer %>!" > $RESULTS_DIR/test.output
-echo "This is an example job. It ran on `hostname -s` (as `whoami`)." >> $RESULTS_DIR/test.output
-echo "Output file has been generated, please check $RESULTS_DIR/test.output"
