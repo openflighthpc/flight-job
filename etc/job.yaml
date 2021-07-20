@@ -89,20 +89,6 @@
 # state_map_path: etc/state-maps/slurm.yaml
 
 # ==============================================================================
-# Check Cron Path
-# Specify the path to the script which checks if cron is setup to run the
-# monitor.
-#
-# If cron has not been setup, it is responsible for setting the crontab to run
-# the "flight job run-monitor" command periodically.
-#
-# Relative paths are expanded from the install directory.
-#
-# The environment variable flight_JOB_check_cron takes precedence.
-# ==============================================================================
-# check_cron: libexec/check-cron.sh
-
-# ==============================================================================
 # Minimum Terminal Width
 # The minimum terminal width when wrapping output text. This prevents various
 # edge cases in small terminals. The terminal is responsible for wrapping the

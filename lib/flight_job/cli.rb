@@ -172,10 +172,6 @@ module FlightJob
       DESC
     end
 
-    create_command 'run-monitor' do |c|
-      c.summary = 'Update the internal state of the data cache'
-    end
-
     create_command 'submit-job', 'SCRIPT_ID' do |c|
       c.summary = 'Schedule a new job to run from a script'
     end
