@@ -78,10 +78,6 @@ module FlightJob
     attribute :minimum_terminal_width, default: 80
     validates :minimum_terminal_width, numericality: { only_integers: true }
 
-    attribute :check_cron, default: 'libexec/job/check-cron.sh',
-              transform: relative_to(root_path)
-    validates :check_cron, presence: true
-
     attribute :max_id_length, default: 16
     validates :max_id_length, numericality: { only_integers: true }
 
