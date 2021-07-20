@@ -118,7 +118,7 @@ module FlightJob
     end
 
     def self.load_active
-      Dir.glob(new(id: '*').active_path).map do |path|
+      Dir.glob(new(id: '*').initial_metadata_path).map do |path|
         new(id: File.basename(File.dirname(path)))
       end
     end
@@ -194,24 +194,20 @@ module FlightJob
       @metadata_path ||= File.join(job_dir, 'metadata.yaml')
     end
 
-    # This denotes a job that has been or will be given to the scheduler. The job is considered
-    # "active" until it is in a terminal state.
+    # Stores the initial state of the metadata before the job is submitted
     #
-    # NOTE: Technically an "active" job may not exist. The existence criteria is determined by
-    # the "metadata_path", which stores the result of the submission command. However a job
-    # becomes active before it is submitted, hence it doesn't exist briefly.
-    #
-    # This allows jobs to be quasi-tracked even if a catastrophic failure occurs during the
-    # submission that prevents the metadata file from being generated.
-    def active_path
-      @active_path ||= File.join(job_dir, 'active.yaml')
+    # A job does not truely exist until after it has been submitted, however this
+    # causes jobs to be lost if the submission catastrophically fails. As a fallback,
+    # The initial metadata is used to re-construct a failed job entry.
+    def initial_metadata_path
+      @initial_metadata_path ||= File.join(job_dir, id, 'metadata.initial.yaml')
     end
 
     def metadata
       @metadata ||= if File.exists? metadata_path
         YAML.load File.read(metadata_path)
-      elsif File.exists? active_path
-        YAML.load File.read(active_path)
+      elsif File.exists? initial_metadata_path
+        YAML.load File.read(initial_metadata_path)
       else
         { "created_at" => DateTime.now.rfc3339 }
       end
@@ -223,12 +219,14 @@ module FlightJob
       metadata.is_a?(Hash) ? metadata.slice('created_at', 'script_id') : {}
     end
 
-    # Checks it the job has got stuck in an Active state and handles it accordingly
+    # Checks it the job has got stuck during the submission
     # This can happen if the job is interrupted during submission
     def transition_inactive
-      return unless File.exists? active_path
-      schema_errors = ACTIVE_SCHEMA.validate(active_metadata).to_a
+      # Remove the initial_metadata_path if metadata_path exists
+      FileUtils.rm_f initial_metadata_path if File.exists? metadata_path
+      return unless File.exists? initial_metadata_path
 
+      schema_errors = ACTIVE_SCHEMA.validate(active_metadata).to_a
       if schema_errors.empty?
         # Check if the maximum pending submission time has elapsed
         start = DateTime.rfc3339(created_at).to_time.to_i
@@ -243,15 +241,15 @@ module FlightJob
           self.submit_stderr = 'Failed to run the submission command for an unknown reason'
           FileUtils.mkdir_p File.dirname(metadata_path)
           File.write metadata_path, YAML.dump(metadata)
-          FileUtils.rm_f active_path
+          FileUtils.rm_f initial_metadata_path
         else
           FlightJob.logger.info "Ignoring the following job as it is pending submission: #{id}"
         end
       else
         FlightJob.logger.error <<~ERROR.chomp
-          The following active file is invalid: #{active_path}
+          The following active file is invalid: #{initial_metadata_path}
         ERROR
-        FileUtils.rm_f active_path
+        FileUtils.rm_f initial_metadata_path
       end
     end
 
@@ -371,9 +369,9 @@ module FlightJob
         script.script_path
       ]
 
-      # Quasi-persist the job in the active "state"
-      FileUtils.mkdir_p File.dirname(active_path)
-      File.write active_path, YAML.dump(active_metadata)
+      # Generate the initial metadata path file
+      FileUtils.mkdir_p File.dirname(initial_metadata_path)
+      File.write initial_metadata_path, YAML.dump(active_metadata)
 
       # Run the submission command
       execute_command(*cmd) do |status, out, err|
@@ -404,13 +402,6 @@ module FlightJob
         # Persist the updated version of the metadata
         File.write(metadata_path, YAML.dump(metadata))
       end
-
-      # TODO: Run the monitor
-
-      # Remove the active file if the job is in a terminal state
-      if TERMINAL_STATES.include?(state)
-        FileUtils.rm_f active_path
-      end
     end
 
     def monitor
@@ -434,12 +425,6 @@ module FlightJob
             File.write(metadata_path, YAML.dump(metadata))
           end
         end
-      end
-
-      # Only preform the active_path removal if the command exists
-      # successfully
-      if TERMINAL_STATES.include?(self.state)
-        FileUtils.rm_f active_path
       end
     end
 
