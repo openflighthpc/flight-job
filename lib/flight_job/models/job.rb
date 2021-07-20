@@ -117,9 +117,9 @@ module FlightJob
       end.reject(&:nil?).sort
     end
 
-    def self.load_active
-      Dir.glob(new(id: '*').initial_metadata_path).map do |path|
-        new(id: File.basename(File.dirname(path)))
+    def self.transition_inactive
+      Dir.glob(new(id: '*').initial_metadata_path).each do |path|
+        new(id: File.basename(File.dirname(path))).transition_inactive
       end
     end
 
