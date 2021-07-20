@@ -108,7 +108,7 @@ module FlightJob
         id = File.basename(File.dirname(path))
         job = new(id: id)
         if job.valid?(:load)
-          job
+          job.tap(&:monitor)
         else
           FlightJob.logger.error("Failed to load missing/invalid job: #{id}")
           FlightJob.logger.debug(job.errors)
@@ -133,23 +133,6 @@ module FlightJob
           JSON.pretty_generate(schema_errors)
         end
         errors.add(:metadata, 'is invalid')
-      end
-    end
-
-    validate on: :monitor do
-      unless submitted?
-        errors.add(:submitted, 'the job has not been submitted')
-      end
-
-      unless (schema_errors = SCHEMA.validate(metadata).to_a).empty?
-        FlightJob.logger.debug("The following metadata file is invalid: #{metadata_path}\n") do
-          JSON.pretty_generate(schema_errors)
-        end
-        errors.add(:metadata, 'is invalid')
-      end
-
-      unless scheduler_id
-        errors.add(:scheduler_id, 'has not been set')
       end
     end
 
@@ -405,6 +388,22 @@ module FlightJob
     end
 
     def monitor
+      # Skip jobs that have terminated, this allows the method to be called liberally
+      if STATES_LOOKUP[state] == :terminal
+        FlightJob.logger.debug "Skipping monitor for terminated job: #{id}"
+        return
+      end
+
+      # Jobs without a scheduler ID should not be in a running/pending state. It is
+      # an error condition if they are
+      unless scheduler_id
+        FlightJob.logger.error "Can not monitor job '#{id}' as it did not report its scheduler_id"
+        self.reason = "Did not report it's scheduler ID"
+        self.state = "FAILED"
+        File.write(metadata_path, YAML.dump(metadata))
+        return
+      end
+
       FlightJob.logger.info("Monitoring Job: #{id}")
       cmd = [FlightJob.config.monitor_script_path, scheduler_id]
       execute_command(*cmd) do |status, stdout, stderr|
@@ -421,9 +420,7 @@ module FlightJob
           elsif data['reason']
             self.reason = data['reason']
           end
-          if valid?(:load)
-            File.write(metadata_path, YAML.dump(metadata))
-          end
+          File.write(metadata_path, YAML.dump(metadata))
         end
       end
     end
