@@ -29,6 +29,7 @@ module FlightJob
   module Commands
     class ListJobs < Command
       def run
+        Job.transition_inactive
         result = Outputs::ListJobs.build_output(**output_options).render(*jobs)
         $stderr.puts 'Nothing To Display' if jobs.empty?
         puts result unless result.empty?
