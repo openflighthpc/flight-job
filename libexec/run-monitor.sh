@@ -26,16 +26,25 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-# NOTE: This script will likely not work out of the box on most installations
-# due to ruby not being on the PATH. This scripts purpose is to be a guide on
-# how the cron job integrates with the application.
+#-------------------------------------------------------------------------------
+# WARNING - README
 #
-# Please reconfigure this script on a per installation basis.
+# This is an internally managed file, any changes maybe lost on the next update!
+# Please make any installation specific changes by duplicating this file and
+# reconfiguring the application.
+#-------------------------------------------------------------------------------
 
-if which ruby >/dev/null; then
-  echo "Ruby is not on the PATH! Cannot run the monitor" >&2
-  exit 1
-fi
+#-------------------------------------------------------------------------------
+# DEPRECATED:
+#
+# flight-job no longer uses cron to manage its internal state. Instead the job
+# state is updated on the fly.
+#
+# This file was originally used as a shim between crontab and flight-job, but
+# is now otherwise deprecated. This shim now removes any remaining crontabs
+#-------------------------------------------------------------------------------
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-"$DIR"/job run-monitor
+# Do not edit cron if there is an error!
+set -e
+crontab -l | grep -v "${BASH_SOURCE[0]}" | crontab
+exit 0

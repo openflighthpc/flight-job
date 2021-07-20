@@ -31,7 +31,6 @@ module FlightJob
   module Commands
     class SubmitJob < Command
       def run
-        check_cron
         job = Job.new(script_id: script.id)
         job.submit
         show_submit = job.submit_status != 0
@@ -43,25 +42,6 @@ module FlightJob
 
       def script
         @script ||= load_script(args.first)
-      end
-
-      def check_cron
-        env = ENV.slice('PATH', 'HOME', 'USER', 'LOGNAME')
-        out, err, status = Open3.capture3(env, FlightJob.config.check_cron, unsetenv_others: true, close_others: true)
-        FlightJob.logger.debug <<~DEBUG
-          Result from cron-check
-          STATUS: #{status.exitstatus}
-          STDOUT:
-          #{out}
-          STDERR:
-          #{err}
-        DEBUG
-        unless status.exitstatus == 0
-          raise InternalError, <<~ERROR.chomp
-            Failed to install the job monitor!
-            Please contact your system administrator for further assistance.
-          ERROR
-        end
       end
     end
   end
