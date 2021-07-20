@@ -185,7 +185,7 @@ module FlightJob
           end
           raise InternalError, "Unexpectedly failed to load job: #{id}"
         end
-      end
+      end.tap(&:monitor)
     end
 
     def assert_results_dir_exists(job)
