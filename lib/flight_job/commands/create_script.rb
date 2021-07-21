@@ -309,6 +309,11 @@ module FlightJob
               { name: opt['text'], value: opt['value'] }
             end
             prompt.multi_select(question.text, choices, **opts)
+          when 'time'
+            prompt.ask(question.text) do |q|
+              q.default default
+              q.validate(/\A24:00|([0-1]\d|2[0-3]):[0-5]\d\Z/, "Times must be in HH:MM format")
+            end
           else
             raise InternalError, "Unexpectedly reached question type: #{question.format['type']}"
           end
