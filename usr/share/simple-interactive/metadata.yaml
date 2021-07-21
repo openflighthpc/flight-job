@@ -168,11 +168,3 @@ generation_questions:
     default: '1024'
     format:
       type: text
-
-  - id: workload
-    text: "Who, or what, should we greet"
-    description: >
-      Who, or what, should we say hello to when your script is ran.
-    default: "World"
-    format:
-      type: text

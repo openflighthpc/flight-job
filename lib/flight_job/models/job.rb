@@ -61,6 +61,7 @@ module FlightJob
         "stdout_path" => { "type" => ["string", "null"] },
         "stderr_path" => { "type" => ["string", "null"] },
         "results_dir" => { "type" => ["string", "null"] },
+        "controls_dir" => { "type" => ["string", "null"] },
         "reason" => { "type" => ["string", "null"] },
         "start_time" => { "type" => ["string", "null"], "format" => "date-time" },
         "end_time" => { "type" => ["string", "null"], "format" => "date-time" }
@@ -80,12 +81,13 @@ module FlightJob
     SUBMIT_RESPONSE_SCHEMA = JSONSchemer.schema({
       "type" => "object",
       "additionalProperties" => false,
-      "required" => ["id", "stdout", "stderr", "results_dir"],
+      "required" => ["id", "stdout", "stderr", "results_dir", "controls_dir"],
       "properties" => {
         "id" => { "type" => "string" },
         "stdout" => { "type" => "string" },
         "stderr" => { "type" => "string" },
-        "results_dir" => { "type" => "string" }
+        "results_dir" => { "type" => "string" },
+        "controls_dir" => { "type" => "string" }
       }
     })
 
@@ -286,7 +288,7 @@ module FlightJob
     [
       "submit_status", "submit_stdout", "submit_stderr", "script_id", "state",
       "scheduler_id", "scheduler_state", "stdout_path", "stderr_path", "reason",
-      "start_time", "end_time", "results_dir"
+      "start_time", "end_time", "results_dir", 'controls_dir'
     ].each do |method|
       define_method(method) { metadata[method] }
       define_method("#{method}=") { |value| metadata[method] = value }
@@ -357,6 +359,7 @@ module FlightJob
         "estimated_start_time" => estimated_start_time,
         "actual_end_time" => actual_end_time,
         "estimated_end_time" => estimated_end_time,
+        "flight_desktop_id" => desktop_id
       }.merge(metadata).tap do |hash|
         # NOTE: The API uses the 'size' attributes as a proxy check to exists/readability
         #       as well as getting the size. Non-readable stdout/stderr would be
@@ -380,6 +383,33 @@ module FlightJob
           hash['result_files'] = nil
         end
       end
+    end
+
+    def desktop_stdout_path
+      return false unless controls_dir
+      @desktop_control_path ||= File.join(controls_dir, 'desktop-session')
+    end
+
+    def desktop_stdout
+      return false unless desktop_stdout_path
+      @desktop_stdout ||= if File.exists? desktop_stdout_path
+                                    File.read desktop_stdout_path
+                                  else
+                                    ''
+                                  end
+    end
+
+    def desktop?
+      return false unless File.exists? desktop_stdout_path
+      desktop_id ? true : false
+    end
+
+    def desktop_id
+      return @desktop_id unless @desktop_id.nil?
+      return @desktop_id = false unless desktop_stdout
+      match = /^Identity\s+(?<id>.*)$/.match(desktop_stdout)
+      return @desktop_id = false unless match
+      @desktop_id = match.named_captures['id']
     end
 
     # Takes the scheduler's state and converts it to an internal flight-job
@@ -434,6 +464,7 @@ module FlightJob
           self.stdout_path = data['stdout']
           self.stderr_path = data['stderr']
           self.results_dir = data['results_dir']
+          self.controls_dir = data['controls_dir']
         end
 
         # Persist the updated version of the metadata
