@@ -113,32 +113,49 @@ generation_questions:
       value: question.notification_wanted.answer
       eq: 'yes'
 
-  - id: start_immediately
-    text: Should the job be started immediately?
+  - id: start_deadline_type
+    text: When should the job start by?
     description: >
-      Flag to the scheduler if the job should be started immediately upon
-      submission. The job submission will fail if there are no available
-      nodes to run the job on.
-    default: 'yes'
+      Flag to the scheduler when the job should start. The job will fail
+      if it cannot be allocated the resources within the specified time.
+    default: 'immediately'
     format:
       type: select
       options:
-        - text: 'Yes'
-          value: 'yes'
-        - text: 'No'
-          value: 'no'
+        - text: 'Immediately'
+          value: 'immediately'
+        - text: 'Today'
+          value: 'today'
+        - text: 'Time from now'
+          value: 'offset'
 
-  - id: latest_start_time
-    text: What time should the job start by?
+  - id: start_deadline_today
+    text: What is the latest the job should start today?
     description: >
-      Give the time a job should start by. Jobs submissions that can not
-      be started by this time will fail.
+      Give the latest time the job should be started today. The job will fail if it
+      cannot be started before than.
     default: '17:00'
     format:
       type: time
     ask_when:
-      value: question.start_immediately.answer
-      eq: 'no'
+      value: question.start_deadline_type.answer
+      eq: 'today'
+
+  - id: start_deadline_offset
+    text: What is the maximum wait time for the job to start?
+    description: >
+      Give the maximum wait time from now for the job to start. The job
+      will fail if it cannot be started within this time window.
+
+      A deadline of zero requests the job start immediately.  The format
+      is one of "minutes", "minutes:seconds", "hours:minutes:seconds",
+      "days-hours", "days-hours:minutes" and "days-hours:minutes:seconds".
+    default: '01:00'
+    format:
+      type: text
+    ask_when:
+      value: question.start_deadline_type.answer
+      eq: 'offset'
 
   - id: max_runtime
     text: Expected RUNTIME

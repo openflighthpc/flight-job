@@ -98,6 +98,51 @@
 ##SBATCH --mail-type <%= questions.notification_events.default.join(',') %>
 <% end -%>
 
+#============
+#  Deadline
+#------------
+# Set how long the job can remain in the queue before terminated. Slurm
+# uses the "predicted end time" for this calculation. The deadline will
+# need to compensate for the maximum runtime
+<%
+  start = questions.max_runtime.answer_in_seconds
+  case questions.start_deadline_type.answer
+  when 'offset'
+    offset = questions.start_deadline_offset.answer_in_seconds
+-%>
+#
+#SBATCH --deadline=now+<%= offset + start %>
+<%
+  when 'today'
+    # NOTE: Due to how slurm handles deadlines, the --deadline=HH:MM
+    # can lead to unexpected results. If it is *before* the current day
+    # it will wrap to the next day.
+    #
+    # However this also needs to apply an offset for the "max runtime".
+    # This offset can push times before *now* into the future. These
+    # future times will not have sufficient deadline to run the job and
+    # slurm will cancel it.
+    #
+    # As the --deadline behaviour is dependent on the "render" time, it
+    # is better to use --deadline=now+<time>. It will be correct if
+    # submit immediately after re-rendering, but it will also *kinda*
+    # work if the submission is delayed.
+    time = questions.start_deadline_today.answer
+    now = Time.now
+    offset = Time.parse(time).to_i - now.to_i
+    deadline = offset + start
+    deadline = 0 if deadline < 0
+-%>
+#
+# NOTE: The following line was rendered at <%= now.hour -%>:<%= now.min %>
+# This corresponds to a deadline of <%= time -%> if ran immediately
+#SBATCH --deadline=now+<%= deadline %>
+<% else -%>
+#
+# This job is due start immediately (within 5 seconds of submission)
+#SBATCH --deadline=now+<%= 5 + start %>
+<% end -%>
+
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 #  >>>> RESOURCE REQUEST DIRECTIVES - always set these
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
