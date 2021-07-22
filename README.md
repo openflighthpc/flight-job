@@ -2,13 +2,62 @@
 
 Generate a job script from a predefined template
 
+## Prerequisite
+
+This applications requires `ruby` version `2.7.1` and `bundler` `2.1.4`. This guide will assume that `ruby` and `bundler` are on your `PATH`, however absolute paths to the binaries are also supported.
+
+By default, this application ships with `slurm` integration scripts. These scripts assume that `sbatch`,`scontrol`, etc.. are on your `PATH`. The integration scripts also require `jq` (version `1.6`) to be in your `PATH`. See [configuration](#configuration) for full details.
+
+*Summary*:
+* `ruby`
+* `bundler`
+* `slurm` - `scontrol`,`sbatch`,..
+* `jq`
+
 ## Installation
 
-Requires a modern-ish version of ruby circa `2.7`
+*User Suite Install*
+
+This package is available as part of the *OpenFlight - User Suite* as an rpm. This is the easiest method for installing `flight-job` and all required dependencies.
+
+[Refer to the OpenFlight project for further details](https://use.openflighthpc.org/installing-user-suite/install.html).
+
+*Manual Install*
+
+Before proceeding, you will need a version of `ruby` `2.7.1`. You _may_ be able to run the application with a different ruby version, however you mileage may vary. [Refer to rvm documentation on how to install rub](https://rvm.io/).
+
+By default, `flight-job` will need an install of `slurm` and `jq`. These packages maybe available via your package manager. Alternatively, they can be downloaded from: [slurm download](https://www.schedmd.com/downloads.php) and [jq download](https://stedolan.github.io/jq/download/).
+
+`flight-job` should then be cloned via `git` and gems installed with `bundler`. The `master` branch is the current bleeding edge version and is not appropriate for production installs. Instead a tagged version should be checked out.
+
+*Example Manual Slurm Installation*
+
+```
+# Install and configure slurm according to your requirments
+
+# Install jq
+cd /path/to/jq/bin
+wget https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
+mv jq-linux64 jq
+chmod u+x jq
+
+# jq will need to be on your PATH, consider adding to your .bashrc
+export PATH=$PATH:$(pwd)
+
+# Install flight-job
+cd /path/to/parent-dir
+git clone https://github.com/openflighthpc/flight-job
+cd flight-job
+git checkout <tag>
+
+# Install the production gems
+bundle install --with default --without development
+
+# Install the development gems (optional)
+bundle install --with default --with development
+```
 
 ## Configuration
-
-For full details, [please see the reference config](etc/job.yaml).
 
 The github repo is preconfigured to run the application in development mode. This will cause the `flight_ROOT` environment variable to be ignored. The production behaviour can be achieved with:
 
@@ -16,6 +65,44 @@ The github repo is preconfigured to run the application in development mode. Thi
 export flight_ENVIRONMENT=production
 export flight_ROOT=...
 ```
+Please refer to the [reference configuration](etc/job.yaml) for a full list of configuration options.
+
+### Environment Overview
+
+`flight-job` has three supported environments in which it can operate in `production`, `standalone`, and `development`. By default the git repo will be configured to use `development`. They can be summaries as:
+
+* `production`  - Runs with the production gems and respects `flight_ROOT`,
+* `standalone`  - Runs with the production gems but ignores `flight_ROOT`, or
+* `development` - Runs with the development gems and ignores `flight_ROOT`.
+
+A "production" install should use either the `production` or `standalone` environments. In `production` the `flight_ROOT` environment variable is used to expand relative paths. The `flight_ROOT` environment variable should be set when using the `production` environment; otherwise the behaviour is the same as `standalone`. For example, the `production` environment will use the following paths:
+
+* `$flight_ROOT/etc/job.yaml`
+* `$flight_ROOT/usr/share/job/templates`
+* ... etc ...
+
+Both the `standalone` and `development` environments will ignore `$flight_ROOT` environment variable. Instead the will expand the paths from the "install directory":
+
+* `/path/to/flight-job/etc/job.yaml`
+* `/path/to/flight-job/usr/share/job/templates`
+* ... etc ...
+
+The environment can be set by either setting `flight_ENVIRONMENT` or overriding the `.env.development` file:
+
+```
+# Either option will set the enviroment
+export flight_ENVIRONMENT=<env>
+echo flight_ENVIRONMENT=<env> > .env.development.local
+```
+
+### Adding Custom Templates
+
+The `templates_dir` in the configuration specifies the location that templates should be stored. This will either be:
+
+* `$flight_ROOT`/usr/share/job/templates, or
+* `/path/to/flight-job/usr/share/job/templates`.
+
+A `template` must contain a `metadata.yaml` and associated "script template". Please refer to the [example templates](usr/share/templates/simple) for the specification.
 
 ## Operation
 
