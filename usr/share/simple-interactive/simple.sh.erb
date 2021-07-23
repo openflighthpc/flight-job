@@ -247,7 +247,7 @@ echo "Executing job commands, current working directory is $(pwd)"
 flight start
 flight env create gridware
 flight env activate gridware
-gridware install apps/R/3/4/2
+yes | gridware install main/apps/R/3.4.2
 module load apps/R
 
 # Additional command-line options (R -h for a list).
