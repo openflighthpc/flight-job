@@ -247,7 +247,6 @@ echo "Executing job commands, current working directory is $(pwd)"
 flight start
 flight env create gridware
 flight env activate gridware
-yes | gridware install main/apps/R/3.4.2
 module load apps/R
 
 # Additional command-line options (R -h for a list).
@@ -258,8 +257,9 @@ R_OPTIONS=""
 #       file. Failure to do so will prevent flight-job from tracking
 #       the session.
 flight desktop start \
-  --app "R $_OPTIONS" \
+  --app "R $R_OPTIONS" \
   --script bash \
   >"$FLIGHT_DESKTOP_STDOUT" \
-  2>"$FlIGHT_DESKTOP_STDERR"
+  2>"$FLIGHT_DESKTOP_STDERR"
 echo $? >"$FLIGHT_DESKTOP_STATUS"
+sleep infinity
