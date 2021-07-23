@@ -4,6 +4,7 @@ license: Creative Commons Attribution-ShareAlike 4.0 International
 script_template: simple.sh
 priority: 100
 version: 0
+interactive: true
 synopsis: Submit an interactive job.
 description: |
   Your job will start in an interactive session with a single core on the

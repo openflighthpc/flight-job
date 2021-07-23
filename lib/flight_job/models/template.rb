@@ -109,6 +109,7 @@ module FlightJob
         'script_template' => { "type" => 'string' },
         'synopsis' => { "type" => 'string' },
         'description' => { "type" => 'string' },
+        "interactive" => { "type" => "boolean" },
         'version' => { "type" => 'integer', 'enum' => [0] },
         'generation_questions' => QUESTIONS_SPEC,
         'priority' => { "type" => 'integer' },
