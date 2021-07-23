@@ -29,7 +29,7 @@ module FlightJob
   module Commands
     class ListTemplates < Command
       def run
-        if templates.empty?
+        if templates.empty? && !opts.json
           $stderr.puts 'Nothing To Display'
         else
           puts render_output(Outputs::ListTemplates, templates)

@@ -29,7 +29,7 @@ module FlightJob
   module Commands
     class ListJobs < Command
       def run
-        if jobs.empty?
+        if jobs.empty? && !opts.json
           $stderr.puts 'Nothing To Display'
         else
           puts render_output(Outputs::ListJobs, jobs)
