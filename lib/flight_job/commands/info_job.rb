@@ -29,8 +29,11 @@ module FlightJob
   module Commands
     class InfoJob < Command
       def run
+        job.wait_for_desktop_session if opts.wait_desktop
         puts render_output(Outputs::InfoJob, job)
       end
+
+      private
 
       def job
         @job ||= load_job(args.first)

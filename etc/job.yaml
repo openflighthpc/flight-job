@@ -139,6 +139,14 @@
 # submission_period: 3600
 
 # ==============================================================================
+# Wait Cooldown
+# The time between checks when waiting for a condition about the job to be met.
+#
+# The environment variable flight_JOB_wait_cooldown takes precedence.
+# ==============================================================================
+# wait_cooldown: 5
+
+# ==============================================================================
 # Log Path
 # The file the logger will write to. It will write to standard error if
 # omitted.

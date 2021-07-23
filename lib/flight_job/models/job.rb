@@ -360,7 +360,7 @@ module FlightJob
         "estimated_start_time" => estimated_start_time,
         "actual_end_time" => actual_end_time,
         "estimated_end_time" => estimated_end_time,
-        "flight_desktop_id" => desktop_id
+        "flight_desktop_id" => desktop_id,
       }.merge(metadata).tap do |hash|
         # NOTE: The API uses the 'size' attributes as a proxy check to exists/readability
         #       as well as getting the size. Non-readable stdout/stderr would be
@@ -386,29 +386,36 @@ module FlightJob
       end
     end
 
-    def desktop_stdout_path
-      return false unless controls_dir
-      @desktop_control_path ||= File.join(controls_dir, 'desktop-session')
-    end
+    def wait_for_desktop_session
+      unless interactive
+        msg = "Can not wait for job '#{id}' desktop session as it is non-interactive"
+        Flight.logger.warn msg
+        $stderr.puts Flight.pastel.yellow(msg)
+        return
+      end
 
-    def desktop_stdout
-      return false unless desktop_stdout_path
-      @desktop_stdout ||= if File.exists? desktop_stdout_path
-                                    File.read desktop_stdout_path
-                                  else
-                                    ''
-                                  end
-    end
+      unless controls_dir
+        msg = "Can not wait for job '#{id}' desktop session as it did not report its controls directory"
+        Flight.logger.warn msg
+        $stderr.puts Flight.pastel.yellow(msg)
+        return
+      end
 
-    def desktop?
-      return false unless File.exists? desktop_stdout_path
-      desktop_id ? true : false
+      status_path = File.join(controls_dir, 'flight-desktop-status')
+      loop do
+        return if File.exists? status_path
+        return if STATE_MAP[state] == :terminal
+        monitor
+        sleep Flight.config.wait_cooldown
+      end
     end
 
     def desktop_id
       return @desktop_id unless @desktop_id.nil?
-      return @desktop_id = false unless desktop_stdout
-      match = /^Identity\s+(?<id>.*)$/.match(desktop_stdout)
+      return @desktop_id = false unless controls_dir
+      path = File.join(controls_dir, 'flight-desktop-stdout')
+      return @desktop_id = false unless File.exists? path
+      match = /^Identity\s+(?<id>.*)$/.match(File.read path)
       return @desktop_id = false unless match
       @desktop_id = match.named_captures['id']
     end

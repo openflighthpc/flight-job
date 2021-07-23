@@ -26,6 +26,8 @@
 #==============================================================================
 require 'logger'
 
+require 'pastel'
+
 require 'active_support/string_inquirer'
 require 'active_support/core_ext/object/blank'
 
@@ -80,6 +82,10 @@ module Flight
           log.level = level
         end
       end
+    end
+
+    def pastel
+      @pastel ||= Pastel.new
     end
   end
 end
