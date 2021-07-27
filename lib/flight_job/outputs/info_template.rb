@@ -56,7 +56,12 @@ module FlightJob
 
     def render(template)
       bind = nil
-      template.instance_exec { bind = self.binding }
+      # NOTE: template.send(:binding) does not work as you would expect
+      # It returns the active binding from the moment it was called
+      # aka Outputs::InfoTemplate not Template
+      #
+      # Instead it needs to be called within instance_exec
+      template.instance_exec { bind = binding }
       MarkdownRenderer.new(TEMPLATE.result(bind)).wrap_markdown
     end
   end
