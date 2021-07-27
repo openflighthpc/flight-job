@@ -97,7 +97,7 @@ module FlightJob
         end
 
         def summary
-          SUMMARY.result self.binding
+          SUMMARY.result binding
         end
 
         # Checks the questions dependencies and return if it should be prompted for
