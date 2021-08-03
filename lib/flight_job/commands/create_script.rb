@@ -199,6 +199,7 @@ module FlightJob
         def prompt_again
           opts = {
             default: if @prompt_for_selected
+                       @prompt_for_selected = false
                        3
                      elsif @prompt_for_name
                        1
@@ -242,7 +243,6 @@ module FlightJob
                 Press any key to continue...
               WARN
             else
-              @prompt_for_selected = false
               prompt_questions(*selected)
             end
             true
