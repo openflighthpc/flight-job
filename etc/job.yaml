@@ -139,6 +139,16 @@
 # submission_period: 3600
 
 # ==============================================================================
+# Include Related Resources
+# Specify the related resource that should be included in the JSON output. The
+# resources should be specified as CSV. This feature *may* be removed within a
+# minor release, proceed with caution.
+#
+# The environment variable flight_JOB_include takes precedence.
+# ==============================================================================
+# includes: ''
+
+# ==============================================================================
 # Log Path
 # The file the logger will write to. It will write to standard error if
 # omitted.

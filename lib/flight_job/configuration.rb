@@ -68,6 +68,8 @@ module FlightJob
     attribute :max_stdin_size, default: 1048576
     validates :max_stdin_size, numericality: { only_integers: true }
 
+    attribute :includes, default: '', transform: ->(v) { v.to_s.split(',') }
+
     attribute :log_path, required: false,
               default: '~/.cache/flight/log/share/job.log',
               transform: ->(path) do
