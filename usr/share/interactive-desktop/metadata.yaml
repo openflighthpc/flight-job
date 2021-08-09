@@ -1,14 +1,15 @@
-name: Simple Interactive
+name: Interactive desktop session
 copyright: Copyright (C) 2021 Alces Flight Ltd.
 license: Creative Commons Attribution-ShareAlike 4.0 International
-script_template: simple.sh
+script_template: interactive-desktop.sh
 priority: 100
 version: 0
 interactive: true
-synopsis: Submit an interactive job.
+synopsis: Submit a job to run an interactive desktop session.
 description: |
-  Your job will start in an interactive session with a single core on the
-  first available node.
+  Your job will start an interactive session on the first available node.  You
+  can optionally provide a session script to configure and launch an
+  interactive application.
 
 generation_questions:
   - id: working_dir
@@ -25,8 +26,6 @@ generation_questions:
     description: >
       Specify a path to a file to contain the output from the standard output
       stream of your job script.
-
-      This will the standard output of the job submission script.
     default: job-%j.output
     format:
       type: text
@@ -51,8 +50,6 @@ generation_questions:
     description: >
       Specify a path to a file to contain the output from the standard error
       stream of your job script.
-
-      This will the standard error of the job submission script.
     default: job-%j.error
     format:
       type: text
@@ -169,6 +166,7 @@ generation_questions:
       A time limit of zero requests that no time limit be imposed.  The format
       is one of "minutes", "minutes:seconds", "hours:minutes:seconds",
       "days-hours", "days-hours:minutes" and "days-hours:minutes:seconds".
+      E.g., `30` for 30 minutes.
     default: '30'
     format:
       type: text
