@@ -210,15 +210,37 @@ FLIGHT_DESKTOP_STDOUT="$CONTROLS_DIR"/flight-desktop-stdout
 FLIGHT_DESKTOP_STDERR="$CONTROLS_DIR"/flight-desktop-stderr
 FLIGHT_DESKTOP_STATUS="$CONTROLS_DIR"/flight-desktop-status
 
+create_session_script() {
+    SESSION_SCRIPT=$( mktemp --tmpdir session-script.XXXXXX.sh )
+    echo "Creating session script ${SESSION_SCRIPT}"
+    export SESSION_SCRIPT
+    cat > ${SESSION_SCRIPT}
+    chmod +x ${SESSION_SCRIPT}
+}
+
+run_session() {
+    if [ "${SESSION_SCRIPT}" == "" ] ; then
+        echo "Session script not created" >&2
+        exit 1
+    fi
+    echo "Starting session..."
+    ${flight_ROOT:-/opt/flight}/bin/flight desktop \
+        start \
+        --script ${SESSION_SCRIPT} \
+        > "$FLIGHT_DESKTOP_STDOUT" \
+        2> "$FLIGHT_DESKTOP_STDERR"
+
+    echo $? >"$FLIGHT_DESKTOP_STATUS"
+}
+
+wait_session() {
+    echo "Waiting for session to finish..."
+    sleep infinity
+}
+
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 #  >>>> YOUR WORKLOAD
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-
-#=======================
-#  Environment modules
-#-----------------------
-# e.g.:
-# module load apps/imb
 
 #===========================
 #  Results directory
@@ -234,6 +256,22 @@ FLIGHT_DESKTOP_STATUS="$CONTROLS_DIR"/flight-desktop-status
 # RESULTS_DIR has already been set to "${WORKING_DIR}/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID".
 echo "Your results will be stored in: $RESULTS_DIR"
 
+create_session_script <<SESSION
+#!/bin/bash
+
+#===============================
+#  Activate Flight Environment
+#-------------------------------
+source "${flight_ROOT:-/opt/flight}"/etc/setup.sh
+
+#==============================
+#  Activate Package Ecosystem
+#------------------------------
+# e.g.:
+# flight env activate modules
+flight env activate gridware
+module load apps/R
+
 #===============================
 #  Application launch commands
 #-------------------------------
@@ -243,23 +281,10 @@ echo "Executing job commands, current working directory is $(pwd)"
 
 # REPLACE THE FOLLOWING WITH YOUR APPLICATION COMMANDS
 
-# Install the application - Demo R
-flight start
-flight env create gridware
-flight env activate gridware
-module load apps/R
-
 # Additional command-line options (R -h for a list).
 R_OPTIONS=""
+R "$R_OPTIONS"
+SESSION
 
-# Start R and an empty terminal with flight-desktop
-# NOTE: Standard output must be reported to the FLIGHT_DESKTOP_SESSION
-#       file. Failure to do so will prevent flight-job from tracking
-#       the session.
-flight desktop start \
-  --app "R $R_OPTIONS" \
-  --script bash \
-  >"$FLIGHT_DESKTOP_STDOUT" \
-  2>"$FLIGHT_DESKTOP_STDERR"
-echo $? >"$FLIGHT_DESKTOP_STATUS"
-sleep infinity
+run_session
+wait_session
