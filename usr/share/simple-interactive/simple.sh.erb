@@ -230,12 +230,42 @@ run_session() {
         > "$FLIGHT_DESKTOP_STDOUT" \
         2> "$FLIGHT_DESKTOP_STDERR"
 
-    echo $? >"$FLIGHT_DESKTOP_STATUS"
+    SESSION_STARTED=$?
+    echo ${SESSION_STARTED} >"$FLIGHT_DESKTOP_STATUS"
+}
+
+get_desktop_id() {
+    ${flight_ROOT:-/opt/flight}/bin/flight job \
+        info-job \
+        --wait-desktop \
+        ${FLIGHT_JOB_ID} \
+        | grep '^Flight Desktop ID' \
+        | cut -d $'\t' -f 2
+}
+
+session_is_active() {
+    local state
+    state=$(
+        ${flight_ROOT:-/opt/flight}/bin/flight desktop \
+            show "${DESKTOP_ID}" \
+            | grep '^State' \
+            | cut -d $'\t' -f 2
+    )
+    [ ${state} == "Active" ]
 }
 
 wait_session() {
-    echo "Waiting for session to finish..."
-    sleep infinity
+    if [ ! ${SESSION_STARTED} ] ; then
+        echo "Session failed to start" >&2
+        exit 1
+    fi
+    echo "Waiting for session to start..." 
+    DESKTOP_ID=$(get_desktop_id)
+    echo "Session id is ${DESKTOP_ID}" 
+    echo "Waiting for session to end..." 
+    while session_is_active ; do
+        sleep 60
+    done
 }
 
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
