@@ -124,7 +124,7 @@ module FlightJob
       job.format_estimated_end_time(true)
     end
 
-    register_attribute(header: "Flight Desktop ID:", verbose: true) do |job|
+    register_attribute(header: "Desktop ID:") do |job|
       job.desktop_id || nil
     end
 

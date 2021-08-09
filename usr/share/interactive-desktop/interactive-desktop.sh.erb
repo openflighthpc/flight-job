@@ -239,7 +239,7 @@ get_desktop_id() {
         info-job \
         --wait-desktop \
         ${FLIGHT_JOB_ID} \
-        | grep '^Flight Desktop ID' \
+        | grep '^Desktop ID' \
         | cut -d $'\t' -f 2
 }
 
