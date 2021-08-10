@@ -50,6 +50,16 @@ $ flight job copy 3
 Successfully copied the template to: /root/simple.sh.2
 ```
 
+### Updating the Internal Job Cache
+
+The "internal job cache" will be update on an ad hoc basis. This will typically be when `info-job` or `list-jobs` is ran.
+
+Depending on your schedulers configuration, this may result in the job results being lost. In this case of the default `slurm` scripts, the `jobs` will be transitioned into an `UNKNOWN` state.
+
+*NOTE:* Other scheduler implementations _should_ transition the jobs to an `UNKNOWN` state; but _may_ get stuck in the "last known state" (e.g. `PENDING` or `RUNNING`).
+
+To prevent this, the `run-monitor` command will update the internal state files for all the jobs. This can be integrated with `cron` (or other appropriate service) to update the cache.
+
 # Contributing
 
 Fork the project. Make your feature addition or bug fix. Send a pull
