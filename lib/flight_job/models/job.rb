@@ -88,31 +88,12 @@ module FlightJob
       }
     })
 
-    SUBMIT_RESPONSE_SCHEMA = JSONSchemer.schema({
-      "type" => "object",
-      "additionalProperties" => false,
-      "required" => ["id", "results_dir"],
-      "properties" => {
-        "id" => { "type" => "string" },
-        "stdout" => { "type" => ["string", "null"] },
-        "stderr" => { "type" => ["string", "null"] },
-        "results_dir" => { "type" => "string" },
-      }
-    })
-
-    MONITOR_RESPONSE_SCHEMA = JSONSchemer.schema({
-      "type" => "object",
-      "additionalProperties" => false,
-      "required" => ["state"],
-      "properties" => {
-        "state" => { "type" => "string" },
-        "reason" => { "type" => ["string", "null"] },
-        "start_time" => { "type" => ["string", "null"] },
-        "end_time" => { "type" => ["string", "null"] },
-        "estimated_start_time" => { "type" => ["string", "null"] },
-        "estimated_end_time" => { "type" => ["string", "null"] }
-      }
-    })
+    SUBMIT_RESPONSE_SCHEMA = JSONSchemer.schema(
+      YAML.load_file(File.join(__dir__, 'job/submit_response_schema.yaml'))
+    )
+    MONITOR_RESPONSE_SCHEMA = JSONSchemer.schema(
+      YAML.load_file(File.join(__dir__, 'job/monitor_response_schema.yaml'))
+    )
 
     def self.load_all
       Dir.glob(new(id: '*').metadata_path).map do |path|

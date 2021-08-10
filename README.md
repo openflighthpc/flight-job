@@ -104,6 +104,29 @@ The `templates_dir` in the configuration specifies the location that templates s
 
 A `template` must contain a `metadata.yaml` and associated "script template". Please refer to the [example templates](usr/share/templates/simple) for the specification.
 
+### Custom Scheduler Integrations
+
+By default, `flight-job` has been designed to integrate with `slurm` as its scheduler. It is however possible to reconfigure the application to work with a custom scheduler. Firstly the `submit_script_path` and `monitor_script_path` need to be updated in the `job.yaml` (`job.local.yaml` if using a git checkout):
+
+```
+submit_script_path: /path/to/custom/libexec/submit.sh
+monitor_script_path: /path/to/custom/libexec/monitor.sh
+```
+
+The `submit` script is responsible for submitting the job to the external scheduler and should return generic information about the job. The `monitor` script is ran to update the internal cache about the job.
+
+Both scripts receive a single argument which is used to identify the script/job. Additional arguments _may_ be provided in a future minor release.
+
+* `submit.sh`:  `$1` is the path to the rendered script for the job to be submitted, and
+* `monitor.sh`: `$1` is the scheduler generated ID of the job to be monitored.
+
+Both scripts use the final line of STDOUT as a means to communicate back to `flight-job`. This line must be in a JSON string according to the script's specification. These specifications are not considered part of `flight-job` public interface and maybe updated within a minor release. The specification is defined using [JSON Schema](https://json-schema.org/understanding-json-schema/index.html):
+
+* [Submit Script Response Specification](lib/flight_job/models/job/submit_response_schema.yaml)
+* [Monitor Script Response Specification](lib/flight_job/models/job/monitor_response_schema.yaml)
+
+The scripts may print to both STDOUT and STDERR as a means of logging. Whether these logs are kept depends on the `log_level` specified in the configuration. Care needs to be taken when printing to STDOUT, as the last line must be the JSON response.
+
 ## Operation
 
 The following will list the available templates
