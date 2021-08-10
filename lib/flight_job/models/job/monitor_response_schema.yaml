@@ -33,15 +33,13 @@
 #
 # YAML is used to purely to support comments and syntax highlighting
 #==============================================================================
-# NOTE: Updates on Minor Releases
+# NOTE: Independent Versioning
 #
 # The 'monitor.sh` provides core functionality that flight-job relies on to
 # operate correctly. This functionality will change over time as part of minor
 # release.
 #
-# The scripts that are distributed with this repository will be updated
-# to match this specification. Custom scripts may need to be upgraded on
-# minor releases.
+# For this reason, the specification is versioned independently to the CLI.
 #==============================================================================
 # CHANGELOG:
 # * 2.3.0 - Extracted Specification
@@ -57,6 +55,8 @@
   "additionalProperties": false,
   "required": ["state"],
   "properties": {
+    # NOTE: version will be required in future specifications
+    "version": { "enum": [0] },
     "state": { "type": "string" },
     "reason": { "type": ["string", "null"] },
     "start_time": { "type": ["string", "null"] },

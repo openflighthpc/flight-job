@@ -43,6 +43,7 @@ set +e
 #       flight-job will set the times according to the state
 read -r -d '' template <<'TEMPLATE' || true
 {
+  version: 0,
   state: ($state),
   reason: ($reason),
   start_time: ($start_time),

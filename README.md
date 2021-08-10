@@ -120,7 +120,7 @@ Both scripts receive a single argument which is used to identify the script/job.
 * `submit.sh`:  `$1` is the path to the rendered script for the job to be submitted, and
 * `monitor.sh`: `$1` is the scheduler generated ID of the job to be monitored.
 
-Both scripts use the final line of STDOUT as a means to communicate back to `flight-job`. This line must be in a JSON string according to the script's specification. These specifications are not considered part of `flight-job` public interface and maybe updated within a minor release. The specification is defined using [JSON Schema](https://json-schema.org/understanding-json-schema/index.html):
+Both scripts use the final line of STDOUT as a means to communicate back to `flight-job`. This line must be in a JSON string according to the script's specification. These specifications are independently versioned from the CLI and may change on a minor release. The specification is defined using [JSON Schema](https://json-schema.org/understanding-json-schema/index.html):
 
 * [Submit Script Response Specification](lib/flight_job/models/job/submit_response_schema.yaml)
 * [Monitor Script Response Specification](lib/flight_job/models/job/monitor_response_schema.yaml)
