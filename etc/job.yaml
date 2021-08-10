@@ -91,6 +91,27 @@
 # monitor_script_path: libexec/job/<scheduler>/monitor.sh
 
 # ==============================================================================
+# Script Adapter Path
+# Specify the path to the script adapter/shim. This adapter will be rendered
+# between the 'directives' and 'workload' sections of the job's script. It is
+# used to apply FlightJob specific features.
+#
+# It is primarily used to set the RESULTS_DIR to match the value returned
+# by the 'submit script'. This directory will be scheduler specific.
+#
+# As this adapter is rendered into the middle of the script, it should not
+# contain the shebang (#!) line.
+#
+# The default value will automatic use the 'scheduler' config. This feature
+# is not supported when overridden.
+#
+# Relative paths are expanded from flight_ROOT. **
+#
+# The environment variable flight_JOB_adapter_script_path takes precedence.
+# ==============================================================================
+# adapter_script_path: usr/share/job/adapter.<scheduler>.erb
+
+# ==============================================================================
 # State Map Path
 # Specify the path to the state map file. This file should contain a list of
 # "scheduler states" and the corresponding "flight job state".

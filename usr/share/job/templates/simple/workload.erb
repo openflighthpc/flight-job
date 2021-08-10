@@ -1,4 +1,13 @@
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+#  >>>> SET TASK ENVIRONMENT VARIABLES
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+# If necessary, set up further environment variables that are not
+# specific to your workload here.
+#
+# Several standard variables, such as SLURM_JOB_ID, SLURM_JOB_NAME and
+# SLURM_NTASKS, are made available by the scheduler.
+
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 #  >>>> YOUR WORKLOAD
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
@@ -18,7 +27,8 @@
 # Your job can save its results anywhere you want, but if the results are
 # saved outside of RESULTS_DIR (or if RESULTS_DIR is modified), 'flight-job'
 # will be unable to help you access your results.
-
+#
+# RESULTS_DIR has already been set to "$WORKING_DIR/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
 echo "Your results will be stored in: $RESULTS_DIR"
 mkdir -p "$RESULTS_DIR"
 

@@ -132,26 +132,3 @@
 # e.g. specify `1024` for 1 gigabyte.
 #
 #SBATCH --mem=<%= questions.memory_limit.answer %>
-
-# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-#  >>>> SET TASK ENVIRONMENT VARIABLES
-# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-# If necessary, set up further environment variables that are not
-# specific to your workload here.
-#
-# Several standard variables, such as SLURM_JOB_ID, SLURM_JOB_NAME and
-# SLURM_NTASKS, are made available by the scheduler.
-
-#=====================
-#  Results directory
-#---------------------
-# By convention, job's submitted with `flight-job` are expected to save their
-# results to RESULTS_DIR.  `flight-job` provides easy access to any files
-# saved there.
-#
-# If RESULTS_DIR is modified, `flight-job` will be unable to track the job's
-# results.
-#
-# WARNING: The script must not change directory prior to this line.
-RESULTS_DIR="$(pwd)/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
-
