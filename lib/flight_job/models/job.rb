@@ -411,12 +411,16 @@ module FlightJob
     end
 
     def desktop_id
-      return @desktop_id unless @desktop_id.nil?
-      return @desktop_id = false unless controls_dir
+      return @desktop_id if defined?(@desktop_id)
+
+      return @desktop_id = nil unless controls_dir
+
       path = File.join(controls_dir, 'flight-desktop-stdout')
-      return @desktop_id = false unless File.exists? path
+      return @desktop_id = nil unless File.exists? path
+
       match = /^Identity\s+(?<id>.*)$/.match(File.read(path).force_encoding('UTF-8'))
-      return @desktop_id = false unless match
+      return @desktop_id = nil unless match
+
       @desktop_id = match.named_captures['id']
     end
 
