@@ -24,13 +24,33 @@
 # For more information on Flight Job, please visit:
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
-# NOTE: This document contains the response specification for the
-#       "submit script".
+# NOTE: JSON Schema
 #
-#       It uses JSON:Schema as its validation library:
-#       https://json-schema.org/understanding-json-schema/index.html
+# This document contains the response specification for the "submit script".
 #
-#       YAML is used to purely to support comments and syntax highlighting
+# It uses JSON:Schema as its validation library:
+# https://json-schema.org/understanding-json-schema/index.html
+#
+# YAML is used to purely to support comments and syntax highlighting
+#==============================================================================
+# NOTE: Updates on Minor Releases
+#
+# The 'submit.sh` provides core functionality that flight-job relies on to
+# operate correctly. This functionality will change over time as part of minor
+# release.
+#
+# The scripts that are distributed with this repository will be updated
+# to match this specification. Custom scripts may need to be upgraded on
+# minor releases.
+#==============================================================================
+# CHANGELOG:
+# * 2.3.0 - Extracted Specification
+#==============================================================================
+# ARGV:
+#
+# The argument vector to the 'submit.sh' is as follows:
+#
+# 1. The absolute path to the render script
 #==============================================================================
 {
   "type": "object",
