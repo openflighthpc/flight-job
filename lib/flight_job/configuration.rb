@@ -53,11 +53,18 @@ module FlightJob
     attribute :state_map_path,
               default: ->(config) { "etc/job/state-maps/#{config.scheduler}.yaml" },
               transform: relative_to(root_path)
+    attribute :template_map_path,
+              default: ->(config) { "etc/job/template-maps/#{config.scheduler}.yaml" },
+              transform: relative_to(root_path)
     attribute :submit_script_path,
               default: ->(config) { File.join('libexec/job', config.scheduler, 'submit.sh') },
               transform: relative_to(root_path)
     attribute :monitor_script_path,
               default: ->(config) { File.join('libexec/job', config.scheduler, 'monitor.sh') },
+              transform: relative_to(root_path)
+
+    attribute :adapter_script_path,
+              default: ->(config) { File.join("usr/share/job/adapter.#{config.scheduler}.erb") },
               transform: relative_to(root_path)
 
     attribute :submission_period, default: 3600

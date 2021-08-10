@@ -25,6 +25,8 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+require 'ostruct'
+
 module FlightJob
   class RenderContext
     class AnswerDecorator
@@ -47,13 +49,22 @@ module FlightJob
       @answers = answers
     end
 
+    def core
+      @core ||= OpenStruct.new(YAML.load(File.read(Flight.config.template_map_path)))
+    end
+
     # Legacy method which will render the directives/payload into a single file
     def render
-      [render_directives, render_workload].reject(&:empty?).join("\n")
+      [render_directives, render_adapter, render_workload].reject(&:empty?).join("\n")
     end
 
     def render_workload
       ERB.new(File.read(@template.workload_path), nil, '-')
+         .result(binding)
+    end
+
+    def render_adapter
+      ERB.new(File.read(Flight.config.adapter_script_path), nil, '-')
          .result(binding)
     end
 
