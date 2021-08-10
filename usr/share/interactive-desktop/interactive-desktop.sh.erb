@@ -209,7 +209,13 @@ mkdir -p "$RESULTS_DIR"
 FLIGHT_DESKTOP_STDOUT="$CONTROLS_DIR"/flight-desktop-stdout
 FLIGHT_DESKTOP_STDERR="$CONTROLS_DIR"/flight-desktop-stderr
 FLIGHT_DESKTOP_STATUS="$CONTROLS_DIR"/flight-desktop-status
+SESSION_OUTPUT="${RESULTS_DIR}/session.output"
 
+#=========================
+#  Session orchestration
+#-------------------------
+# Functions used to orchestrate the creation of your interactive with Flight
+# Desktop.
 create_session_script() {
     SESSION_SCRIPT=$( mktemp --tmpdir session-script.XXXXXX.sh )
     echo "Creating session script ${SESSION_SCRIPT}"
@@ -218,23 +224,28 @@ create_session_script() {
     chmod +x ${SESSION_SCRIPT}
 }
 
-run_session() {
+session_run() {
+    session_start
+    session_await
+}
+
+session_start() {
     if [ "${SESSION_SCRIPT}" == "" ] ; then
-        echo "Session script not created" >&2
+        echo "Session script not created. Aborting." >&2
         exit 1
     fi
     echo "Starting session..."
     ${flight_ROOT:-/opt/flight}/bin/flight desktop \
         start \
         --script ${SESSION_SCRIPT} \
-        > "$FLIGHT_DESKTOP_STDOUT" \
-        2> "$FLIGHT_DESKTOP_STDERR"
+        > >( tee "$FLIGHT_DESKTOP_STDOUT" ) \
+        2> >( tee "$FLIGHT_DESKTOP_STDERR" >&2 )
 
     SESSION_STARTED=$?
     echo ${SESSION_STARTED} >"$FLIGHT_DESKTOP_STATUS"
 }
 
-get_desktop_id() {
+get_session_id() {
     ${flight_ROOT:-/opt/flight}/bin/flight job \
         info-job \
         --wait-desktop \
@@ -247,21 +258,25 @@ session_is_active() {
     local state
     state=$(
         ${flight_ROOT:-/opt/flight}/bin/flight desktop \
-            show "${DESKTOP_ID}" \
+            show "${SESSION_ID}" \
             | grep '^State' \
             | cut -d $'\t' -f 2
     )
-    [ ${state} == "Active" ]
+    [ "${state}" == "Active" ]
 }
 
-wait_session() {
-    if [ ! ${SESSION_STARTED} ] ; then
-        echo "Session failed to start" >&2
+session_await() {
+    if [ ${SESSION_STARTED} -ne 0 ] ; then
+        echo "Session failed to start. Aborting." >&2
         exit 1
     fi
     echo "Waiting for session to start..." 
-    DESKTOP_ID=$(get_desktop_id)
-    echo "Session id is ${DESKTOP_ID}" 
+    SESSION_ID=$(get_session_id)
+    if [ "${SESSION_ID}" == "" ] ; then
+        echo "Unable to determine session ID. Aborting." >&2
+        exit 1
+    fi
+    echo "Session ID is ${SESSION_ID}" 
     echo "Waiting for session to end..." 
     while session_is_active ; do
         sleep 60
@@ -292,22 +307,26 @@ create_session_script <<SESSION
 #===============================
 #  Activate Flight Environment
 #-------------------------------
-source "${flight_ROOT:-/opt/flight}"/etc/setup.sh
+source "${flight_ROOT:-/opt/flight}"/etc/setup.sh > "${SESSION_OUTPUT}" 2>&1
 
 #==============================
 #  Activate Package Ecosystem
 #------------------------------
+{
 # e.g.:
 # flight env activate modules
+# module load apps/R
+
 flight env activate gridware
 module load apps/R
+} >> "${SESSION_OUTPUT}" 2>&1
 
 #===============================
 #  Application launch commands
 #-------------------------------
 # Customize this section to suit your needs.
 
-echo "Executing job commands, current working directory is $(pwd)"
+echo "Executing job commands, current working directory is $(pwd)" >> "${SESSION_OUTPUT}" 2>&1
 
 # REPLACE THE FOLLOWING WITH YOUR APPLICATION COMMANDS
 
@@ -316,5 +335,4 @@ R_OPTIONS=""
 R "$R_OPTIONS"
 SESSION
 
-run_session
-wait_session
+session_run
