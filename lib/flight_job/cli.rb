@@ -206,6 +206,10 @@ module FlightJob
       c.summary = 'Permanently remove a job'
     end
 
+    create_command 'run-monitor' do |c|
+      c.summary = 'Update the internal state of the data cache'
+    end
+
     alias_command 'create', 'create-script'
     alias_command 'submit', 'submit-job'
     alias_command 'cp',     'copy-template'
