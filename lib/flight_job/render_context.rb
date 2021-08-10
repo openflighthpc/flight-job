@@ -53,7 +53,6 @@ module FlightJob
       @core ||= OpenStruct.new(YAML.load(File.read(Flight.config.template_map_path)))
     end
 
-    # Legacy method which will render the directives/payload into a single file
     def render
       [render_directives, render_adapter, render_workload].reject(&:empty?).join("\n")
     end

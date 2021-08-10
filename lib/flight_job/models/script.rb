@@ -100,7 +100,7 @@ module FlightJob
       end
     end
 
-    validate on: [:id_check, :render] do
+    validate on: :id_check do
       # Ensure the ID has not been taken
       # NOTE: This negates the need to check if metadata_path exists
       if Dir.exists? File.expand_path(id, FlightJob.config.scripts_dir)
@@ -221,13 +221,9 @@ module FlightJob
       Template.new(id: template_id)
     end
 
-    # NOTE: Legacy method that will render the script together without saving
-    def render
-      generate_render_context.render
-    end
-
     def render_and_save
-      ctx = generate_render_context
+      # Ensure the renderer is defined
+      renderer
 
       # Ensures it claims the ID
       # NOTE: As this is done after validation, it may trigger a race condition
@@ -243,7 +239,7 @@ module FlightJob
       # Writes the data to disk
       save_metadata
       save_notes
-      File.write(workload_path, ctx.render)
+      File.write(workload_path, renderer.render)
 
       # Makes the script executable and metadata read/write
       FileUtils.chmod(0700, workload_path)
@@ -283,6 +279,22 @@ module FlightJob
       raise DuplicateError, "The ID already exists!"
     end
 
+    def renderer
+      return @renderer if @renderer
+
+      # Ensure the script is in a valid state
+      unless valid?(:render)
+        FlightJob.logger.error("The script is invalid:\n") do
+          errors.full_messages.join("\n")
+        end
+        raise InternalError, 'Unexpectedly failed to render the script!'
+      end
+
+      @renderer ||= FlightJob::RenderContext.new(
+        template: load_template, answers: answers
+      )
+    end
+
     protected
 
     def <=>(other)
@@ -304,27 +316,6 @@ module FlightJob
                     else
                       { 'created_at' => DateTime.now.rfc3339 }
                     end
-    end
-
-    def generate_render_context
-      # Ensure the script is in a valid state
-      unless valid?(:render)
-        FlightJob.logger.error("The script is invalid:\n") do
-          errors.full_messages.join("\n")
-        end
-        duplicate_errors = errors.find do |error|
-          error.attribute == :id && error.type == :already_exists
-        end
-        if duplicate_errors
-          raise_duplicate_id_error
-        else
-          raise InternalError, 'Unexpectedly failed to render the script!'
-        end
-      end
-
-      FlightJob::RenderContext.new(
-        template: load_template, answers: answers
-      )
     end
   end
 end
