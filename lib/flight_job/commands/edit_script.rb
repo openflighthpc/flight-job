@@ -30,6 +30,49 @@ require 'tty-prompt'
 
 module FlightJob
   class Commands::EditScript < Command
+    EditorHelper = Struct.new(:path, :pastel) do
+      def open
+        TTY::Editor.open(path, command: cmd)
+      end
+
+      private
+
+      # Opens vimish commands with the start line at the top of the editor,
+      # Other common editors will open somewhere near the start line
+      # NOTE: gedit needs x-forwarding over ssh, but it also supports the +line
+      def cmd
+        @cmd = if ! start_line
+          editor
+        elsif ['vim', 'nvim'].include?(editor)
+          "#{editor} +#{start_line} -c 'normal! kztj'"
+        elsif ['vi', 'emacs', 'nano', 'gedit'].include?(editor)
+          "#{editor} +#{start_line}"
+        else
+          editor
+        end
+      end
+
+      def editor
+        @editor ||= TTY::Editor.from_env.first || begin
+        $stderr.puts pastel.red <<~WARN.chomp
+            Defaulting to 'vi' as the editor.
+            This can be changed by setting the EDITOR environment variable.
+          WARN
+          'vi'
+        end
+      end
+
+      # Determine which line to open the script on
+      def start_line
+        File.open(path) do |file|
+          _, idx = file.each_line.each_with_index.find do |line, _|
+            /^# *>{4,}.*WORKLOAD/.match?(line)
+          end
+          return idx ? idx + 1 : nil
+        end
+      end
+    end
+
     def run
       # Ensure the script exists up front
       script
@@ -38,21 +81,8 @@ module FlightJob
         confirm_prompt
         File.write script.script_path, content
       else
-        # Opens vimish commands with the start line at the top of the editor,
-        # Other common editors will open somewhere near the start line
-        # NOTE: gedit needs x-forwarding over ssh, but it also supports the +line
-        cmd = if ! start_line
-                editor
-              elsif ['vim', 'nvim'].include?(editor)
-                "#{editor} +#{start_line} -c 'normal! kztj'"
-              elsif ['vi', 'emacs', 'nano', 'gedit'].include?(editor)
-                "#{editor} +#{start_line}"
-              else
-                editor
-              end
-
         # Open the file
-        TTY::Editor.open(script.workload_path, command: cmd)
+        EditorHelper.new(script.workload_path, pastel).open
       end
     end
 
@@ -73,7 +103,7 @@ module FlightJob
         return
       elsif $stdout.tty?
         bool = TTY::Prompt.new.yes? pastel.yellow(<<~WARN.chomp), default: false
-          This action will replace the existing script!
+          This action will replace the existing script and prevent if from being re-rendered!
           Do you wish to continue?
         WARN
         raise InputError, <<~ERROR.chomp unless bool
@@ -86,26 +116,6 @@ module FlightJob
 
     def script
       @script ||= load_script(args.first)
-    end
-
-    # Determine which line to open the script on
-    def start_line
-      File.open(script.workload_path) do |file|
-        _, idx = file.each_line.each_with_index.find do |line, _|
-          /^# *>{4,}.*WORKLOAD/.match?(line)
-        end
-        return idx ? idx + 1 : nil
-      end
-    end
-
-    def editor
-      @editor ||= TTY::Editor.from_env.first || begin
-      $stderr.puts pastel.red <<~WARN.chomp
-          Defaulting to 'vi' as the editor.
-          This can be changed by setting the EDITOR environment variable.
-        WARN
-        'vi'
-      end
     end
   end
 end
