@@ -36,7 +36,7 @@ module FlightJob
 
       if content = content_flag
         confirm_prompt
-        File.write script.workload_path, content
+        File.write script.script_path, content
       else
         # Opens vimish commands with the start line at the top of the editor,
         # Other common editors will open somewhere near the start line

@@ -106,8 +106,9 @@ module FlightJob
       @answers = answers
     end
 
-    def render
-      [render_directives, render_adapter, render_workload].reject(&:blank?).join("\n")
+    def render(workload: nil)
+      workload ||= render_workload
+      [render_directives, render_adapter, workload].reject(&:blank?).join("\n")
     end
 
     def render_workload

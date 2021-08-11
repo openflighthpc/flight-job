@@ -87,15 +87,30 @@ module FlightJob
         next
       end
 
-      # Ensures the workload exists
-      unless File.exists? workload_path
+      # Ensure a fully rendered version of the script is available
+      unless File.exists? script_path
         legacy_path = File.join(Flight.config.scripts_dir, id, script_name)
         if File.exists?(legacy_path)
-          # Migrate legacy scripts to the workload_path
-          FileUtils.ln_s File.basename(legacy_path), workload_path
+          # Migrate legacy scripts to the script_path
+          FileUtils.ln_s File.basename(legacy_path), script_path
         else
           # Error as it is missing
-          @errors.add(:workload_path, 'does not exist')
+          @errors.add(:script_path, 'does not exist')
+        end
+      end
+
+      # Ensures the workload exists
+      unless File.exists? workload_path
+        begin
+          # Attempt to migrate the script via rendering the workload
+          File.write workload_path, renderer.render_workload
+        rescue
+          if script_path
+            # Fallback on making the script the workload
+            FileUtils.cp script_path, workload_path
+          else
+            @errrors.add(:workload_path, 'does not exist')
+          end
         end
       end
     end
@@ -178,6 +193,10 @@ module FlightJob
       end
     end
 
+    def script_path
+      @script_path ||= File.join(FlightJob.config.scripts_dir, id, 'script.sh')
+    end
+
     def workload_path
       @workload_path ||= File.join(FlightJob.config.scripts_dir, id, 'workload.sh')
     end
@@ -239,7 +258,9 @@ module FlightJob
       # Writes the data to disk
       save_metadata
       save_notes
-      File.write(workload_path, renderer.render)
+      workload = renderer.render_workload
+      File.write(workload_path, workload)
+      File.write(script_path, renderer.render(workload: workload))
 
       # Makes the script executable and metadata read/write
       FileUtils.chmod(0700, workload_path)
@@ -262,7 +283,7 @@ module FlightJob
       {
         "id" => id,
         "notes" => notes,
-        "path" => workload_path,
+        "path" => script_path,
         "workload_path" => workload_path
       }.merge(metadata).tap do |hash|
         if opts.fetch(:include, []).include? 'template'
