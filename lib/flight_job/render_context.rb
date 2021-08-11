@@ -53,7 +53,7 @@ module FlightJob
 
     # Legacy method which will render the directives/payload into a single file
     def render
-      [render_directives, render_adapter, render_workload].reject(&:empty?).join("\n")
+      [render_directives, render_adapter, render_workload].reject(&:blank?).join("\n")
     end
 
     def render_workload
@@ -62,11 +62,15 @@ module FlightJob
     end
 
     def render_adapter
+      # NOTE: The adapter is designed augment the directives,
+      # monolithic templates without directives can not benefit from the adapter
+      return nil unless File.exists? @template.directives_path
       ERB.new(File.read(Flight.config.adapter_script_path), nil, '-')
          .result(binding)
     end
 
     def render_directives
+      return nil unless File.exists? @template.directives_path
       ERB.new(File.read(@template.directives_path), nil, '-')
          .result(binding)
     end

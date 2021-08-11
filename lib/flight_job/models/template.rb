@@ -171,10 +171,6 @@ module FlightJob
           errors.add(:workload_path, "does not exist")
         end
       end
-
-      unless File.exists? directives_path
-        errors.add(:directives_path, "does not exist")
-      end
     end
 
     validate on: :verbose do
