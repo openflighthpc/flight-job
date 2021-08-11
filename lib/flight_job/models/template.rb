@@ -124,8 +124,8 @@ module FlightJob
       if validate
         templates.select do |template|
           next true if template.valid?
-          FlightJob.logger.warn "Rejecting invalid template: #{template.id}"
-          FlightJob.logger.debug("Errors: \n") { template.errors.full_messages.join("\n") }
+          FlightJob.logger.error("Failed to load missing/invalid template: #{id}")
+          FlightJob.logger.info(template.errors.full_messages.join("\n"))
           false
         end
 
