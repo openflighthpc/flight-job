@@ -68,7 +68,7 @@
 # Submit Script Path
 # Specify the path to the script which submits jobs.
 #
-# The default value will automatic use the 'scheduler' config. This feature
+# The default value will automatically use the 'scheduler' config. This feature
 # is not supported when overridden.
 #
 # Relative paths are expanded from flight_ROOT. **
@@ -81,7 +81,7 @@
 # Monitor Script Path
 # Specify the path to the script which monitors jobs.
 #
-# The default value will automatic use the 'scheduler' config. This feature
+# The default value will automatically use the 'scheduler' config. This feature
 # is not supported when overridden.
 #
 # Relative paths are expanded from flight_ROOT. **
@@ -102,7 +102,7 @@
 # As this adapter is rendered into the middle of the script, it should not
 # contain the shebang (#!) line.
 #
-# The default value will automatic use the 'scheduler' config. This feature
+# The default value will automatically use the 'scheduler' config. This feature
 # is not supported when overridden.
 #
 # Relative paths are expanded from flight_ROOT. **
@@ -113,13 +113,13 @@
 
 # ==============================================================================
 # Template Map Path
-# Specify the path the template map path. This should contain scheduler specific
-# environment variables that will be rendered into the templates.
+# Specify the path to the template map file. This should contain scheduler
+# specific environment variables that will be rendered into the templates.
 #
 # This allows the templates to be written in a platform agnostic manner, but
 # rendered with familiar variables.
 #
-# The default value will automatic use the 'scheduler' config. This feature
+# The default value will automatically use the 'scheduler' config. This feature
 # is not supported when overridden.
 #
 # Relative paths are expanded from flight_ROOT. **
@@ -133,7 +133,7 @@
 # Specify the path to the state map file. This file should contain a list of
 # "scheduler states" and the corresponding "flight job state".
 #
-# The default value will automatic use the 'scheduler' config. This feature
+# The default value will automatically use the 'scheduler' config. This feature
 # is not supported when overridden.
 #
 # Relative paths are expanded from flight_ROOT. **
