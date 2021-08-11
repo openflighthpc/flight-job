@@ -32,7 +32,7 @@
 #
 # Relative paths are expanded from flight_ROOT. **
 # ==============================================================================
-# templates_dir: usr/share
+# templates_dir: usr/share/job/templates
 
 # ==============================================================================
 # Scripts Directory
@@ -75,7 +75,7 @@
 #
 # The environment variable flight_JOB_submit_script_path takes precedence.
 # ==============================================================================
-# submit_script_path: libexec/<scheduler>/monitor.sh
+# submit_script_path: libexec/job/<scheduler>/monitor.sh
 
 # ==============================================================================
 # Monitor Script Path
@@ -88,7 +88,7 @@
 #
 # The environment variable flight_JOB_monitor_script_path takes precedence.
 # ==============================================================================
-# monitor_script_path: libexec/<scheduler>/monitor.sh
+# monitor_script_path: libexec/job/<scheduler>/monitor.sh
 
 # ==============================================================================
 # State Map Path
@@ -105,7 +105,7 @@
 #
 # The environment variable flight_JOB_state_map_path takes precedence.
 # ==============================================================================
-# state_map_path: etc/state-maps/<scheduler>.yaml
+# state_map_path: etc/job/state-maps/<scheduler>.yaml
 
 # ==============================================================================
 # Check Cron Path
@@ -119,7 +119,7 @@
 #
 # The environment variable flight_JOB_check_cron takes precedence.
 # ==============================================================================
-# check_cron: libexec/check-cron.sh
+# check_cron: libexec/job/check-cron.sh
 
 # ==============================================================================
 # Minimum Terminal Width

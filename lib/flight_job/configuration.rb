@@ -42,7 +42,7 @@ module FlightJob
 
     application_name 'job'
 
-    attribute :templates_dir, default: 'usr/share',
+    attribute :templates_dir, default: 'usr/share/job/templates',
               transform: relative_to(root_path)
     attribute :scripts_dir, default: '~/.local/share/flight/job/scripts',
               transform: relative_to(root_path)
@@ -51,13 +51,13 @@ module FlightJob
 
     attribute :scheduler, default: 'slurm'
     attribute :state_map_path,
-              default: ->(config) { "etc/state-maps/#{config.scheduler}.yaml" },
+              default: ->(config) { "etc/job/state-maps/#{config.scheduler}.yaml" },
               transform: relative_to(root_path)
     attribute :submit_script_path,
-              default: ->(config) { File.join('libexec', config.scheduler, 'submit.sh') },
+              default: ->(config) { File.join('libexec/job', config.scheduler, 'submit.sh') },
               transform: relative_to(root_path)
     attribute :monitor_script_path,
-              default: ->(config) { File.join('libexec', config.scheduler, 'monitor.sh') },
+              default: ->(config) { File.join('libexec/job', config.scheduler, 'monitor.sh') },
               transform: relative_to(root_path)
 
     attribute :submission_period, default: 3600
@@ -66,7 +66,7 @@ module FlightJob
     attribute :minimum_terminal_width, default: 80
     validates :minimum_terminal_width, numericality: { only_integers: true }
 
-    attribute :check_cron, default: 'libexec/check-cron.sh',
+    attribute :check_cron, default: 'libexec/job/check-cron.sh',
               transform: relative_to(root_path)
 
     attribute :max_id_length, default: 16
