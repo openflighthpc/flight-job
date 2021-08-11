@@ -65,7 +65,6 @@ module FlightJob
         "reason" => { "type" => ["string", "null"] },
         "start_time" => { "type" => ["string", "null"], "format" => "date-time" },
         "end_time" => { "type" => ["string", "null"], "format" => "date-time" },
-        "interactive" => { "type" => ["boolean", "null"] },
       }
     })
 
@@ -289,7 +288,7 @@ module FlightJob
     [
       "submit_status", "submit_stdout", "submit_stderr", "script_id", "state",
       "scheduler_id", "scheduler_state", "stdout_path", "stderr_path", "reason",
-      "start_time", "end_time", "results_dir", 'controls_dir', "interactive"
+      "start_time", "end_time", "results_dir", 'controls_dir'
     ].each do |method|
       define_method(method) { metadata[method] }
       define_method("#{method}=") { |value| metadata[method] = value }
@@ -417,9 +416,6 @@ module FlightJob
         raise InternalError, 'Unexpectedly failed to submit the job'
       end
       script = load_script
-
-      # Flags if the job is interactive
-      self.interactive = script.load_template.metadata['interactive']
 
       FlightJob.logger.info("Submitting Job: #{id}")
       cmd = [

@@ -412,6 +412,8 @@ module FlightJob
           **opts
         )
 
+        script.tags = template.tags
+
         # Save the script
         script.render_and_save
 

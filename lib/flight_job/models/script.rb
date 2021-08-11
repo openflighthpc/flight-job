@@ -38,10 +38,11 @@ module FlightJob
       "additionalProperties" => false,
       "required" => ['created_at', 'script_name'],
       "properties" => {
+        'answers' => { 'type' => 'object' },
         'created_at' => { 'type' => 'string', 'format' => 'date-time' },
-        'template_id' => { 'type' => 'string' },
         'script_name' => { 'type' => 'string' },
-        'answers' => { 'type' => 'object' }
+        'tags' => { 'type' => 'array', 'items' => { 'type' => 'string' }},
+        'template_id' => { 'type' => 'string' },
       }
     })
 
@@ -190,6 +191,14 @@ module FlightJob
       metadata['created_at']
     end
 
+    def tags
+      metadata['tags'] || []
+    end
+
+    def tags=(tags)
+      metadata['tags'] = tags
+    end
+
     def template_id
       metadata['template_id']
     end
@@ -285,7 +294,8 @@ module FlightJob
       {
         "id" => id,
         "notes" => notes,
-        "path" => script_path
+        "path" => script_path,
+        "tags" => tags,
       }.merge(metadata).tap do |hash|
         if opts.fetch(:include, []).include? 'template'
           hash['template'] = load_template

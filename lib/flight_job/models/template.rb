@@ -103,16 +103,16 @@ module FlightJob
       "additionalProperties" => false,
       "required" => ['synopsis', 'version', 'generation_questions', 'name', 'copyright', 'license'],
       "properties" => {
-        'name' => { "type" => 'string' },
-        'license' => { "type" => "string" },
         'copyright' => { "type" => "string" },
+        'description' => { "type" => 'string' },
+        'generation_questions' => QUESTIONS_SPEC,
+        'license' => { "type" => "string" },
+        'name' => { "type" => 'string' },
+        'priority' => { "type" => 'integer' },
         'script_template' => { "type" => 'string' },
         'synopsis' => { "type" => 'string' },
-        'description' => { "type" => 'string' },
-        "interactive" => { "type" => "boolean" },
+        'tags' => { "type" => 'array', 'items' => { 'type' => 'string' }},
         'version' => { "type" => 'integer', 'enum' => [0] },
-        'generation_questions' => QUESTIONS_SPEC,
-        'priority' => { "type" => 'integer' },
       }
     })
 
@@ -249,6 +249,10 @@ module FlightJob
 
     def priority
       metadata['priority']
+    end
+
+    def tags
+      metadata['tags'] || []
     end
 
     protected

@@ -4,6 +4,8 @@ license: Creative Commons Attribution-ShareAlike 4.0 International
 script_template: simple.sh
 priority: 100
 version: 0
+tags:
+  - script:type=batch
 synopsis: Submit a single job.
 description: |
   Your job will be allocated a single core on the first available node.
