@@ -258,7 +258,7 @@ session_is_active() {
     local state
     state=$(
         ${flight_ROOT:-/opt/flight}/bin/flight desktop \
-            show "${SESSION_ID}" \
+            show "${SESSION_ID}" 2>/dev/null \
             | grep '^State' \
             | cut -d $'\t' -f 2
     )
@@ -281,6 +281,7 @@ session_await() {
     while session_is_active ; do
         sleep 60
     done
+    echo "Session is no longer running."
 }
 
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
