@@ -28,73 +28,6 @@
 require 'ostruct'
 
 module FlightJob
-  class RenderError < GeneralError; end
-
-  class RenderContext
-    class AnswerDecorator
-      def initialize(question:, answer:)
-        @question = question
-        @answer = answer
-      end
-
-      def answer
-        @answer || @question.default
-      end
-
-      def default
-        @question.default
-      end
-    end
-
-    def initialize(template:, answers:)
-      @template = template
-      @answers = answers
-    end
-
-    # Legacy method which will render the directives/payload into a single file
-    def render
-      [render_directives, render_adapter, render_workload].reject(&:blank?).join("\n")
-    end
-
-    def render_workload
-      ERB.new(File.read(@template.workload_path), nil, '-')
-         .result(binding)
-    end
-
-    def render_adapter
-      # NOTE: The adapter is designed augment the directives,
-      # monolithic templates without directives can not benefit from the adapter
-      return nil unless File.exists? @template.directives_path
-      ERB.new(File.read(Flight.config.adapter_script_path), nil, '-')
-         .result(binding)
-    end
-
-    def render_directives
-      return nil unless File.exists? @template.directives_path
-      ERB.new(File.read(@template.directives_path), nil, '-')
-         .result(binding)
-    end
-
-    def question
-      questions
-    end
-
-    def questions
-      @questions ||= begin
-        questions = @template.generation_questions.reduce({}) do |memo, question|
-          memo.merge({
-            question.id => AnswerDecorator.new(question: question,
-                                               answer: @answers[question.id])
-          })
-        end
-        DefaultsOpenStruct.new(questions) do |h, k|
-          question = Question.new(id: k)
-          h[k] = AnswerDecorator.new(question: question, answer: nil)
-        end
-      end
-    end
-  end
-
   # This object is used to provide nice answer handling for missing questions so that:
   # questions.missing.answer # => nil (Instead of raising NoMethodError)
   #
@@ -119,6 +52,80 @@ module FlightJob
       opts.each do |k, v|
         @table[k.to_sym] = v
       end
+    end
+  end
+
+  class Renderer
+    class AnswerDecorator
+      def initialize(question:, answer:)
+        @question = question
+        @answer = answer
+      end
+
+      def answer
+        @answer || @question.default
+      end
+
+      def default
+        @question.default
+      end
+    end
+
+    class RenderDecorator
+      def initialize(template:, answers:)
+        @template = template
+        @answers = answers
+      end
+
+      def question
+        questions
+      end
+
+      def questions
+        @questions ||= begin
+          questions = @template.generation_questions.reduce({}) do |memo, question|
+            memo.merge({
+              question.id => AnswerDecorator.new(question: question,
+                                                 answer: @answers[question.id])
+            })
+          end
+          DefaultsOpenStruct.new(questions) do |h, k|
+            question = Question.new(id: k)
+            h[k] = AnswerDecorator.new(question: question, answer: nil)
+          end
+        end
+      end
+    end
+
+    def initialize(template:, answers:)
+      @template = template
+      @answers = answers
+    end
+
+    def render
+      [render_directives, render_adapter, render_workload].reject(&:blank?).join("\n")
+    end
+
+    def render_workload
+      ERB.new(File.read(@template.workload_path), nil, '-').result(generate_binding)
+    end
+
+    private
+
+    def render_adapter
+      # NOTE: The adapter is designed augment the directives,
+      # monolithic templates without directives can not benefit from the adapter
+      return nil unless File.exists? @template.directives_path
+      ERB.new(File.read(Flight.config.adapter_script_path), nil, '-').result(generate_binding)
+    end
+
+    def render_directives
+      return nil unless File.exists? @template.directives_path
+      ERB.new(File.read(@template.directives_path), nil, '-').result(generate_binding)
+    end
+
+    def generate_binding
+      RenderDecorator.new(template: @template, answers: @answers).instance_exec { binding }
     end
   end
 end
