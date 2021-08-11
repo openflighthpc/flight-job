@@ -386,30 +386,6 @@ module FlightJob
       end
     end
 
-    def wait_for_desktop_session
-      unless interactive
-        msg = "Can not wait for job '#{id}' desktop session as it is non-interactive"
-        Flight.logger.warn msg
-        $stderr.puts Flight.pastel.yellow(msg)
-        return
-      end
-
-      unless controls_dir
-        msg = "Can not wait for job '#{id}' desktop session as it did not report its controls directory"
-        Flight.logger.warn msg
-        $stderr.puts Flight.pastel.yellow(msg)
-        return
-      end
-
-      status_path = File.join(controls_dir, 'flight-desktop-status')
-      loop do
-        return if File.exists? status_path
-        return if STATE_MAP[state] == :terminal
-        monitor
-        sleep Flight.config.wait_cooldown
-      end
-    end
-
     def desktop_id
       return @desktop_id if defined?(@desktop_id)
 
