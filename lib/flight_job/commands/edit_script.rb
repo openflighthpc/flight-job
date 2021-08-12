@@ -77,28 +77,22 @@ module FlightJob
       # Ensure the script exists up front
       script
 
-      if content = content_flag
-        confirm_prompt
-        File.write script.script_path, content
+      # Update the content of the script directly from --content
+      if opts.content || !$stdout.tty?
+        run_content_update
+
+      # Attempt to update the workload section
+      elsif script.md5
+        run_edit_workload
       else
-        # Open the file
-        EditorHelper.new(script.workload_path, pastel).open
+        run_edit_script
       end
     end
 
-    def content_flag
-      if stdin_flag?(opts.content)
-        cached_stdin
-      elsif opts.content && opts.content[0] == '@'
-        read_file(opts.content[1..])
-      elsif opts.content
-        raise InputError, "Please prefix the file path with an '@': #{pastel.yellow("--content @" + opts.content)}"
-      else
-        nil
-      end
-    end
+    private
 
-    def confirm_prompt
+    def run_content_update
+      content = content_flag
       if opts.force
         return
       elsif $stdout.tty?
@@ -111,6 +105,45 @@ module FlightJob
         ERROR
       else
         raise InputError, "'Please rerun the command with: #{pastel.yellow('--force --content ' + opts.content)}"
+      end
+      File.write script.script_path, content
+    end
+
+    def run_edit_workload
+      if script.valid?(:render)
+        EditorHelper.new(script.workload_path, pastel).open
+        script.rerender_script_from_workload
+      else
+        run_edit_script
+      end
+    end
+
+    def run_edit_script
+      msg <<~WARN
+        It is nolonger possible to edit the workload section of your script directly!
+        Do you wish to edit the entire script file?
+      WARN
+      if opts.force || $stdout.tty? && TTY::Prompt.new.yes? pastel.yellow(msg, default: false)
+        EditorHelper.new(script.script_path, pastel).open
+        # Flag that the script has been edited and the file integrity has been broken
+        # NOTE: *Technically* the user may have opened and closed the file, without editing it
+        #       However they looked at the directives, which is close enough
+        script.unset_md5
+        script.save_metadata
+      else
+        raise InputError, "Cancelled the edit!"
+      end
+    end
+
+    def content_flag
+      if stdin_flag?(opts.content)
+        cached_stdin
+      elsif opts.content && opts.content[0] == '@'
+        read_file(opts.content[1..])
+      elsif opts.content
+        raise InputError, "Please prefix the file path with an '@': #{pastel.yellow("--content @" + opts.content)}"
+      else
+        nil
       end
     end
 

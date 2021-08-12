@@ -41,7 +41,8 @@ module FlightJob
         'created_at' => { 'type' => 'string', 'format' => 'date-time' },
         'template_id' => { 'type' => 'string' },
         'script_name' => { 'type' => 'string' },
-        'answers' => { 'type' => 'object' }
+        'answers' => { 'type' => 'object' },
+        'md5' => { 'type' => ['string', 'null'] }
       }
     })
 
@@ -124,6 +125,22 @@ module FlightJob
     end
 
     validate on: :render do
+      # Ensure the script has not been externally modified, before attempting a re-render
+      #
+      # NOTE: As running the digest can be time consuming, commands which trigger a
+      #       re-render can fail fast if md5 is not set. The full check should only be
+      #       attempted if it can be reasonable assumed to pass.
+      #
+      #       On failure, the calling command should remove the 'md5' sum from the metadata.
+      #       This is to allow future commands to fail fast.
+      md5 = metadata['md5']
+      script = File.exists?(script_path) ? File.read(script) : nil
+      if script && !md5
+        @errors.add(:script_path, :md5, 'can not confirm the integrity of the script')
+      elsif script && md5 && md5 != Digest::MD5.hexdigest(script)
+        @errors.add(:script_path, :md5, 'has been unexpectedly modified')
+      end
+
       # Ensures the template is valid
       template = load_template
       if template.nil?
@@ -242,7 +259,9 @@ module FlightJob
 
     def render_and_save
       # Ensure the renderer is defined
-      renderer
+      workload = renderer.render_workload
+      script = renderer.render(workload: workload)
+      metadata['md5'] = Digest::MD5.hexdigest(script)
 
       # Ensures it claims the ID
       # NOTE: As this is done after validation, it may trigger a race condition
@@ -258,13 +277,26 @@ module FlightJob
       # Writes the data to disk
       save_metadata
       save_notes
-      workload = renderer.render_workload
       File.write(workload_path, workload)
-      File.write(script_path, renderer.render(workload: workload))
+      File.write(script_path, script)
 
       # Makes the script executable and metadata read/write
       FileUtils.chmod(0700, workload_path)
       FileUtils.chmod(0600, metadata_path)
+    end
+
+    def rerender_script_from_workload
+      # Re-render the script
+      script = renderer.render(workload: File.read(workload_path))
+      metadata['md5'] = Digest::MD5.hexdigest(script)
+
+      # The following is order dependent:
+      # 1. Remove the old script_path to prevent a conflict with the new md5
+      # 2. Save the new md5 to disk
+      # 3. Save the new script to match the md5
+      FileUtils.rm_f script_path
+      save_metadata
+      File.write(script_path, script)
     end
 
     def save_metadata
@@ -314,6 +346,14 @@ module FlightJob
       @renderer ||= FlightJob::Renderer.new(
         template: load_template, answers: answers
       )
+    end
+
+    def md5?
+      metadata['md5'] ? true : false
+    end
+
+    def unset_md5
+      metadata['md5'] = nil
     end
 
     protected
