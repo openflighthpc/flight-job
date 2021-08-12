@@ -38,9 +38,8 @@ module FlightJob
     end
 
     def file(name)
-      cf = ControlsFile.new(self, name)
-      if cf.exists?
-        cf
+      if exists?
+        ControlsFile.new(self, name)
       else
         NullControlsFile.new(self, name)
       end
