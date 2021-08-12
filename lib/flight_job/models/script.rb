@@ -73,7 +73,7 @@ module FlightJob
       next if validation_context == :id_check
 
       unless (errors = SCHEMA.validate(metadata).to_a).empty?
-        @errors.add(:metadata, 'is not valid')
+        errors.add(:metadata, 'is not valid')
         path_tag = File.exists?(metadata_path) ? metadata_path : id
         FlightJob.logger.debug("Invalid metadata: #{path_tag}\n") do
           JSON.pretty_generate(errors)
@@ -84,13 +84,13 @@ module FlightJob
     validate on: :load do
       # Ensures the metadata file exists
       unless File.exists? metadata_path
-        @errors.add(:metadata_path, 'does not exist')
+        errors.add(:metadata_path, 'does not exist')
         next
       end
 
       # Ensures the script file exists
       unless File.exists? script_path
-        @errors.add(:script_path, 'does not exist')
+        errors.add(:script_path, 'does not exist')
       end
     end
 
@@ -98,7 +98,7 @@ module FlightJob
       # Ensure the ID has not been taken
       # NOTE: This negates the need to check if metadata_path exists
       if Dir.exists? File.expand_path(id, FlightJob.config.scripts_dir)
-        @errors.add(:id, :already_exists, message: 'already exists')
+        errors.add(:id, :already_exists, message: 'already exists')
       end
     end
 
@@ -106,9 +106,9 @@ module FlightJob
       # Ensures the template is valid
       template = load_template
       if template.nil?
-        @errors.add(:template, 'could not be resolved')
+        errors.add(:template, 'could not be resolved')
       elsif ! template.valid?(:verbose)
-        @errors.add(:template, 'is not valid')
+        errors.add(:template, 'is not valid')
         FlightJob.logger.debug("Template errors: #{template_id}\n") do
           template.errors.full_messages.join("\n")
         end
@@ -178,7 +178,7 @@ module FlightJob
       elsif id && script_name
         @script_path = File.join(FlightJob.config.scripts_dir, id, script_name)
       else
-        @errors.add(:script_path, 'cannot be determined')
+        errors.add(:script_path, 'cannot be determined')
         @script_path = false
       end
     end

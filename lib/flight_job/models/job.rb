@@ -110,7 +110,7 @@ module FlightJob
         if job.valid?(:load)
           job
         else
-          FlightJob.logger.error("Failed to load missing/invalid script: #{id}")
+          FlightJob.logger.error("Failed to load missing/invalid job: #{id}")
           FlightJob.logger.debug(job.errors)
           nil
         end
