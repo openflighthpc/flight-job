@@ -576,10 +576,7 @@ module FlightJob
       # NOTE: Should the PATH be configurable instead of inherited from the environment?
       # This could lead to differences when executed via the CLI or the webapp
       env = ENV.slice('PATH', 'HOME', 'USER', 'LOGNAME').tap do |h|
-        # h['FLIGHT_JOB_ID'] = id
-        # h['FLIGHT_JOB_DIR'] = job_dir
         h['CONTROLS_DIR'] = controls_dir.path
-        # h['FLIGHT_JOB_CONTROLS_DIR'] = File.join(job_dir, 'controls')
       end
       cmd_stdout, cmd_stderr, status = Open3.capture3(env, *cmd, unsetenv_others: true, close_others: true)
 

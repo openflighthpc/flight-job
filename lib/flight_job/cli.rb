@@ -184,7 +184,6 @@ module FlightJob
 
     create_command 'info-job', 'JOB_ID' do |c|
       c.summary = 'Display details about a submitted job'
-      c.slop.bool '--wait-desktop', "Hang until the desktop session has reported back"
     end
 
     create_command 'view-job-results', 'JOB_ID FILENAME' do |c|

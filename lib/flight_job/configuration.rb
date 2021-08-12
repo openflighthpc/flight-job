@@ -56,9 +56,6 @@ module FlightJob
     attribute :submission_period, default: 3600
     validates :submission_period, numericality: { only_integers: true }
 
-    attribute :wait_cooldown, default: 5
-    validates :wait_cooldown, numericality: { only_integers: true }
-
     attribute :minimum_terminal_width, default: 80
     validates :minimum_terminal_width, numericality: { only_integers: true }
 

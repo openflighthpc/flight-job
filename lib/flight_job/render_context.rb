@@ -25,9 +25,6 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-# Ensure time is available for the templates
-require 'time'
-
 module FlightJob
   class RenderError < GeneralError; end
 
@@ -42,63 +39,6 @@ module FlightJob
         @answer || @question.default
       end
 
-      # Converts slurm times into seconds. This allows questions to use Slurm's
-      # time specification and convert it into something a different standard.
-      #
-      # Supports:
-      # * MM
-      # * MM:SS
-      # * HH:MM:SS
-      # * DD-HH
-      # * DD-HH:MM
-      # * DD-HH:MM:SS
-      #
-      # XXX: This time format is needlessly verbose! In practice, users will
-      # not be specifying times down to the second.
-      #
-      # It also means the \d\d:\d\d is sometimes MM:SS instead of HH:MM. Both
-      # versions are used in question's which is unwieldy to use. Instead the
-      # time format should *probably* be simplified to:
-      # * MM
-      # * HH:MM
-      # * DD-HH:MM
-      # * DD-HH:MM:SS (maybe?)
-      #
-      # This does break the standard with slurm, however flight-job is intended
-      # to work with other schedulers. It should be a fairly easy to document
-      # the slimmed down standard.
-      #
-      # This does mean that each scheduler will need to define a helper method
-      # that can convert the time to the appropriate format, but this should
-      # be relatively straight forward.
-      def answer_in_seconds
-        case answer
-        when Integer
-          answer
-        when /\A\d+\Z/
-          answer.to_i * 60
-        when /\A\d+:\d+\Z/
-          m,s = answer.split(':')
-          m.to_i * 60 + s.to_i
-        when /\A\d+:\d+:\d+\Z/
-          h,m,s = answer.split(':')
-          h.to_i * 3600 + m.to_i * 60 + s.to_i
-        when /\A\d+-\d+\Z/
-          d,h = answer.split('-')
-          d.to_i * 86400 + h.to_i * 3600
-        when /\A\d+-\d+:\d+\Z/
-          d,r = answer.split('-')
-          h,m = r.split(":")
-          d.to_i * 86400 + h.to_i * 3600 + m.to_i * 60
-        when /\A\d+-\d+:\d+:\d+\Z/
-          d,r = answer.split('-')
-          h,m,s = r.split(":")
-          d.to_i * 86400 + h.to_i * 3600 + m.to_i * 60 + s.to_i
-        else
-          raise RenderError, "Failed to convert time: #{answer}"
-        end
-      end
-
       def default
         @question.default
       end
@@ -107,19 +47,6 @@ module FlightJob
     def initialize(template:, answers:)
       @template = template
       @answers = answers
-    end
-
-    # NOTE: The following is unlikely to be required by other schedulers
-    # apart from slurm. Consider extracting to a module that is dynamically
-    # loaded into the name-space
-    def convert_to_slurm_time(remaining)
-      day =       remaining % 86400
-      remaining = remaining / 86400
-      hours =     remaining % 3600
-      remaining = remaining / 3600
-      minutes =   remaining % 60
-      seconds =   remaining / 60
-      "#{day}-#{hours}:#{minutes}:#{seconds}"
     end
 
     def render

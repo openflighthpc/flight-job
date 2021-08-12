@@ -46,7 +46,7 @@ read -r -d '' template <<'TEMPLATE' || true
   id: ($id),
   stdout: ($stdout),
   stderr: ($stderr),
-  results_dir: ($results_dir),
+  results_dir: ($results_dir)
 }
 TEMPLATE
 
@@ -81,7 +81,7 @@ fi
 stdout=$(echo "$control" | grep -E "^\s*StdOut=" | sed "s/^\s*StdOut=//g")
 stderr=$(echo "$control" | grep -E "^\s*StdErr=" | sed "s/^\s*StdErr=//g")
 
-# Determine the results and metadata directories
+# Determine the results directory
 working=$(echo "$control" | grep -E "^\s*WorkDir=" | sed "s/^\s*WorkDir=//g")
 name=$(echo "$control" | grep -E "^JobId=\w*\s*JobName=" | sed "s/^JobId=\w*\s*JobName=//g")
 results_dir="${working}/${name}-outputs/$id"
