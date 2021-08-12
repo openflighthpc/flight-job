@@ -46,24 +46,35 @@ module FlightJob
     SCHEMA = JSONSchemer.schema({
       "type" => "object",
       "additionalProperties" => false,
-      "required" => ["submit_status", "submit_stdout", "submit_stderr", "script_id", "created_at", "state"],
+      "required" => ["created_at", "script_id", "state", "submit_status", "submit_stdout", "submit_stderr"],
       "properties" => {
+        # ----------------------------------------------------------------------------
+        # Required
+        # ----------------------------------------------------------------------------
+        "created_at" => { "type" => "string", "format" => "date-time" },
+        "script_id" => { "type" => "string" },
+        "state" => { "type" => "string", "enum" => STATES },
         "submit_status" => { "type" => "integer", "minimum" => 0, "maximum" => 255 },
         "submit_stdout" => { "type" => "string" },
         "submit_stderr" => { "type" => "string" },
-        "script_id" => { "type" => "string" },
-        "created_at" => { "type" => "string", "format" => "date-time" },
-        "state" => { "type" => "string", "enum" => STATES },
-        "scheduler_state" => { "type" => "string" },
-        # NOTE: In practice this will normally be an integer, however this is not
-        # guaranteed. As such it must be stored as a string.
+        # ----------------------------------------------------------------------------
+        # Psuedo - Required
+        #
+        # These should *probably* become required on the next major release of the metadata
+        # ----------------------------------------------------------------------------
+        "rendered_path" => { "type" => "string" },
+        "version" => { "const": 0 },
+        # ----------------------------------------------------------------------------
+        # Optional
+        # ----------------------------------------------------------------------------
+        "end_time" => { "type" => ["string", "null"], "format" => "date-time" },
         "scheduler_id" => { "type" => ["string", "null"] },
+        "scheduler_state" => { "type" => "string" },
+        "start_time" => { "type" => ["string", "null"], "format" => "date-time" },
         "stdout_path" => { "type" => ["string", "null"] },
         "stderr_path" => { "type" => ["string", "null"] },
         "results_dir" => { "type" => ["string", "null"] },
         "reason" => { "type" => ["string", "null"] },
-        "start_time" => { "type" => ["string", "null"], "format" => "date-time" },
-        "end_time" => { "type" => ["string", "null"], "format" => "date-time" },
       }
     })
 
@@ -192,14 +203,14 @@ module FlightJob
       elsif File.exists? initial_metadata_path
         YAML.load File.read(initial_metadata_path)
       else
-        { "created_at" => DateTime.now.rfc3339 }
+        { "version" => 0, "created_at" => DateTime.now.rfc3339 }
       end
     end
 
     # NOTE: This is a subset of the full metadata file which is stored in the active file
     # It stores rudimentary information about the job if the metadata file is never saved
     def active_metadata
-      metadata.is_a?(Hash) ? metadata.slice('created_at', 'script_id') : {}
+      metadata.is_a?(Hash) ? metadata.slice('version', 'created_at', 'script_id') : {}
     end
 
     # Checks it the job has got stuck during the submission
@@ -338,6 +349,7 @@ module FlightJob
     end
 
     def submit
+      # Validate and load the script
       unless valid?(:submit)
         FlightJob.config.logger("The script is not in a valid submission state: #{id}\n") do
           errors.full_messages
@@ -346,17 +358,18 @@ module FlightJob
       end
       script = load_script
 
-      FlightJob.logger.info("Submitting Job: #{id}")
-      cmd = [
-        FlightJob.config.submit_script_path,
-        script.script_path
-      ]
-
       # Generate the initial metadata path file
       FileUtils.mkdir_p File.dirname(initial_metadata_path)
       File.write initial_metadata_path, YAML.dump(active_metadata)
 
+      # Duplicate the script into the job's directory
+      # NOTE: Eventually this should probably be named after the job_name question
+      metadata["rendered_path"] = File.join(FlightJob.config.jobs_dir, id, script.script_name)
+      FileUtils.cp script.script_path, metadata["rendered_path"]
+
       # Run the submission command
+      FlightJob.logger.info("Submitting Job: #{id}")
+      cmd = [FlightJob.config.submit_script_path, metadata["rendered_path"]]
       execute_command(*cmd) do |status, out, err|
         # set the status/stdout/stderr
         self.submit_status = status.exitstatus

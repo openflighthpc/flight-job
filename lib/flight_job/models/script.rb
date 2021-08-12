@@ -38,11 +38,20 @@ module FlightJob
       "additionalProperties" => false,
       "required" => ['created_at', 'script_name'],
       "properties" => {
-        'answers' => { 'type' => 'object' },
+        # ----------------------------------------------------------------------------
+        # Required
+        # ----------------------------------------------------------------------------
         'created_at' => { 'type' => 'string', 'format' => 'date-time' },
         'script_name' => { 'type' => 'string' },
+        # ----------------------------------------------------------------------------
+        # Psuedo - Required
+        #
+        # These should *probably* become required on the next major release of the metadata
+        # ----------------------------------------------------------------------------
+        'answers' => { 'type' => 'object' },
         'tags' => { 'type' => 'array', 'items' => { 'type' => 'string' }},
         'template_id' => { 'type' => 'string' },
+        'version' => { 'const' => 0 },
       }
     })
 
@@ -319,7 +328,7 @@ module FlightJob
       @metadata ||= if File.exists?(metadata_path)
                       YAML.load File.read(metadata_path)
                     else
-                      { 'created_at' => DateTime.now.rfc3339 }
+                      { 'version' => 0, 'created_at' => DateTime.now.rfc3339 }
                     end
     end
   end
