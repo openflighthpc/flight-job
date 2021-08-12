@@ -357,9 +357,7 @@ module FlightJob
         "estimated_start_time" => estimated_start_time,
         "actual_end_time" => actual_end_time,
         "estimated_end_time" => estimated_end_time,
-        "controls" => {
-          "flight_desktop_id" => desktop_id,
-        },
+        "controls" => controls_dir.serializable_hash,
       }.merge(metadata).tap do |hash|
         # NOTE: The API uses the 'size' attributes as a proxy check to exists/readability
         #       as well as getting the size. Non-readable stdout/stderr would be
@@ -385,9 +383,8 @@ module FlightJob
       end
     end
 
-    def desktop_id
-      return @desktop_id if defined?(@desktop_id)
-      @desktop_id = controls_dir.file('flight-desktop-id').read&.strip
+    def controls_file(name)
+      controls_dir.file(name)
     end
 
     # Takes the scheduler's state and converts it to an internal flight-job

@@ -125,7 +125,7 @@ module FlightJob
     end
 
     register_attribute(header: "Desktop ID:") do |job|
-      job.desktop_id || nil
+      job.controls_file('flight-desktop-id').read
     end
 
     def self.build_output(**opts)
