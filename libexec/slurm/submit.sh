@@ -47,7 +47,6 @@ read -r -d '' template <<'TEMPLATE' || true
   stdout: ($stdout),
   stderr: ($stderr),
   results_dir: ($results_dir),
-  controls_dir: ($controls_dir)
 }
 TEMPLATE
 
@@ -86,12 +85,10 @@ stderr=$(echo "$control" | grep -E "^\s*StdErr=" | sed "s/^\s*StdErr=//g")
 working=$(echo "$control" | grep -E "^\s*WorkDir=" | sed "s/^\s*WorkDir=//g")
 name=$(echo "$control" | grep -E "^JobId=\w*\s*JobName=" | sed "s/^JobId=\w*\s*JobName=//g")
 results_dir="${working}/${name}-outputs/$id"
-controls_dir="${working}/${name}-controls/$id"
 
 # Render and return the JSON payload
 echo '{}' | jq  --arg id "$id" \
                 --arg stdout "$stdout" \
                 --arg stderr "$stderr" \
                 --arg results_dir "$results_dir" \
-                --arg controls_dir "$controls_dir" \
                 "$template" | tr -d "\n"

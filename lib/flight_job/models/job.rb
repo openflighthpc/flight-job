@@ -61,7 +61,6 @@ module FlightJob
         "stdout_path" => { "type" => ["string", "null"] },
         "stderr_path" => { "type" => ["string", "null"] },
         "results_dir" => { "type" => ["string", "null"] },
-        "controls_dir" => { "type" => ["string", "null"] },
         "reason" => { "type" => ["string", "null"] },
         "start_time" => { "type" => ["string", "null"], "format" => "date-time" },
         "end_time" => { "type" => ["string", "null"], "format" => "date-time" },
@@ -81,13 +80,12 @@ module FlightJob
     SUBMIT_RESPONSE_SCHEMA = JSONSchemer.schema({
       "type" => "object",
       "additionalProperties" => false,
-      "required" => ["id", "stdout", "stderr", "results_dir", "controls_dir"],
+      "required" => ["id", "stdout", "stderr", "results_dir"],
       "properties" => {
         "id" => { "type" => "string" },
         "stdout" => { "type" => "string" },
         "stderr" => { "type" => "string" },
         "results_dir" => { "type" => "string" },
-        "controls_dir" => { "type" => "string" }
       }
     })
 
@@ -193,7 +191,7 @@ module FlightJob
     end
 
     def metadata_path
-      @metadata_path ||= File.join(FlightJob.config.jobs_dir, id, 'metadata.yaml')
+      @metadata_path ||= File.join(job_dir, 'metadata.yaml')
     end
 
     # This denotes a job that has been or will be given to the scheduler. The job is considered
@@ -206,7 +204,7 @@ module FlightJob
     # This allows jobs to be quasi-tracked even if a catastrophic failure occurs during the
     # submission that prevents the metadata file from being generated.
     def active_path
-      @active_path ||= File.join(FlightJob.config.jobs_dir, id, 'active.yaml')
+      @active_path ||= File.join(job_dir, 'active.yaml')
     end
 
     def metadata
@@ -288,7 +286,7 @@ module FlightJob
     [
       "submit_status", "submit_stdout", "submit_stderr", "script_id", "state",
       "scheduler_id", "scheduler_state", "stdout_path", "stderr_path", "reason",
-      "start_time", "end_time", "results_dir", 'controls_dir'
+      "start_time", "end_time", "results_dir"
     ].each do |method|
       define_method(method) { metadata[method] }
       define_method("#{method}=") { |value| metadata[method] = value }
@@ -359,7 +357,9 @@ module FlightJob
         "estimated_start_time" => estimated_start_time,
         "actual_end_time" => actual_end_time,
         "estimated_end_time" => estimated_end_time,
-        "flight_desktop_id" => desktop_id,
+        "controls" => {
+          "flight_desktop_id" => desktop_id,
+        },
       }.merge(metadata).tap do |hash|
         # NOTE: The API uses the 'size' attributes as a proxy check to exists/readability
         #       as well as getting the size. Non-readable stdout/stderr would be
@@ -387,16 +387,7 @@ module FlightJob
 
     def desktop_id
       return @desktop_id if defined?(@desktop_id)
-
-      return @desktop_id = nil unless controls_dir
-
-      path = File.join(controls_dir, 'flight-desktop-stdout')
-      return @desktop_id = nil unless File.exists? path
-
-      match = /^Identity\s+(?<id>.*)$/.match(File.read(path).force_encoding('UTF-8'))
-      return @desktop_id = nil unless match
-
-      @desktop_id = match.named_captures['id']
+      @desktop_id = controls_dir.file('flight-desktop-id').read&.strip
     end
 
     # Takes the scheduler's state and converts it to an internal flight-job
@@ -451,7 +442,6 @@ module FlightJob
           self.stdout_path = data['stdout']
           self.stderr_path = data['stderr']
           self.results_dir = data['results_dir']
-          self.controls_dir = data['controls_dir']
         end
 
         # Persist the updated version of the metadata
@@ -507,6 +497,14 @@ module FlightJob
     end
 
     private
+
+    def controls_dir
+      @controls_dir ||= ControlsDir.new(File.join(job_dir, 'controls'))
+    end
+
+    def job_dir
+      @job_dir ||= File.join(FlightJob.config.jobs_dir, id)
+    end
 
     def process_times(est_start, start, est_end, end_time)
       # The monitor script does not always distinguish between actual/estimated
@@ -578,7 +576,10 @@ module FlightJob
       # NOTE: Should the PATH be configurable instead of inherited from the environment?
       # This could lead to differences when executed via the CLI or the webapp
       env = ENV.slice('PATH', 'HOME', 'USER', 'LOGNAME').tap do |h|
-        h['FLIGHT_JOB_ID'] = id
+        # h['FLIGHT_JOB_ID'] = id
+        # h['FLIGHT_JOB_DIR'] = job_dir
+        h['CONTROLS_DIR'] = controls_dir.path
+        # h['FLIGHT_JOB_CONTROLS_DIR'] = File.join(job_dir, 'controls')
       end
       cmd_stdout, cmd_stderr, status = Open3.capture3(env, *cmd, unsetenv_others: true, close_others: true)
 

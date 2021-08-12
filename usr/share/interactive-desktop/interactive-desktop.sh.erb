@@ -188,7 +188,7 @@
 # SLURM_NTASKS, are made available by the scheduler.
 
 #============================
-#  Results/Metadata directory
+#  Results / Metadata directory
 #----------------------------
 # By convention, job's submitted with `flight-job` are expected to save their
 # results to RESULTS_DIR.  `flight-job` provides easy access to any files
@@ -203,19 +203,18 @@
 #
 # WARNING: The script must not change directory prior to this line.
 RESULTS_DIR="$(pwd)/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
-CONTROLS_DIR="$(pwd)/${SLURM_JOB_NAME}-controls/$SLURM_JOB_ID"
+CONTROLS_DIR="${CONTROLS_DIR:-$RESULTS_DIR}"
+FLIGHT_SESSION_ID_PATH="${CONTROLS_DIR}"/flight-desktop-id
+FLIGHT_SESSION_STATUS_PATH="${CONTROLS_DIR}"/flight-desktop-status
+SESSION_OUTPUT="${RESULTS_DIR}/session.output"
 mkdir -p "$CONTROLS_DIR"
 mkdir -p "$RESULTS_DIR"
-FLIGHT_DESKTOP_STDOUT="$CONTROLS_DIR"/flight-desktop-stdout
-FLIGHT_DESKTOP_STDERR="$CONTROLS_DIR"/flight-desktop-stderr
-FLIGHT_DESKTOP_STATUS="$CONTROLS_DIR"/flight-desktop-status
-SESSION_OUTPUT="${RESULTS_DIR}/session.output"
 
 #=========================
 #  Session orchestration
 #-------------------------
-# Functions used to orchestrate the creation of your interactive with Flight
-# Desktop.
+# Functions used to orchestrate the creation of your interactive session with
+# Flight Desktop.
 create_session_script() {
     SESSION_SCRIPT=$( mktemp --tmpdir session-script.XXXXXX.sh )
     echo "Creating session script ${SESSION_SCRIPT}"
@@ -238,20 +237,10 @@ session_start() {
     ${flight_ROOT:-/opt/flight}/bin/flight desktop \
         start \
         --script ${SESSION_SCRIPT} \
-        > >( tee "$FLIGHT_DESKTOP_STDOUT" ) \
-        2> >( tee "$FLIGHT_DESKTOP_STDERR" >&2 )
+        | tee >( grep '^Identity' | cut -f2 > "${FLIGHT_SESSION_ID_PATH}" )
 
     SESSION_STARTED=$?
-    echo ${SESSION_STARTED} >"$FLIGHT_DESKTOP_STATUS"
-}
-
-get_session_id() {
-    ${flight_ROOT:-/opt/flight}/bin/flight job \
-        info-job \
-        --wait-desktop \
-        ${FLIGHT_JOB_ID} \
-        | grep '^Desktop ID' \
-        | cut -d $'\t' -f 2
+    echo ${SESSION_STARTED} > "$FLIGHT_SESSION_STATUS_PATH"
 }
 
 session_is_active() {
@@ -270,8 +259,9 @@ session_await() {
         echo "Session failed to start. Aborting." >&2
         exit 1
     fi
-    echo "Waiting for session to start..." 
-    SESSION_ID=$(get_session_id)
+    SESSION_ID=$(cat "${FLIGHT_SESSION_ID_PATH}")
+    SESSION_ID=${SESSION_ID##[[:space:]]}
+    SESSION_ID=${SESSION_ID%%[[:space:]]}
     if [ "${SESSION_ID}" == "" ] ; then
         echo "Unable to determine session ID. Aborting." >&2
         exit 1
