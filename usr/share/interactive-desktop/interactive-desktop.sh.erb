@@ -174,7 +174,7 @@
 #
 # WARNING: The script must not change directory prior to this line.
 RESULTS_DIR="$(pwd)/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
-CONTROLS_DIR="${CONTROLS_DIR:-$RESULTS_DIR}"
+CONTROLS_DIR="${CONTROLS_DIR:-"$(pwd)/${SLURM_JOB_NAME}-controls/$SLURM_JOB_ID"}"
 FLIGHT_SESSION_ID_PATH="${CONTROLS_DIR}"/flight-desktop-id
 FLIGHT_SESSION_STATUS_PATH="${CONTROLS_DIR}"/flight-desktop-status
 SESSION_OUTPUT="${RESULTS_DIR}/session.output"
