@@ -205,10 +205,13 @@ session_start() {
         exit 1
     fi
     echo "Starting session..."
-    ${flight_ROOT:-/opt/flight}/bin/flight desktop \
-        start \
-        --script ${SESSION_SCRIPT} \
-        | tee >( grep '^Identity' | cut -f2 > "${FLIGHT_SESSION_ID_PATH}" )
+    (
+        set -o pipefail
+        ${flight_ROOT:-/opt/flight}/bin/flight desktop \
+            start \
+            --script ${SESSION_SCRIPT} \
+            | tee >( grep '^Identity' | cut -f2 > "${FLIGHT_SESSION_ID_PATH}" )
+    )
 
     SESSION_STARTED=$?
     echo ${SESSION_STARTED} > "$FLIGHT_SESSION_STATUS_PATH"
