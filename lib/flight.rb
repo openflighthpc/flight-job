@@ -35,9 +35,11 @@ module Flight
   class << self
     def config
       return @config if @config
-      @config = FlightJob::Configuration.load
-      @config.__logs__.log_with(logger)
-      @config
+      @config = FlightJob::Configuration.build
+      @config.tap do |c|
+        c.__logs__.log_with(logger)
+        raise FlightJob::ConfigError, c.rich_error_message unless c.valid?
+      end
     end
     alias_method :load_configuration, :config
 
@@ -76,7 +78,7 @@ module Flight
         if level.nil?
           # Log bad log levels
           log.level = Logger::ERROR
-          log.error "Unrecognized log level: #{log_level}"
+          log.error "Unrecognized log level: #{config.log_level}"
         else
           # Sets good log levels
           log.level = level
