@@ -32,25 +32,6 @@ require 'active_model'
 require 'flight_configuration'
 require_relative 'errors'
 
-class FlightConfiguration::SourceStruct
-  def value
-    if type == :default && @default_set.nil?
-      @default_set = true
-      default = attribute[:default]
-      self.value = if default.respond_to?(:call) && default.arity == 0
-        default.call
-      elsif default.respond_to?(:call)
-        default.call(config)
-      else
-        default
-      end
-    else
-      # Structs don't have a super method
-      values[3]
-    end
-  end
-end
-
 module FlightJob
   class ConfigError < InternalError; end
 
@@ -58,12 +39,6 @@ module FlightJob
     extend FlightConfiguration::DSL
     include FlightConfiguration::RichActiveValidationErrorMessage
     include ActiveModel::Validations
-
-    # Disable the 'defaults' hash. This prevents them being resolved up-front
-    # Instead, this is done by FlightConfiguration::SourceStruct patch
-    def self.defaults
-      @attributes.each { |k, _| [k, nil] }.to_h
-    end
 
     application_name 'job'
 
