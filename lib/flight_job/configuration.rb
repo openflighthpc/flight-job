@@ -33,9 +33,11 @@ require 'flight_configuration'
 require_relative 'errors'
 
 module FlightJob
+  class ConfigError < InternalError; end
+
   class Configuration
     extend FlightConfiguration::DSL
-
+    include FlightConfiguration::RichActiveValidationErrorMessage
     include ActiveModel::Validations
 
     application_name 'job'
