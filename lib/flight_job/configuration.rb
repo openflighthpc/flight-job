@@ -42,18 +42,35 @@ module FlightJob
 
     application_name 'job'
 
-    attribute :templates_dir, default: 'usr/share',
+    attribute :templates_dir, default: 'usr/share/job/templates',
               transform: relative_to(root_path)
+    validates :templates_dir, presence: true
+
     attribute :scripts_dir, default: '~/.local/share/flight/job/scripts',
               transform: relative_to(root_path)
+    validates :scripts_dir, presence: true
+
     attribute :jobs_dir, default: '~/.local/share/flight/job/jobs',
               transform: relative_to(root_path)
-    attribute :state_map_path, default: 'etc/state-maps/slurm.yaml',
+    validates :jobs_dir, presence: true
+
+    attribute :scheduler, default: 'slurm'
+    validates :scheduler, presence: true
+
+    attribute :state_map_path,
+              default: ->(config) { "etc/job/state-maps/#{config.scheduler}.yaml" },
               transform: relative_to(root_path)
-    attribute :submit_script_path, default: 'libexec/slurm/submit.sh',
+    validates :state_map_path, presence: true
+
+    attribute :submit_script_path,
+              default: ->(config) { File.join('libexec/job', config.scheduler, 'submit.sh') },
               transform: relative_to(root_path)
-    attribute :monitor_script_path, default: 'libexec/slurm/monitor.sh',
+    validates :submit_script_path, presence: true
+
+    attribute :monitor_script_path,
+              default: ->(config) { File.join('libexec/job', config.scheduler, 'monitor.sh') },
               transform: relative_to(root_path)
+    validates :monitor_script_path, presence: true
 
     attribute :submission_period, default: 3600
     validates :submission_period, numericality: { only_integers: true }
@@ -61,8 +78,9 @@ module FlightJob
     attribute :minimum_terminal_width, default: 80
     validates :minimum_terminal_width, numericality: { only_integers: true }
 
-    attribute :check_cron, default: 'libexec/check-cron.sh',
+    attribute :check_cron, default: 'libexec/job/check-cron.sh',
               transform: relative_to(root_path)
+    validates :check_cron, presence: true
 
     attribute :max_id_length, default: 16
     validates :max_id_length, numericality: { only_integers: true }
@@ -71,6 +89,7 @@ module FlightJob
     validates :max_stdin_size, numericality: { only_integers: true }
 
     attribute :includes, default: '', transform: ->(v) { v.to_s.split(',') }
+    validates :includes, presence: true, allow_blank: true
 
     attribute :log_path, required: false,
               default: '~/.cache/flight/log/share/job.log',
@@ -89,5 +108,12 @@ module FlightJob
       within: %w(fatal error warn info debug disabled),
       message: 'must be one of fatal, error, warn, info, debug or disabled'
     }
+
+    # NOTE: The directives_name doesn't need to be configurable (currently?)
+    #       However the config is required to generate it, so it is best
+    #       located here.
+    def directives_name
+      "directives.#{scheduler}.erb"
+    end
   end
 end

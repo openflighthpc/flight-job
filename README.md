@@ -8,9 +8,14 @@ Requires a modern-ish version of ruby circa `2.7`
 
 ## Configuration
 
-[See the reference config](etc/config.reference)
+For full details, [please see the reference config](etc/job.yaml).
 
-By default the job templates need to be stored in: `var/templates`
+The github repo is preconfigured to run the application in development mode. This will cause the `flight_ROOT` environment variable to be ignored. The production behaviour can be achieved with:
+
+```
+export flight_ENVIRONMENT=production
+export flight_ROOT=...
+```
 
 ## Operation
 
