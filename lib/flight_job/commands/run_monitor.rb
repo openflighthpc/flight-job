@@ -29,13 +29,8 @@ module FlightJob
   module Commands
     class RunMonitor < Command
       def run
-        Job.load_active.each do |job|
-          if job.valid?(:monitor)
-            job.monitor
-          else
-            job.transition_inactive
-          end
-        end
+        Job.transition_inactive
+        Job.load_all
       end
     end
   end
