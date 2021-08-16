@@ -297,10 +297,10 @@ module FlightJob
         "path" => script_path,
         "tags" => tags,
       }.merge(metadata).tap do |hash|
-        if opts.fetch(:include, []).include? 'template'
+        if Flight.config.includes.include? 'template'
           hash['template'] = load_template
         end
-        if opts.fetch(:include, []).include? 'jobs'
+        if Flight.config.includes.include? 'jobs'
           # NOTE: Consider using a file registry instead
           hash['jobs'] = Job.load_all.select { |s| s.script_id == id }
         end

@@ -225,7 +225,7 @@ module FlightJob
         'id' => id,
         'path' => template_path,
       }.merge(metadata).tap do |hash|
-        if opts.fetch(:include, []).include? 'scripts'
+        if Flight.config.includes.include? 'scripts'
           # NOTE: Consider using a file registry instead
           hash['scripts'] = Script.load_all.select { |s| s.template_id == id }
         end

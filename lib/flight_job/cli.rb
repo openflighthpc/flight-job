@@ -74,8 +74,6 @@ module FlightJob
     global_slop.bool '--pretty', 'Display a human friendly output, when supported'
     global_slop.bool '--ascii', 'Display a simplified version of the output, when supported'
     global_slop.bool '--json', 'Display a JSON version of the output, when supported'
-    global_slop.array '--include', 'Include the specified related resources in the JSON output',
-                      delimiter: ','
 
     create_command 'list-templates' do |c|
       c.summary = 'List available templates'

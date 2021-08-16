@@ -365,7 +365,7 @@ module FlightJob
         hash["stdout_size"] = File.size(stdout_path) if stdout_readable?
         hash["stderr_size"] = File.size(stderr_path) if stderr_readable?
 
-        if opts.fetch(:include, []).include? 'script'
+        if Flight.config.includes.include? 'script'
           hash['script'] = load_script
         end
 
