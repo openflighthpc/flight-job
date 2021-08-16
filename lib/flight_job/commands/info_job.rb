@@ -32,6 +32,8 @@ module FlightJob
         puts render_output(Outputs::InfoJob, job)
       end
 
+      private
+
       def job
         @job ||= load_job(args.first)
       end

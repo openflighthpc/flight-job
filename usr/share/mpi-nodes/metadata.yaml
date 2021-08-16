@@ -4,6 +4,8 @@ license: Creative Commons Attribution-ShareAlike 4.0 International
 script_template: multinode.sh
 priority: 400
 version: 0
+tags:
+  - script:type=batch
 synopsis: Submit a single job that spans multiple nodes where you want exclusive use of each node allocated. 
 description: |
   This may be because you intend to spawn multiple threads yourself or intend

@@ -26,20 +26,67 @@
 #==============================================================================
 
 module FlightJob
-  module Commands
-    class ListJobs < Command
-      def run
-        if jobs.empty? && !opts.json
-          $stderr.puts 'Nothing To Display'
-        else
-          puts render_output(Outputs::ListJobs, jobs)
-        end
-      end
+  class ControlsDir
+    attr_reader :path
 
-      def jobs
-        @jobs ||= Job.load_all
+    def initialize(path)
+      @path = path
+    end
+
+    def entries
+      return [] unless exists?
+
+      Dir.entries(@path)
+        .select { |e| p = File.join(@path, e); File.file?(p) && File.readable?(p) }
+        .map { |e| ControlsFile.new(self, e) }
+    end
+
+    def exists?
+      File.exists?(@path)
+    end
+
+    def file(name)
+      if exists?
+        ControlsFile.new(self, name)
+      else
+        NullControlsFile.new(self, name)
       end
+    end
+
+    def serializable_hash
+      Hash[entries.map { |file| [file.name, file.read] }]
+    end
+  end
+
+  class ControlsFile
+    attr_reader :name, :path
+
+    def initialize(dir, name)
+      @name = name
+      @path = File.join(dir.path, name)
+    end
+
+    def exists?
+      File.exists?(@path)
+    end
+
+    def read
+      return nil unless exists?
+      File.read(@path).force_encoding('UTF-8').strip
+    end
+  end
+
+  class NullControlsFile
+    def initialize(dir, name)
+      @path = File.join(dir.path, name)
+    end
+
+    def exists?
+      false
+    end
+
+    def read
+      nil
     end
   end
 end
-

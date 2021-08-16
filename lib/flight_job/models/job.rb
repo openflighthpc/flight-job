@@ -63,7 +63,7 @@ module FlightJob
         "results_dir" => { "type" => ["string", "null"] },
         "reason" => { "type" => ["string", "null"] },
         "start_time" => { "type" => ["string", "null"], "format" => "date-time" },
-        "end_time" => { "type" => ["string", "null"], "format" => "date-time" }
+        "end_time" => { "type" => ["string", "null"], "format" => "date-time" },
       }
     })
 
@@ -85,7 +85,7 @@ module FlightJob
         "id" => { "type" => "string" },
         "stdout" => { "type" => "string" },
         "stderr" => { "type" => "string" },
-        "results_dir" => { "type" => "string" }
+        "results_dir" => { "type" => "string" },
       }
     })
 
@@ -110,7 +110,7 @@ module FlightJob
         if job.valid?(:load)
           job
         else
-          FlightJob.logger.error("Failed to load missing/invalid script: #{id}")
+          FlightJob.logger.error("Failed to load missing/invalid job: #{id}")
           FlightJob.logger.debug(job.errors)
           nil
         end
@@ -191,7 +191,7 @@ module FlightJob
     end
 
     def metadata_path
-      @metadata_path ||= File.join(FlightJob.config.jobs_dir, id, 'metadata.yaml')
+      @metadata_path ||= File.join(job_dir, 'metadata.yaml')
     end
 
     # This denotes a job that has been or will be given to the scheduler. The job is considered
@@ -204,7 +204,7 @@ module FlightJob
     # This allows jobs to be quasi-tracked even if a catastrophic failure occurs during the
     # submission that prevents the metadata file from being generated.
     def active_path
-      @active_path ||= File.join(FlightJob.config.jobs_dir, id, 'active.yaml')
+      @active_path ||= File.join(job_dir, 'active.yaml')
     end
 
     def metadata
@@ -357,6 +357,7 @@ module FlightJob
         "estimated_start_time" => estimated_start_time,
         "actual_end_time" => actual_end_time,
         "estimated_end_time" => estimated_end_time,
+        "controls" => controls_dir.serializable_hash,
       }.merge(metadata).tap do |hash|
         # NOTE: The API uses the 'size' attributes as a proxy check to exists/readability
         #       as well as getting the size. Non-readable stdout/stderr would be
@@ -380,6 +381,10 @@ module FlightJob
           hash['result_files'] = nil
         end
       end
+    end
+
+    def controls_file(name)
+      controls_dir.file(name)
     end
 
     # Takes the scheduler's state and converts it to an internal flight-job
@@ -490,6 +495,14 @@ module FlightJob
 
     private
 
+    def controls_dir
+      @controls_dir ||= ControlsDir.new(File.join(job_dir, 'controls'))
+    end
+
+    def job_dir
+      @job_dir ||= File.join(FlightJob.config.jobs_dir, id)
+    end
+
     def process_times(est_start, start, est_end, end_time)
       # The monitor script does not always distinguish between actual/estimated
       # start/end times. Doing so reliable would require knowledge of the state
@@ -559,7 +572,9 @@ module FlightJob
     def execute_command(*cmd)
       # NOTE: Should the PATH be configurable instead of inherited from the environment?
       # This could lead to differences when executed via the CLI or the webapp
-      env = ENV.slice('PATH', 'HOME', 'USER', 'LOGNAME')
+      env = ENV.slice('PATH', 'HOME', 'USER', 'LOGNAME').tap do |h|
+        h['CONTROLS_DIR'] = controls_dir.path
+      end
       cmd_stdout, cmd_stderr, status = Open3.capture3(env, *cmd, unsetenv_others: true, close_others: true)
 
       FlightJob.logger.debug <<~DEBUG

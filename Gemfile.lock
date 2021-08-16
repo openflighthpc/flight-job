@@ -1,9 +1,9 @@
 GIT
   remote: https://github.com/openflighthpc/flight_configuration.git
-  revision: 2cbc8c4b698c71d2fd18edb082fff5110701cb7e
-  tag: 0.4.0
+  revision: 1769525a5ef78d98eed46f67daac8e085b6a667e
+  tag: 0.4.1
   specs:
-    flight_configuration (0.1.0)
+    flight_configuration (0.4.1)
 
 GIT
   remote: https://github.com/openflighthpc/tty-table.git

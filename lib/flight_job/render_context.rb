@@ -26,6 +26,8 @@
 #==============================================================================
 
 module FlightJob
+  class RenderError < GeneralError; end
+
   class RenderContext
     class AnswerDecorator
       def initialize(question:, answer:)

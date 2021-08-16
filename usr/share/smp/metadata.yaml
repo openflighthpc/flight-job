@@ -4,6 +4,8 @@ license: Creative Commons Attribution-ShareAlike 4.0 International
 script_template: smp.sh
 priority: 500
 version: 0
+tags:
+  - script:type=batch
 synopsis: Submit a job that has multiple processes where all processes need to reside on a single host.
 description: |
   This allows you to specify the total number of cores required for a job on a

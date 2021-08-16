@@ -1,23 +1,17 @@
-name: Multiple slot
-copyright: Copyright (C) 2020 Alces Flight Ltd.
+name: Interactive desktop session
+copyright: Copyright (C) 2021 Alces Flight Ltd.
 license: Creative Commons Attribution-ShareAlike 4.0 International
-script_template: mpi-slots.sh
-priority: 300
+script_template: interactive-desktop.sh
+priority: 100
 version: 0
 tags:
-  - script:type=batch
-synopsis: Submit a single job that has multiple processes that may span multiple nodes.
+  - script:type=interactive
+  - session:type=desktop
+synopsis: Submit a job to run an interactive desktop session.
 description: |
-  This allows you to specify the total number of cores required for a job whilst
-  leaving it up to the scheduler to allocate them. This method is often used for
-  MPI jobs where you know the required number of processes in advance but do not
-  need exclusive access to the machine.
-
-  Your job will be allocated the requested number of cores across the allocated
-  nodes. The remaining unallocated cores maybe shared with other jobs. This method
-  should not be used for SMP (OpenMP) jobs. As this method allocates individual
-  cores, you may need to share the nodes' resources. You may prefer using a
-  multiple mpi node job to obtain exclusive access instead.
+  Your job will start an interactive session on the first available node.  You
+  can optionally provide a session script to configure and launch an
+  interactive application.
 
 generation_questions:
   - id: working_dir
@@ -70,7 +64,7 @@ generation_questions:
     description: >
       This will be shown in the process queue and by default used in the name
       of the output files.
-    default: 'multislot.sh'
+    default: 'simple.sh'
     format:
       type: text
 
@@ -130,8 +124,8 @@ generation_questions:
       A time limit of zero requests that no time limit be imposed.  The format
       is one of "minutes", "minutes:seconds", "hours:minutes:seconds",
       "days-hours", "days-hours:minutes" and "days-hours:minutes:seconds".
-      e.g. `3-0` for 3 days.
-    default: '3-0'
+      E.g., `30` for 30 minutes.
+    default: '30'
     format:
       type: text
 
@@ -146,34 +140,5 @@ generation_questions:
       Note that this setting is specified in megabytes.  e.g. specify `1024`
       for 1 gigabyte.
     default: '1024'
-    format:
-      type: text
-
-  - id: number_of_slots
-    text: Processing requirements
-    description: >
-      Specify the number of processing slots required for your job.
-
-      You should request a processing slot for each simultaneous thread
-      (or process) that your script and/or application executes.  Note
-      that requesting a larger number of slots will mean that your job
-      could take longer to launch.
-    default: '2'
-    format:
-      type: text
-
-  - id: number_of_nodes
-    text: Nodes requirements
-    description: >
-      Specify the number of nodes the processes should be spread over
-    default: '2'
-    format:
-      type: text
-
-  - id: workload
-    text: "Who, or what, should we greet"
-    description: >
-      Who, or what, should we say hello to when your script is ran.
-    default: "World"
     format:
       type: text
