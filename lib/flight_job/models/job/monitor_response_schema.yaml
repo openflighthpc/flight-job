@@ -31,7 +31,8 @@
 # It uses JSON:Schema as its validation library:
 # https://json-schema.org/understanding-json-schema/index.html
 #
-# YAML is used to purely to support comments and syntax highlighting
+# This document uses YAML to support syntax highlighting and comments;
+# otherwise it is regular JSON.
 #==============================================================================
 # NOTE: Independent Versioning
 #
