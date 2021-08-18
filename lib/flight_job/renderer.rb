@@ -113,8 +113,8 @@ module FlightJob
     private
 
     def render_adapter
-      # NOTE: The adapter is designed augment the directives,
-      # monolithic templates without directives can not benefit from the adapter
+      # NOTE: The adapter is designed to augment the directives. Monolithic
+      # 'script templates' (sans 'directives template') cannot benefit from the adapter
       return nil unless File.exists? @template.directives_path
       ERB.new(File.read(Flight.config.adapter_script_path), nil, '-').result(generate_binding)
     end
