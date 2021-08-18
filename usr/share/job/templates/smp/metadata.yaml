@@ -6,6 +6,7 @@ priority: 500
 version: 0
 tags:
   - script:type=batch
+  - script:workload=smp
 synopsis: Submit a job that has multiple processes where all processes need to reside on a single host.
 description: |
   This allows you to specify the total number of cores required for a job on a

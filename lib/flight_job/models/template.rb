@@ -125,8 +125,8 @@ module FlightJob
       if validate
         templates.select do |template|
           next true if template.valid?
-          FlightJob.logger.warn "Rejecting invalid template: #{template.id}"
-          FlightJob.logger.debug("Errors: \n") { template.errors.full_messages.join("\n") }
+          FlightJob.logger.error("Failed to load missing/invalid template: #{id}")
+          FlightJob.logger.info(template.errors.full_messages.join("\n"))
           false
         end
 
@@ -159,10 +159,17 @@ module FlightJob
       end
     end
 
-    # Validates the script
+    # Validates the workload_path and directives_path
     validate do
-      unless File.exists? template_path
-        errors.add(:template, "has not been saved")
+      unless File.exists? workload_path
+        legacy_path = File.join(FlightJob.config.templates_dir, id, "#{script_template_name}.erb")
+        if File.exists?(legacy_path)
+          # Symlink the legacy script path into place, if required
+          FileUtils.ln_s File.basename(legacy_path), workload_path
+        else
+          # Otherwise error
+          errors.add(:workload_path, "does not exist")
+        end
       end
     end
 
@@ -196,8 +203,12 @@ module FlightJob
       File.join(FlightJob.config.templates_dir, id, "metadata.yaml")
     end
 
-    def template_path
-      File.join(FlightJob.config.templates_dir, id, "#{script_template_name}.erb")
+    def workload_path
+      File.join(FlightJob.config.templates_dir, id, "workload.erb")
+    end
+
+    def directives_path
+      File.join(FlightJob.config.templates_dir, id, Flight.config.directives_name)
     end
 
     def script_template_name
@@ -223,7 +234,7 @@ module FlightJob
       opts ||= {}
       {
         'id' => id,
-        'path' => template_path,
+        'path' => workload_path,
       }.merge(metadata).tap do |hash|
         if Flight.config.includes.include? 'scripts'
           # NOTE: Consider using a file registry instead
@@ -241,10 +252,6 @@ module FlightJob
       @questions ||= questions_data.map do |datum|
         Question.new(**datum.symbolize_keys)
       end
-    end
-
-    def to_erb
-      ERB.new(File.read(template_path), nil, '-')
     end
 
     def priority

@@ -68,22 +68,24 @@ if [[ $? -ne 0 ]]; then
 fi
 
 # Fetch the details about the job
-control=$(scontrol show job "$id")
+raw_control=$(scontrol show job "$id" --oneline)
+exit_status=$?
+control=$(echo "$raw_control" | head -n 1 | tr ' ' '\n')
 cat <<EOF >&2
 scontrol output:
 $control
 EOF
-if [[ $? -ne 0 ]]; then
-  exit $?
+if [[ $exit_status -ne 0 ]]; then
+  exit $exit_status
 fi
 
 # Extract the sdout/stderr paths
-stdout=$(echo "$control" | grep -E "^\s*StdOut=" | sed "s/^\s*StdOut=//g")
-stderr=$(echo "$control" | grep -E "^\s*StdErr=" | sed "s/^\s*StdErr=//g")
+stdout=$(echo "$control" | grep '^StdOut=' | cut -d= -f2)
+stderr=$(echo "$control" | grep '^StdErr=' | cut -d= -f2)
 
 # Determine the results directory
-working=$(echo "$control" | grep -E "^\s*WorkDir=" | sed "s/^\s*WorkDir=//g")
-name=$(echo "$control" | grep -E "^JobId=\w*\s*JobName=" | sed "s/^JobId=\w*\s*JobName=//g")
+working=$(echo "$control" | grep '^WorkDir=' | cut -d= -f2)
+name=$(echo "$control" | grep '^JobName=' | cut -d= -f2)
 results_dir="${working}/${name}-outputs/$id"
 
 # Render and return the JSON payload

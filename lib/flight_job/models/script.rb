@@ -29,7 +29,7 @@ require 'json'
 require 'securerandom'
 require 'json_schemer'
 
-require_relative '../render_context'
+require_relative '../renderer'
 
 module FlightJob
   class Script < ApplicationModel
@@ -38,11 +38,20 @@ module FlightJob
       "additionalProperties" => false,
       "required" => ['created_at', 'script_name'],
       "properties" => {
-        'answers' => { 'type' => 'object' },
+        # ----------------------------------------------------------------------------
+        # Required
+        # ----------------------------------------------------------------------------
         'created_at' => { 'type' => 'string', 'format' => 'date-time' },
         'script_name' => { 'type' => 'string' },
+        # ----------------------------------------------------------------------------
+        # Psuedo - Required
+        #
+        # These should *probably* become required on the next major release of the metadata
+        # ----------------------------------------------------------------------------
+        'answers' => { 'type' => 'object' },
         'tags' => { 'type' => 'array', 'items' => { 'type' => 'string' }},
         'template_id' => { 'type' => 'string' },
+        'version' => { 'const' => 0 },
       }
     })
 
@@ -54,7 +63,7 @@ module FlightJob
           script
         else
           FlightJob.logger.error("Failed to load missing/invalid script: #{id}")
-          FlightJob.logger.debug(script.errors)
+          FlightJob.logger.info(script.errors.full_messages.join("\n"))
           nil
         end
       end.reject(&:nil?).sort
@@ -90,11 +99,18 @@ module FlightJob
 
       # Ensures the script file exists
       unless File.exists? script_path
-        errors.add(:script_path, 'does not exist')
+        legacy_path = File.join(Flight.config.scripts_dir, id, script_name)
+        if File.exists?(legacy_path)
+          # Migrate legacy scripts to the script_path
+          FileUtils.ln_s script_name, script_path
+        else
+          # Error as it is missing
+          @errors.add(:script_path, 'does not exist')
+        end
       end
     end
 
-    validate on: [:id_check, :render] do
+    validate on: :id_check do
       # Ensure the ID has not been taken
       # NOTE: This negates the need to check if metadata_path exists
       if Dir.exists? File.expand_path(id, FlightJob.config.scripts_dir)
@@ -165,22 +181,11 @@ module FlightJob
     end
 
     def metadata_path
-      if ! @metadata_path.nil?
-        @metadata_path
-      else
-        @metadata_path ||= File.join(FlightJob.config.scripts_dir, id, 'metadata.yaml')
-      end
+      @metadata_path ||= File.join(FlightJob.config.scripts_dir, id, 'metadata.yaml')
     end
 
     def script_path
-      if ! @script_path.nil?
-        @script_path
-      elsif id && script_name
-        @script_path = File.join(FlightJob.config.scripts_dir, id, script_name)
-      else
-        errors.add(:script_path, 'cannot be determined')
-        @script_path = false
-      end
+      @script_path ||= File.join(FlightJob.config.scripts_dir, id, 'script.sh')
     end
 
     def notes_path
@@ -212,7 +217,6 @@ module FlightJob
     end
 
     def script_name=(name)
-      @script_path = nil
       metadata['script_name'] = name
     end
 
@@ -231,31 +235,9 @@ module FlightJob
       Template.new(id: template_id)
     end
 
-    # NOTE: This method is used to generate a rendered template without saving
-    def render
-      # Ensure the script is in a valid state
-      unless valid?(:render)
-        FlightJob.logger.error("The script is invalid:\n") do
-          errors.full_messages.join("\n")
-        end
-        duplicate_errors = errors.find do |error|
-          error.attribute == :id && error.type == :already_exists
-        end
-        if duplicate_errors
-          raise_duplicate_id_error
-        else
-          raise InternalError, 'Unexpectedly failed to render the script!'
-        end
-      end
-
-      # Render the content
-      FlightJob::RenderContext.new(
-        template: load_template, answers: answers
-      ).render
-    end
-
     def render_and_save
-      content = render
+      # Ensure the renderer is defined
+      renderer
 
       # Ensures it claims the ID
       # NOTE: As this is done after validation, it may trigger a race condition
@@ -271,7 +253,7 @@ module FlightJob
       # Writes the data to disk
       save_metadata
       save_notes
-      File.write(script_path, content)
+      File.write(script_path, renderer.render)
 
       # Makes the script executable and metadata read/write
       FileUtils.chmod(0700, script_path)
@@ -311,6 +293,22 @@ module FlightJob
       raise DuplicateError, "The ID already exists!"
     end
 
+    def renderer
+      return @renderer if @renderer
+
+      # Ensure the script is in a valid state
+      unless valid?(:render)
+        FlightJob.logger.error("The script is invalid:\n") do
+          errors.full_messages.join("\n")
+        end
+        raise InternalError, 'Unexpectedly failed to render the script!'
+      end
+
+      @renderer ||= FlightJob::Renderer.new(
+        template: load_template, answers: answers
+      )
+    end
+
     protected
 
     def <=>(other)
@@ -330,7 +328,7 @@ module FlightJob
       @metadata ||= if File.exists?(metadata_path)
                       YAML.load File.read(metadata_path)
                     else
-                      { 'created_at' => DateTime.now.rfc3339 }
+                      { 'version' => 0, 'created_at' => DateTime.now.rfc3339 }
                     end
     end
   end

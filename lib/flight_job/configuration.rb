@@ -58,7 +58,7 @@ module FlightJob
     validates :scheduler, presence: true
 
     attribute :state_map_path,
-              default: ->(config) { "etc/job/state-maps/#{config.scheduler}.yaml" },
+              default: ->(config) { File.join("etc/job/state-maps", "#{config.scheduler}.yaml") },
               transform: relative_to(root_path)
     validates :state_map_path, presence: true
 
@@ -71,6 +71,10 @@ module FlightJob
               default: ->(config) { File.join('libexec/job', config.scheduler, 'monitor.sh') },
               transform: relative_to(root_path)
     validates :monitor_script_path, presence: true
+
+    attribute :adapter_script_path,
+              default: ->(config) { File.join("usr/share/job/adapter.#{config.scheduler}.erb") },
+              transform: relative_to(root_path)
 
     attribute :submission_period, default: 3600
     validates :submission_period, numericality: { only_integers: true }

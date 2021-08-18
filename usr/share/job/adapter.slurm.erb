@@ -1,0 +1,99 @@
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+#  >>>> FLIGHT JOB ADAPTER
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
+#=====================
+#  Results directory
+#---------------------
+# By convention, job's submitted with `flight-job` are expected to save their
+# results to RESULTS_DIR.  `flight-job` provides easy access to any files
+# saved there.
+<% if template.tag('script:workload') == 'array' -%>
+RESULTS_DIR="$(pwd)/${SLURM_JOB_NAME}-outputs/$SLURM_ARRAY_JOB_ID"
+<% else -%>
+RESULTS_DIR="$(pwd)/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
+<% end -%>
+
+<% if template.tag('script:type') == 'interactive' -%>
+#======================
+#  Controls directory
+#----------------------
+# The controls directory is used internally to track various flight-job data
+# files.  This is used to store the desktop session ID of the interactive
+# sesison.
+CONTROLS_DIR="${CONTROLS_DIR:-"${RESULTS_DIR}"}"
+mkdir -p "$CONTROLS_DIR"
+<% end -%>
+
+<% if template.tag('script:type') == 'interactive' -%>
+#=========================
+#  Session orchestration
+#-------------------------
+# Functions used to orchestrate the creation of your interactive session with
+# Flight Desktop.
+FLIGHT_SESSION_ID_PATH="${CONTROLS_DIR}"/flight_desktop_id
+FLIGHT_SESSION_STATUS_PATH="${CONTROLS_DIR}"/flight_desktop_status
+SESSION_OUTPUT="${RESULTS_DIR}/session.output"
+
+create_session_script() {
+    SESSION_SCRIPT=$( mktemp --tmpdir session-script.XXXXXX.sh )
+    echo "Creating session script ${SESSION_SCRIPT}"
+    export SESSION_SCRIPT
+    cat > ${SESSION_SCRIPT}
+    chmod +x ${SESSION_SCRIPT}
+}
+
+session_run() {
+    session_start
+    session_await
+}
+
+session_start() {
+    if [ "${SESSION_SCRIPT}" == "" ] ; then
+        echo "Session script not created. Aborting." >&2
+        exit 1
+    fi
+    echo "Starting session..."
+    (
+        set -o pipefail
+        ${flight_ROOT:-/opt/flight}/bin/flight desktop \
+            start \
+            --script ${SESSION_SCRIPT} \
+            | tee >( grep '^Identity' | cut -f2 > "${FLIGHT_SESSION_ID_PATH}" )
+    )
+
+    SESSION_STARTED=$?
+    echo ${SESSION_STARTED} > "$FLIGHT_SESSION_STATUS_PATH"
+}
+
+session_is_active() {
+    local state
+    state=$(
+        ${flight_ROOT:-/opt/flight}/bin/flight desktop \
+            show "${SESSION_ID}" 2>/dev/null \
+            | grep '^State' \
+            | cut -d $'\t' -f 2
+    )
+    [ "${state}" == "Active" ]
+}
+
+session_await() {
+    if [ ${SESSION_STARTED} -ne 0 ] ; then
+        echo "Session failed to start. Aborting." >&2
+        exit 1
+    fi
+    SESSION_ID=$(cat "${FLIGHT_SESSION_ID_PATH}")
+    SESSION_ID=${SESSION_ID##[[:space:]]}
+    SESSION_ID=${SESSION_ID%%[[:space:]]}
+    if [ "${SESSION_ID}" == "" ] ; then
+        echo "Unable to determine session ID. Aborting." >&2
+        exit 1
+    fi
+    echo "Session ID is ${SESSION_ID}" 
+    echo "Waiting for session to end..." 
+    while session_is_active ; do
+        sleep 60
+    done
+    echo "Session is no longer running."
+}
+<% end -%>
