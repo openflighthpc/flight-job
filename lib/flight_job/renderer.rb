@@ -71,6 +71,18 @@ module FlightJob
       end
     end
 
+    class TemplateDecorator
+      def initialize(template)
+        @template = template
+      end
+
+      def tag(name)
+        tag = @template.tags.detect { |t| t.split('=')[0] == name}
+        return nil if tag.nil?
+        tag.split('=')[1]
+      end
+    end
+
     class RenderDecorator
       def initialize(template:, answers:)
         @template = template
@@ -94,6 +106,10 @@ module FlightJob
             h[k] = AnswerDecorator.new(question: question, answer: nil)
           end
         end
+      end
+
+      def template
+        @template_decorator ||= TemplateDecorator.new(@template)
       end
     end
 

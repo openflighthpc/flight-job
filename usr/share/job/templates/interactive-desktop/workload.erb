@@ -1,0 +1,61 @@
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+#  >>>> SET TASK ENVIRONMENT VARIABLES
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+# If necessary, set up further environment variables that are not
+# specific to your workload here.
+#
+# Several standard variables, such as SLURM_JOB_ID, SLURM_JOB_NAME and
+# SLURM_NTASKS, are made available by the scheduler.
+SESSION_OUTPUT="${RESULTS_DIR}/session.output"
+
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+#  >>>> YOUR WORKLOAD
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
+#===========================
+#  Create results directory
+#---------------------------
+# By convention, job's submitted with `flight-job` are expected to save their
+# results to RESULTS_DIR.  `flight-job` provides easy access to any files
+# saved there.
+#
+# Your job can save its results anywhere you want, but if the results are
+# saved outside of RESULTS_DIR (or if RESULTS_DIR is modified), 'flight-job'
+# will be unable to help you access your results.
+#
+# RESULTS_DIR has already been set appropriately for your script.
+echo "Your results will be stored in: $RESULTS_DIR"
+mkdir -p "$RESULTS_DIR"
+
+create_session_script <<SESSION
+#!/bin/bash
+
+#===============================
+#  Activate Flight Environment
+#-------------------------------
+source "${flight_ROOT:-/opt/flight}"/etc/setup.sh > "${SESSION_OUTPUT}" 2>&1
+
+#==============================
+#  Activate Package Ecosystem
+#------------------------------
+{
+# e.g.:
+# flight env activate gridware
+# module load apps/R
+:
+} >> "${SESSION_OUTPUT}" 2>&1
+
+#===============================
+#  Application launch commands
+#-------------------------------
+# Customize this section to suit your needs.
+
+echo "Executing job commands, current working directory is $(pwd)" >> "${SESSION_OUTPUT}" 2>&1
+
+# REPLACE THE FOLLOWING WITH YOUR APPLICATION COMMANDS
+
+echo "This is an example interactive job running a bash shell." >> "${SESSION_OUTPUT}" 2>&1
+bash
+SESSION
+
+session_run
