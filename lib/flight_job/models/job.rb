@@ -194,7 +194,7 @@ module FlightJob
     # causes jobs to be lost if the submission catastrophically fails. As a fallback,
     # The initial metadata is used to re-construct a failed job entry.
     def initial_metadata_path
-      @initial_metadata_path ||= File.join(job_dir, id, 'metadata.initial.yaml')
+      @initial_metadata_path ||= File.join(job_dir, 'metadata.initial.yaml')
     end
 
     def metadata
@@ -364,7 +364,7 @@ module FlightJob
 
       # Duplicate the script into the job's directory
       # NOTE: Eventually this should probably be named after the job_name question
-      metadata["rendered_path"] = File.join(FlightJob.config.jobs_dir, id, script.script_name)
+      metadata["rendered_path"] = File.join(job_dir, script.script_name)
       FileUtils.cp script.script_path, metadata["rendered_path"]
 
       # Run the submission command
