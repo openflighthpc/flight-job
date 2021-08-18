@@ -75,6 +75,10 @@ module FlightJob
     global_slop.bool '--ascii', 'Display a simplified version of the output, when supported'
     global_slop.bool '--json', 'Display a JSON version of the output, when supported'
 
+    # NOTE: NEXT MAJOR CLI RELEASE
+    # Please review the Outputs and <Model>#serializable_hash methods on the next major release
+    # These will need simplifying
+
     create_command 'list-templates' do |c|
       c.summary = 'List available templates'
     end

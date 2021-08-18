@@ -79,9 +79,12 @@ if [[ $exit_status -ne 0 ]]; then
   exit $exit_status
 fi
 
-# Extract the sdout/stderr paths
-stdout=$(echo "$control" | grep '^StdOut=' | cut -d= -f2)
-stderr=$(echo "$control" | grep '^StdErr=' | cut -d= -f2)
+# Skip the stdout/stderr for the "main" array job
+if [ -z "$(echo "$control" | grep "ArrayJobId")" ]; then
+  # Extract the sdout/stderr paths (most jobs)
+  stdout=$(echo "$control" | grep '^StdOut=' | cut -d= -f2)
+  stderr=$(echo "$control" | grep '^StdErr=' | cut -d= -f2)
+fi
 
 # Determine the results directory
 working=$(echo "$control" | grep '^WorkDir=' | cut -d= -f2)
