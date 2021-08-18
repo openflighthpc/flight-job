@@ -11,10 +11,16 @@
 #  >>>> YOUR WORKLOAD
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
-#=======================
-#  Environment modules
-#-----------------------
+#===============================
+#  Activate Flight Environment
+#-------------------------------
+source "${flight_ROOT:-/opt/flight}"/etc/setup.sh
+
+#==============================
+#  Activate Package Ecosystem
+#------------------------------
 # e.g.:
+# flight env activate gridware
 # module load apps/imb
 
 #===========================

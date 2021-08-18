@@ -23,7 +23,7 @@ SESSION_OUTPUT="${RESULTS_DIR}/session.output"
 # saved outside of RESULTS_DIR (or if RESULTS_DIR is modified), 'flight-job'
 # will be unable to help you access your results.
 #
-# RESULTS_DIR has already been set appropriately for your script.
+# RESULTS_DIR has already been set to "$WORKING_DIR/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
 echo "Your results will be stored in: $RESULTS_DIR"
 mkdir -p "$RESULTS_DIR"
 

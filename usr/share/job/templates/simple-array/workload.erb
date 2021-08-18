@@ -14,10 +14,16 @@
 #  >>>> YOUR WORKLOAD
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
-#=======================
-#  Environment modules
-#-----------------------
+#===============================
+#  Activate Flight Environment
+#-------------------------------
+source "${flight_ROOT:-/opt/flight}"/etc/setup.sh
+
+#==============================
+#  Activate Package Ecosystem
+#------------------------------
 # e.g.:
+# flight env activate gridware
 # module load apps/imb
 
 #===========================
@@ -31,7 +37,7 @@
 # saved outside of RESULTS_DIR (or if RESULTS_DIR is modified), 'flight-job'
 # will be unable to help you access your results.
 #
-# RESULTS_DIR has already been set to "$WORKING_DIR/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
+# RESULTS_DIR has already been set to "$WORKING_DIR/${SLURM_JOB_NAME}-outputs/$SLURM_ARRAY_JOB_ID"
 echo "Your results will be stored in: $RESULTS_DIR"
 mkdir -p "$RESULTS_DIR"
 
