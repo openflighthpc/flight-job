@@ -91,11 +91,11 @@ module FlightJob
     SUBMIT_RESPONSE_SCHEMA = JSONSchemer.schema({
       "type" => "object",
       "additionalProperties" => false,
-      "required" => ["id", "stdout", "stderr", "results_dir"],
+      "required" => ["id", "results_dir"],
       "properties" => {
         "id" => { "type" => "string" },
-        "stdout" => { "type" => "string" },
-        "stderr" => { "type" => "string" },
+        "stdout" => { "type" => ["string", "null"] },
+        "stderr" => { "type" => ["string", "null"] },
         "results_dir" => { "type" => "string" },
       }
     })
@@ -390,8 +390,8 @@ module FlightJob
         # Parse stdout on successful commands
         process_output('submit', status, out) do |data|
           self.scheduler_id = data['id']
-          self.stdout_path = data['stdout']
-          self.stderr_path = data['stderr']
+          self.stdout_path = data['stdout'].blank? ? nil : data['stdout']
+          self.stderr_path = data['stderr'].blank? ? nil : data['stderr']
           self.results_dir = data['results_dir']
         end
 

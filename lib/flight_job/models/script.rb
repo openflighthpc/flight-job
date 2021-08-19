@@ -81,11 +81,11 @@ module FlightJob
       # Skip this validation on :id_check
       next if validation_context == :id_check
 
-      unless (errors = SCHEMA.validate(metadata).to_a).empty?
+      unless (schema_errors = SCHEMA.validate(metadata).to_a).empty?
         errors.add(:metadata, 'is not valid')
         path_tag = File.exists?(metadata_path) ? metadata_path : id
         FlightJob.logger.debug("Invalid metadata: #{path_tag}\n") do
-          JSON.pretty_generate(errors)
+          JSON.pretty_generate(schema_errors)
         end
       end
     end
