@@ -170,6 +170,21 @@ To prevent this, the `run-monitor` command should be ran periodically for each u
 
 \*\* NOTE: Custom `scheduler` implementations should also transition missing jobs to an `UNKNOWN` state. Failure to do so will cause them to get stuck in the "last known state".
 
+# Versioning
+
+This application uses [semver](https://semver.org/) to version the command line interface. The current version is given within [version.rb](lib/flight_job/version.rb). This version is limited to the applications _public command line interface _(exhaustive list):
+
+* The command names and associated aliases,
+* The commands' type signatures,
+* The commands' option flags (unless otherwise stated),
+* The column order of the machine readable index outputs,
+* The key names of the machine readable show outputs,
+* The required keys within the JSON outputs (\*\* pending specification)
+
+\* _Note for system integrators_
+
+The internal metadata files and scripts are independently versioned. These scripts have a major version number which denotes they are backwards compatible. Additional required keys will not be added within a major version number, however recommended keys maybe.
+
 # Contributing
 
 Fork the project. Make your feature addition or bug fix. Send a pull
