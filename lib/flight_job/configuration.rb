@@ -36,11 +36,13 @@ module FlightJob
   class ConfigError < InternalError; end
 
   class Configuration
-    extend FlightConfiguration::DSL
+    include FlightConfiguration::DSL
     include FlightConfiguration::RichActiveValidationErrorMessage
     include ActiveModel::Validations
 
     application_name 'job'
+
+    user_configs :log_level, :log_path
 
     attribute :templates_dir, default: 'usr/share/job/templates',
               transform: relative_to(root_path)

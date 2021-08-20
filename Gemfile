@@ -29,7 +29,8 @@ source 'https://rubygems.org'
 
 gem 'commander-openflighthpc', '~> 2.1'
 gem 'activemodel'
-gem 'flight_configuration', github: 'openflighthpc/flight_configuration', tag: '0.5.0'
+# gem 'flight_configuration', github: 'openflighthpc/flight_configuration', tag: '0.5.0'
+gem 'flight_configuration', github: 'openflighthpc/flight_configuration', branch: "a1e4555eb965433d9974e94eff28ecc27a297969"
 gem 'dotenv'
 gem 'json_schemer'
 gem 'output_mode'
