@@ -42,7 +42,7 @@ module FlightJob
 
     application_name 'job'
 
-    user_configs :log_level, :log_path
+    user_configs :log_level, :log_path, :jobs_dir, :scripts_dir
 
     attribute :templates_dir, default: 'usr/share/job/templates',
               transform: relative_to(root_path)
