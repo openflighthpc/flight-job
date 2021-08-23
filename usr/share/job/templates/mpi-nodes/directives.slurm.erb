@@ -138,6 +138,28 @@
 #
 #SBATCH --mem=<%= questions.memory_limit.answer %>
 
+#=========================
+#  Resource requirements
+#-------------------------
+# Resources required for your job
+#
+# If your job has specific resource requirements specify them below.
+# Specification of fewer resources will cause the scheduler to be more likely
+# to scheduler your job sooner.
+#
+# e.g. GPUs, MICs, etc.
+##SBATCH --gres gpu:1
+
+#=====================
+#  Specify partition
+#---------------------
+# The partition on which your job is to run
+#
+# Enter the partition that your job is to be submitted to.  You can find the
+# list of available partitions by running the `sinfo` command from your
+# cluster login.
+##SBATCH -p nodes
+
 #==========================
 #  Processing requirements
 #--------------------------
