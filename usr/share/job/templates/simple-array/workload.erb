@@ -52,4 +52,4 @@ echo "Executing job commands, current working directory is $(pwd)"
 
 echo "Hello, <%= questions.workload.answer %>!" > $RESULTS_DIR/test.output.$SLURM_ARRAY_TASK_ID
 echo "This is an example array job. This process was task number $SLURM_ARRAY_TASK_ID and it ran on `hostname -s` (as `whoami`)." >> $RESULTS_DIR/test.output.$SLURM_ARRAY_TASK_ID
-echo "Output file has been generated, please check $RESULTS_DIR/test.output"
+echo "Output file has been generated, please check $RESULTS_DIR/test.output.$SLURM_ARRAY_TASK_ID"
