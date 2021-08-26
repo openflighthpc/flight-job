@@ -180,6 +180,14 @@ module FlightJob
       end
     end
 
+    def script_id
+      metadata['script_id']
+    end
+
+    def script_id=(input)
+      metadata['script_id'] = input
+    end
+
     def submitted?
       File.exists? metadata_path
     end
@@ -229,10 +237,10 @@ module FlightJob
           FlightJob.logger.error <<~ERROR
             The following job is being flaged as FAILED as it has not been submitted: #{id}
           ERROR
-          self.state = 'FAILED'
-          self.submit_status = 126
-          self.submit_stdout = ''
-          self.submit_stderr = 'Failed to run the submission command for an unknown reason'
+          metadata['state'] = 'FAILED'
+          metadata['submit_status'] = 126
+          metadata['submit_stdout'] = ''
+          metadata['submit_stderr'] = 'Failed to run the submission command for an unknown reason'
           FileUtils.mkdir_p File.dirname(metadata_path)
           File.write metadata_path, YAML.dump(metadata)
           FileUtils.rm_f initial_metadata_path
@@ -256,12 +264,11 @@ module FlightJob
     end
 
     [
-      "submit_status", "submit_stdout", "submit_stderr", "script_id", "state",
+      "submit_status", "submit_stdout", "submit_stderr", "state",
       "scheduler_id", "scheduler_state", "stdout_path", "stderr_path", "reason",
       "start_time", "end_time", "results_dir"
     ].each do |method|
       define_method(method) { metadata[method] }
-      define_method("#{method}=") { |value| metadata[method] = value }
     end
 
     def stdout_readable?
@@ -290,8 +297,8 @@ module FlightJob
     # NOTE: The `state=` method should be used when updating the internal
     # state directly
     def update_scheduler_state(scheduler_state)
-      self.state = STATE_MAP.fetch(scheduler_state, 'UNKNOWN')
-      self.scheduler_state = scheduler_state
+      metadata['state'] = STATE_MAP.fetch(scheduler_state, 'UNKNOWN')
+      metadata['scheduler_state'] = scheduler_state
     end
 
     def submit
@@ -318,15 +325,15 @@ module FlightJob
       cmd = [FlightJob.config.submit_script_path, metadata["rendered_path"]]
       execute_command(*cmd) do |status, out, err|
         # set the status/stdout/stderr
-        self.submit_status = status.exitstatus
-        self.submit_stdout = out
-        self.submit_stderr = err
+        metadata['submit_status'] = status.exitstatus
+        metadata['submit_stdout'] = out
+        metadata['submit_stderr'] = err
 
         # Set the initial state based on the exit status
         if submit_status == 0
-          self.state = 'PENDING'
+          metadata['state'] = 'PENDING'
         else
-          self.state = 'FAILED'
+          metadata['state'] = 'FAILED'
         end
 
         # Persist the current state of the job
@@ -335,10 +342,10 @@ module FlightJob
 
         # Parse stdout on successful commands
         process_output('submit', status, out) do |data|
-          self.scheduler_id = data['id']
-          self.stdout_path = data['stdout'].blank? ? nil : data['stdout']
-          self.stderr_path = data['stderr'].blank? ? nil : data['stderr']
-          self.results_dir = data['results_dir']
+          metadata['scheduler_id'] = data['id']
+          metadata['stdout_path'] = data['stdout'].blank? ? nil : data['stdout']
+          metadata['stderr_path'] = data['stderr'].blank? ? nil : data['stderr']
+          metadata['results_dir'] = data['results_dir']
         end
 
         # Persist the updated version of the metadata
@@ -357,8 +364,8 @@ module FlightJob
       # an error condition if they are
       unless scheduler_id
         FlightJob.logger.error "Can not monitor job '#{id}' as it did not report its scheduler_id"
-        self.reason = "Did not report it's scheduler ID"
-        self.state = "FAILED"
+        metadata['reason'] = "Did not report it's scheduler ID"
+        metadata['state'] = "FAILED"
         File.write(metadata_path, YAML.dump(metadata))
         return
       end
@@ -375,9 +382,9 @@ module FlightJob
                         data['end_time']
 
           if data['reason'] == ''
-            self.reason = nil
+            metadata['reason'] = nil
           elsif data['reason']
-            self.reason = data['reason']
+            metadata['reason'] = data['reason']
           end
           File.write(metadata_path, YAML.dump(metadata))
         end
@@ -425,14 +432,14 @@ module FlightJob
 
       case state
       when *PENDING_STATES
-        self.start_time = parse_time(est_start, type: "estimated_start_time")
-        self.end_time = parse_time(est_end, type: "estimated_end_time")
+        metadata['start_time'] = parse_time(est_start, type: "estimated_start_time")
+        metadata['end_time'] = parse_time(est_end, type: "estimated_end_time")
       when *RUNNING_STATES
-        self.start_time = parse_time(start, type: "actual_start_time")
-        self.end_time = parse_time(est_end, type: "estimated_end_time")
+        metadata['start_time'] = parse_time(start, type: "actual_start_time")
+        metadata['end_time'] = parse_time(est_end, type: "estimated_end_time")
       else
-        self.start_time = parse_time(start, type: "actual_start_time")
-        self.end_time = parse_time(end_time, type: "actual_end_time")
+        metadata['start_time'] = parse_time(start, type: "actual_start_time")
+        metadata['end_time'] = parse_time(end_time, type: "actual_end_time")
       end
     end
 
