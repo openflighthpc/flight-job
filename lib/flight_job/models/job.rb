@@ -316,7 +316,7 @@ module FlightJob
       # Run the submission command
       FlightJob.logger.info("Submitting Job: #{id}")
       cmd = [FlightJob.config.submit_script_path, metadata["rendered_path"]]
-      execute_command(*cmd) do |status, out, err|
+      execute_command(*cmd, tag: 'submit') do |status, out, err, data|
         # set the status/stdout/stderr
         metadata['submit_status'] = status.exitstatus
         metadata['submit_stdout'] = out
@@ -334,7 +334,8 @@ module FlightJob
         File.write metadata_path, YAML.dump(metadata)
 
         # Parse stdout on successful commands
-        process_output('submit', status, out) do |data|
+        if status.success?
+          validate_data(SUBMIT_RESPONSE_SCHEMA, data, tag: 'submit')
           metadata['scheduler_id'] = data['id']
           metadata['stdout_path'] = data['stdout'].blank? ? nil : data['stdout']
           metadata['stderr_path'] = data['stderr'].blank? ? nil : data['stderr']
@@ -365,8 +366,11 @@ module FlightJob
 
       FlightJob.logger.info("Monitoring Job: #{id}")
       cmd = [FlightJob.config.monitor_script_path, scheduler_id]
-      execute_command(*cmd) do |status, stdout, stderr|
-        process_output('monitor', status, stdout) do |data|
+      execute_command(*cmd, tag: 'monitor') do |status, stdout, stderr, data|
+        if status.success?
+          # Validate the output
+          validate_data(MONITOR_RESPONSE_SCHEMA, data, tag: "monitor (initial)")
+
           update_scheduler_state(data['state'])
 
           process_times data['estimated_start_time'],
@@ -445,47 +449,26 @@ module FlightJob
       raise_command_error
     end
 
-    def process_output(type, status, out)
-      schema = case type
-               when 'submit'
-                 SUBMIT_RESPONSE_SCHEMA
-               when 'monitor'
-                 MONITOR_RESPONSE_SCHEMA
-               else
-                 raise InternalError, "Unknown command type: #{type}"
-               end
-
-      if status.success?
-        string = out.split("\n").last
-        begin
-          data = JSON.parse(string)
-          errors = schema.validate(data).to_a
-          if errors.empty?
-            yield(data) if block_given?
-          else
-            FlightJob.logger.error("Invalid #{type} response for job: #{id}")
-            FlightJob.logger.debug(JSON.pretty_generate(errors))
-            raise_command_error
-          end
-        rescue JSON::ParserError
-          FlightJob.logger.error("Failed to parse #{type} JSON for job: #{id}")
-          FlightJob.logger.debug($!.message)
-          raise_command_error
-        end
-      else
-        # NOTE: Commands are allowed to fail at this point. The caller is
-        # responsible for generating an appropriate message
-        FlightJob.logger.error("Failed to #{type} job: #{id}")
+    def validate_data(schema, data, tag:)
+      errors = schema.validate(data).to_a
+      unless errors.empty?
+        FlightJob.logger.error("Invalid #{tag} response for job: #{id}")
+        FlightJob.logger.debug(JSON.pretty_generate(errors))
+        raise_command_error
       end
     end
 
-    def execute_command(*cmd)
+    def execute_command(*cmd, tag:)
       # NOTE: Should the PATH be configurable instead of inherited from the environment?
       # This could lead to differences when executed via the CLI or the webapp
       env = ENV.slice('PATH', 'HOME', 'USER', 'LOGNAME').tap do |h|
         h['CONTROLS_DIR'] = controls_dir.path
       end
       cmd_stdout, cmd_stderr, status = Open3.capture3(env, *cmd, unsetenv_others: true, close_others: true)
+
+      unless status.success?
+        FlightJob.logger.error("Failed to #{tag} job: #{id}")
+      end
 
       FlightJob.logger.debug <<~DEBUG
         COMMAND: #{cmd.join(" ")}
@@ -496,7 +479,18 @@ module FlightJob
         #{cmd_stderr}
       DEBUG
 
-      yield(status, cmd_stdout, cmd_stderr)
+      data = nil
+      if status.success?
+        begin
+          data = JSON.parse(cmd_stdout.split("\n").last)
+        rescue JSON::ParserError
+          FlightJob.logger.error("Failed to parse #{type} JSON for job: #{id}")
+          FlightJob.logger.debug($!.message)
+          raise_command_error
+        end
+      end
+
+      yield(status, cmd_stdout, cmd_stderr, data)
     end
 
     def raise_command_error
