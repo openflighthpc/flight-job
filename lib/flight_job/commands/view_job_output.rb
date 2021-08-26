@@ -41,7 +41,7 @@ module FlightJob
       private
 
       def assert_job_submitted
-        return if @job.submit_status == 0
+        return if @job.submitted?
         raise MissingError, "The job's standard " \
           "#{opts.type == :stdout ? 'output' : 'error'} is not available as "\
           "the job did not succesfully submit"

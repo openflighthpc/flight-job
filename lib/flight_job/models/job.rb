@@ -263,12 +263,24 @@ module FlightJob
       metadata['created_at']
     end
 
-    [
-      "submit_status", "submit_stdout", "submit_stderr", "state",
-      "scheduler_id", "scheduler_state", "stdout_path", "stderr_path", "reason",
-      "start_time", "end_time", "results_dir"
-    ].each do |method|
-      define_method(method) { metadata[method] }
+    def state
+      metadata['state']
+    end
+
+    def stdout_path
+      metadata['stdout_path']
+    end
+
+    def stderr_path
+      metadata['stderr_path']
+    end
+
+    def submitted?
+      metadata['submit_status'] == 0
+    end
+
+    def scheduler_id
+      metadata['scheduler_id']
     end
 
     def stdout_readable?
@@ -330,7 +342,7 @@ module FlightJob
         metadata['submit_stderr'] = err
 
         # Set the initial state based on the exit status
-        if submit_status == 0
+        if metadata['submit_status'] == 0
           metadata['state'] = 'PENDING'
         else
           metadata['state'] = 'FAILED'

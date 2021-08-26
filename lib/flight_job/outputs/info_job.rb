@@ -124,9 +124,7 @@ module FlightJob
       Outputs.format_time(job.estimated_end_time, false)
     end
 
-    register_attribute(header: "Desktop ID:") do |job|
-      job.controls_file('flight_desktop_id').read
-    end
+    register_attribute(header: "Desktop ID:", &:desktop_id)
 
     def self.build_output(**opts)
       submit = opts.delete(:submit)

@@ -32,8 +32,16 @@ module FlightJob
     class JobDecorator < Draper::Decorator
       include ActiveModel::Serializers::JSON
 
-      # TODO: Port all the methods and remove this delegator
-      delegate_all
+      def self.delegate_metadata(*keys)
+        keys.each do |key|
+          define_method(key) { object.metadata[key.to_s] }
+        end
+      end
+
+      delegate :id
+      delegate_metadata :script_id, :start_time, :end_time, :scheduler_id, :scheduler_state,
+        :stdout_path, :stderr_path, :results_dir, :reason, :created_at, :state,
+        :submit_status, :submit_stdout, :submit_stderr
 
       def actual_start_time
         return nil if Job::STATES_LOOKUP[state] == :pending
@@ -55,24 +63,49 @@ module FlightJob
         end_time
       end
 
+      def desktop_id
+        object.controls_file('flight_desktop_id').read
+      end
+
       def serializable_hash(opts = nil)
         opts ||= {}
         {
+          # ----------------------------------------------------------------------------
+          # Required - Must not be nil
+          #          - Empty string maybe acceptable depending on the attribute
+          # ----------------------------------------------------------------------------
           "id" => id,
+          "created_at" => created_at,
+          "script_id" => script_id,
+          "state" => state,
+          "submit_status" => submit_status,
+          "submit_stdout" => submit_stdout,
+          "submit_stderr" => submit_stderr,
+          # ----------------------------------------------------------------------------
+          # Optional - Maybe nil
+          # ----------------------------------------------------------------------------
+          "end_time" => end_time,
+          "scheduler_id" => scheduler_id,
+          "scheduler_state" => scheduler_state,
+          "start_time" => start_time,
+          "stdout_path" => stdout_path,
+          "stderr_path" => stderr_path,
+          "results_dir" => results_dir,
+          "reason" => reason,
           "actual_start_time" => actual_start_time,
           "estimated_start_time" => estimated_start_time,
           "actual_end_time" => actual_end_time,
           "estimated_end_time" => estimated_end_time,
-          "controls" => controls_dir.serializable_hash,
-        }.merge(metadata).tap do |hash|
+          "controls" => object.controls_dir.serializable_hash,
+        }.tap do |hash|
           # NOTE: The API uses the 'size' attributes as a proxy check to exists/readability
           #       as well as getting the size. Non-readable stdout/stderr would be
           #       unusual, and can be ignored
-          hash["stdout_size"] = File.size(stdout_path) if stdout_readable?
-          hash["stderr_size"] = File.size(stderr_path) if stderr_readable?
+          hash["stdout_size"] = File.size(stdout_path) if object.stdout_readable?
+          hash["stderr_size"] = File.size(stderr_path) if object.stderr_readable?
 
           if Flight.config.includes.include? 'script'
-            hash['script'] = load_script
+            hash['script'] = object.load_script
           end
 
           # Always serialize the result_files

@@ -37,11 +37,11 @@ module FlightJob
         # Patches the submit flag on to output_options
         # NOTE: There is probably a better way to do this in general,
         #       but this is a once off
-        show_submit = job.submit_status != 0
+        show_submit = !job.submitted?
         output_options.merge!(submit: show_submit)
 
         puts render_output(Outputs::InfoJob, job.decorate)
-        unless job.submit_status == 0
+        unless job.submitted?
           raise GeneralError, "The job submission failed!"
         end
       end
