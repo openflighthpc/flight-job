@@ -40,7 +40,7 @@ module FlightJob
         show_submit = job.submit_status != 0
         output_options.merge!(submit: show_submit)
 
-        puts render_output(Outputs::InfoJob, job)
+        puts render_output(Outputs::InfoJob, job.decorate)
         unless job.submit_status == 0
           raise GeneralError, "The job submission failed!"
         end

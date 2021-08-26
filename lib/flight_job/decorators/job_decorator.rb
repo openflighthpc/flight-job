@@ -35,6 +35,26 @@ module FlightJob
       # TODO: Port all the methods and remove this delegator
       delegate_all
 
+      def actual_start_time
+        return nil if Job::STATES_LOOKUP[state] == :pending
+        start_time
+      end
+
+      def estimated_start_time
+        return nil unless Job::STATES_LOOKUP[state] == :pending
+        start_time
+      end
+
+      def actual_end_time
+        return nil unless Job::STATES_LOOKUP[state] == :terminal
+        end_time
+      end
+
+      def estimated_end_time
+        return nil if Job::STATES_LOOKUP[state] == :terminal
+        end_time
+      end
+
       def serializable_hash(opts = nil)
         opts ||= {}
         {
