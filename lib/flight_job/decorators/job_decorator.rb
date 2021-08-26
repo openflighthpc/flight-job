@@ -25,11 +25,9 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require 'draper'
-
 module FlightJob
   module Decorators
-    class JobDecorator < Draper::Decorator
+    class JobDecorator
       include ActiveModel::Serializers::JSON
 
       def self.delegate_metadata(*keys)
@@ -38,7 +36,13 @@ module FlightJob
         end
       end
 
-      delegate :id
+      attr_reader :object
+
+      def initialize(object)
+        @object = object
+      end
+
+      delegate :id, to: :object
       delegate_metadata :script_id, :start_time, :end_time, :scheduler_id, :scheduler_state,
         :stdout_path, :stderr_path, :results_dir, :reason, :created_at, :state,
         :submit_status, :submit_stdout, :submit_stderr
