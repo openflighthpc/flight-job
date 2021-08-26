@@ -301,40 +301,6 @@ module FlightJob
       stdout_path == stderr_path
     end
 
-    def serializable_hash(opts = nil)
-      opts ||= {}
-      {
-        "id" => id,
-        "actual_start_time" => actual_start_time,
-        "estimated_start_time" => estimated_start_time,
-        "actual_end_time" => actual_end_time,
-        "estimated_end_time" => estimated_end_time,
-        "controls" => controls_dir.serializable_hash,
-      }.merge(metadata).tap do |hash|
-        # NOTE: The API uses the 'size' attributes as a proxy check to exists/readability
-        #       as well as getting the size. Non-readable stdout/stderr would be
-        #       unusual, and can be ignored
-        hash["stdout_size"] = File.size(stdout_path) if stdout_readable?
-        hash["stderr_size"] = File.size(stderr_path) if stderr_readable?
-
-        if Flight.config.includes.include? 'script'
-          hash['script'] = load_script
-        end
-
-        # Always serialize the result_files
-        if results_dir && Dir.exist?(results_dir)
-          files =  Dir.glob(File.join(results_dir, '**/*'))
-                      .map { |p| Pathname.new(p) }
-                      .reject(&:directory?)
-                      .select(&:readable?) # These would be unusual and should be rejected
-                      .map { |p| { file: p.to_s, size: p.size } }
-          hash['result_files'] = files
-        else
-          hash['result_files'] = nil
-        end
-      end
-    end
-
     def controls_file(name)
       controls_dir.file(name)
     end
@@ -438,6 +404,19 @@ module FlightJob
       end
     end
 
+    def decorate
+      Decorators::JobDecorator.new(self)
+    end
+
+    # Jobs need to be serialized via the decorator
+    def serializable_hash
+      raise InternalError, "Unexpectedly tried to serializer a job resource"
+    end
+
+    def controls_dir
+      @controls_dir ||= ControlsDir.new(File.join(job_dir, 'controls'))
+    end
+
     protected
 
     def <=>(other)
@@ -449,10 +428,6 @@ module FlightJob
     end
 
     private
-
-    def controls_dir
-      @controls_dir ||= ControlsDir.new(File.join(job_dir, 'controls'))
-    end
 
     def job_dir
       @job_dir ||= File.join(FlightJob.config.jobs_dir, id)

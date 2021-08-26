@@ -47,6 +47,13 @@ module FlightJob
     end
   end
 
+  # Setup the autoloads for the decorators
+  module Decorators
+    Dir.glob(File.expand_path('flight_job/decorators/*.rb', __dir__)).each do |path|
+      autoload FlightJob.constantize(File.basename(path, '.*')), path
+    end
+  end
+
   # Setup the autoloads for models
   Dir.glob(File.expand_path('flight_job/models/*.rb', __dir__)).each do |path|
     autoload FlightJob.constantize(File.basename(path, '.*')), path
