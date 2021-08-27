@@ -68,7 +68,7 @@ module FlightJob
         # ----------------------------------------------------------------------------
         "end_time" => { "type" => ["string", "null"], "format" => "date-time" },
         "scheduler_id" => { "type" => ["string", "null"] },
-        "scheduler_state" => { "type" => "string" },
+        "scheduler_state" => { "type" => ["string", "null"] },
         "start_time" => { "type" => ["string", "null"], "format" => "date-time" },
         "estimated_start_time" => { "type" => ["string", "null"], "format" => "date-time" },
         "estimated_end_time" => { "type" => ["string", "null"], "format" => "date-time" },
@@ -547,9 +547,9 @@ module FlightJob
       data = nil
       if status.success?
         begin
-          data = JSON.parse(cmd_stdout.split("\n").last)
+          data = JSON.parse(cmd_stdout.split("\n").last.to_s)
         rescue JSON::ParserError
-          FlightJob.logger.error("Failed to parse #{type} JSON for job: #{id}")
+          FlightJob.logger.error("Failed to parse #{tag} JSON for job: #{id}")
           FlightJob.logger.debug($!.message)
           raise_command_error
         end
