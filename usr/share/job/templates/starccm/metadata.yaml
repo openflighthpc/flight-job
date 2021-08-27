@@ -1,0 +1,97 @@
+name: StarCCM+
+copyright: Copyright (C) 2021 Alces Flight Ltd.
+license: Creative Commons Attribution-ShareAlike 4.0 International
+script_template: starccm.sh
+priority: 100
+version: 0
+synopsis: Job script for launching a StarCCM+ job.
+description: |
+  This template creates a job script for launching a StarCCM+ job.
+
+generation_questions:
+  - id: starccm_version
+    text: "StarCCM+ version:"
+    description: >
+      StarCCM+ version.
+    default: '14.04.013'
+    format:
+      type: select
+      options:
+        - text: '14.04.013'
+          value: '14.04.013'
+        - text: '13.06.012'
+          value: '13.06.012'
+
+  - id: input_filename
+    text: "SIM filename (including .sim extension):"
+    description: >
+      The name of the SIM file to use.
+    format:
+      type: text
+
+  - id: input_dir
+    text: "Subdirectory containing input file (blank for default):"
+    description: >
+      The directory containing the SIM file to use. Leave blank to use
+      a directory named the same as the basename of the SIM file.
+    default: ''
+    format:
+      type: text
+
+  - id: job_type
+    text: "Job type:"
+    description: >
+      The job type.
+    default: 'Mesh'
+    format:
+      type: select
+      options:
+        - text: 'Mesh'
+          value: 'mesh'
+        - text: 'Solve'
+          value: 'solve'
+
+  - id: mesh_cores
+    text: "Number of mesh cores:"
+    description: >
+      Mesh cores.
+    default: '1'
+    format:
+      type: text
+    ask_when:
+      value: question.job_type.answer
+      eq: 'mesh'
+
+  - id: solve_cores
+    text: "Number of solve cores:"
+    description: >
+      Solve cores.
+    default: '360'
+    format:
+      type: text
+    ask_when:
+      value: question.job_type.answer
+      eq: 'solve'
+
+  - id: macros
+    text: "Macros to apply to the job (.java files or builtins):"
+    description: >
+      Macro files or builtins.
+    default: ''
+    format:
+      type: text
+
+  - id: await_job
+    text: "ID of job to wait for before starting:"
+    description: >
+      Wait for job ID.
+    format:
+      type: text
+
+  - id: notification_address
+    text: "Notification email address:"
+    description: >
+      What email address should job notifications be sent to?
+    default: 'eelke.groot@uk.alpineracing.com'
+    format:
+      type: text
