@@ -21,6 +21,11 @@ generation_questions:
           value: '14.04.013'
         - text: '13.06.012'
           value: '13.06.012'
+    validate:
+      type: string
+      enum:
+        - '14.04.013'
+        - '13.06.012'
 
   - id: input_filename
     text: "SIM filename (including .sim extension):"
@@ -28,6 +33,9 @@ generation_questions:
       The name of the SIM file to use.
     format:
       type: text
+    validate:
+      type: string
+      required: true
 
   - id: input_dir
     text: "Subdirectory containing input file (blank for default):"
@@ -37,6 +45,8 @@ generation_questions:
     default: ''
     format:
       type: text
+    validate:
+      type: string
 
   - id: job_type
     text: "Job type:"
@@ -50,28 +60,41 @@ generation_questions:
           value: 'mesh'
         - text: 'Solve'
           value: 'solve'
+    validate:
+      type: string
+      enum:
+        - 'mesh'
+        - 'solve'
 
   - id: mesh_cores
     text: "Number of mesh cores:"
     description: >
       Mesh cores.
-    default: '1'
+    default: 1
     format:
-      type: text
+      type: number
     ask_when:
       value: question.job_type.answer
       eq: 'mesh'
+    validate:
+      type: integer
+      minimum: 1
+      maximum: 100
 
   - id: solve_cores
     text: "Number of solve cores:"
     description: >
       Solve cores.
-    default: '360'
+    default: 360
     format:
-      type: text
+      type: number
     ask_when:
       value: question.job_type.answer
       eq: 'solve'
+    validate:
+      type: integer
+      minimum: 1
+      maximum: 100
 
   - id: macros
     text: "Macros to apply to the job (.java files or builtins):"
@@ -80,13 +103,18 @@ generation_questions:
     default: ''
     format:
       type: text
+    validate:
+      type: string
 
   - id: await_job
     text: "ID of job to wait for before starting:"
     description: >
       Wait for job ID.
     format:
-      type: text
+      type: number
+    validate:
+      type: integer
+      minimum: 1
 
   - id: notification_address
     text: "Notification email address:"
@@ -95,3 +123,6 @@ generation_questions:
     default: 'eelke.groot@uk.alpineracing.com'
     format:
       type: text
+    validate:
+      type: string
+      format: email
