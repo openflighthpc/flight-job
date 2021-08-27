@@ -122,24 +122,6 @@
 # adapter_script_path: usr/share/job/adapter.<scheduler>.erb
 
 # ==============================================================================
-# State Map Path
-# Specify the path to the state map file. This file should contain a list of
-# "scheduler states" and the corresponding "flight job state".
-#
-# The default value will automatically use the 'scheduler' config. This feature
-# is not supported when overridden.
-#
-# Relative paths are expanded according to the "Relative path expansion" rules
-# described below.
-#
-# WARNING: Unrecognized flight-job states may prevent the job from being updated.
-# Ensure all flight-job states are valid (see: lib/flight_job/models/script.rb)
-#
-# The environment variable flight_JOB_state_map_path takes precedence.
-# ==============================================================================
-# state_map_path: etc/job/state-maps/<scheduler>.yaml
-
-# ==============================================================================
 # Minimum Terminal Width
 # The minimum terminal width when wrapping output text. This prevents various
 # edge cases in small terminals. The terminal is responsible for wrapping the

@@ -45,25 +45,13 @@ module FlightJob
       delegate :id, to: :object
       delegate_metadata :script_id, :start_time, :end_time, :scheduler_id, :scheduler_state,
         :stdout_path, :stderr_path, :results_dir, :reason, :created_at, :state,
-        :submit_status, :submit_stdout, :submit_stderr
+        :submit_status, :submit_stdout, :submit_stderr, :estimated_start_time, :estimated_end_time
 
       def actual_start_time
-        return nil if Job::STATES_LOOKUP[state] == :pending
-        start_time
-      end
-
-      def estimated_start_time
-        return nil unless Job::STATES_LOOKUP[state] == :pending
         start_time
       end
 
       def actual_end_time
-        return nil unless Job::STATES_LOOKUP[state] == :terminal
-        end_time
-      end
-
-      def estimated_end_time
-        return nil if Job::STATES_LOOKUP[state] == :terminal
         end_time
       end
 

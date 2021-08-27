@@ -41,15 +41,25 @@ set +e
 # Specify the template for the JSON response
 # NOTE: scontrol does not distinguish between actual/estimated times. Instead
 #       flight-job will set the times according to the state
+# read -r -d '' template <<'TEMPLATE' || true
+# {
+#   state: ($state),
+#   reason: ($reason),
+#   start_time: ($start_time),
+#   end_time: ($end_time),
+#   estimated_start_time: ($estimated_start_time),
+#   estimated_end_time: ($estimated_end_time)
+# }
+# TEMPLATE
 read -r -d '' template <<'TEMPLATE' || true
 {
-  version: 0,
-  state: ($state),
-  reason: ($reason),
-  start_time: ($start_time),
-  end_time: ($end_time),
-  estimated_start_time: ($estimated_start_time),
-  estimated_end_time: ($estimated_end_time)
+  version: 1,
+  state: "UNKNOWN",
+  reason: "",
+  start_time: null,
+  end_time: null,
+  estimated_start_time: null,
+  estimated_end_time: null
 }
 TEMPLATE
 

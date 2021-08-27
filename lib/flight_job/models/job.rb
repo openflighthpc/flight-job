@@ -33,7 +33,6 @@ require 'open3'
 
 module FlightJob
   class Job < ApplicationModel
-    STATE_MAP = YAML.load(File.read(FlightJob.config.state_map_path))
     PENDING_STATES = ['PENDING']
     TERMINAL_STATES = ['FAILED', 'COMPLETED', 'CANCELLED', 'UNKNOWN']
     RUNNING_STATES = ['RUNNING']
@@ -63,7 +62,7 @@ module FlightJob
         # These should *probably* become required on the next major release of the metadata
         # ----------------------------------------------------------------------------
         "rendered_path" => { "type" => "string" },
-        "version" => { "const": 0 },
+        "version" => { "const": "1.alpha" },
         # ----------------------------------------------------------------------------
         # Optional
         # ----------------------------------------------------------------------------
@@ -71,6 +70,8 @@ module FlightJob
         "scheduler_id" => { "type" => ["string", "null"] },
         "scheduler_state" => { "type" => "string" },
         "start_time" => { "type" => ["string", "null"], "format" => "date-time" },
+        "estimated_start_time" => { "type" => ["string", "null"], "format" => "date-time" },
+        "estimated_end_time" => { "type" => ["string", "null"], "format" => "date-time" },
         "stdout_path" => { "type" => ["string", "null"] },
         "stderr_path" => { "type" => ["string", "null"] },
         "results_dir" => { "type" => ["string", "null"] },
@@ -91,9 +92,94 @@ module FlightJob
     SUBMIT_RESPONSE_SCHEMA = JSONSchemer.schema(
       YAML.load_file(File.join(__dir__, 'job/submit_response_schema.yaml'))
     )
-    MONITOR_RESPONSE_SCHEMA = JSONSchemer.schema(
-      YAML.load_file(File.join(__dir__, 'job/monitor_response_schema.yaml'))
-    )
+    # We have multiple schemas for the monitor response to workaround issues
+    # with JSONSchemer and error reporting on `oneOf` matchers.
+    MONITOR_RESPONSE_SCHEMAS = {
+      initial: JSONSchemer.schema({
+        "type" => "object",
+        "additionalProperties" => true,
+        "required" => ["version", "state"],
+        "properties" => {
+          "version" => { "const" => 1 },
+          "state" => { "enum" => STATES }
+        }
+      }),
+
+      "PENDING" => JSONSchemer.schema({
+        "type" => "object",
+        "additionalProperties" => false,
+        "required" => [],
+        "properties" => {
+          "version" => {}, "state" => {},
+          "scheduler_state" => { "type" => "string", "minLength": 1 },
+          "reason" => { "type" => ["string", "null"] },
+          "start_time" => { "type" => "null" },
+          "end_time" => { "type" => "null" },
+          "estimated_start_time" => { "type" => ["string", "null"] },
+          "estimated_end_time" => { "type" => ["string", "null"] }
+        }
+      }),
+
+      "RUNNING" => JSONSchemer.schema({
+        "type" => "object",
+        "additionalProperties" => false,
+        "required" => ["start_time"],
+        "properties" => {
+          "version" => {}, "state" => {},
+          "scheduler_state" => { "type" => "string", "minLength": 1 },
+          "reason" => { "type" => ["string", "null"] },
+          "start_time" => { "type" => "string", "minLength": 1 },
+          "end_time" => { "type" => "null" },
+          "estimated_start_time" => { "type" => "null" },
+          "estimated_end_time" => { "type" => ["string", "null"] }
+        }
+      }),
+
+      "COMPLETED" => JSONSchemer.schema({
+        "type" => "object",
+        "additionalProperties" => false,
+        "required" => ["start_time"],
+        "properties" => {
+          "version" => {}, "state" => {},
+          "scheduler_state" => { "type" => "string", "minLength": 1 },
+          "reason" => { "type" => ["string", "null"] },
+          "start_time" => { "type" => "string", "minLength": 1 },
+          "end_time" => { "type" => "string", "minLength": 1 },
+          "estimated_start_time" => { "type" => "null" },
+          "estimated_end_time" => { "type" => "null" }
+        }
+      }),
+
+      "CANCELLED" => JSONSchemer.schema({
+        "type" => "object",
+        "additionalProperties" => false,
+        "required" => ["start_time"],
+        "properties" => {
+          "version" => {}, "state" => {},
+          "scheduler_state" => { "type" => "string", "minLength": 1 },
+          "reason" => { "type" => ["string", "null"] },
+          "start_time" => { "type" => ["null", "string"] },
+          "end_time" => { "type" => "string", "minLength": 1 },
+          "estimated_start_time" => { "type" => "null" },
+          "estimated_end_time" => { "type" => "null" }
+        }
+      }),
+
+      "UNKNOWN" => JSONSchemer.schema({
+        "type" => "object",
+        "additionalProperties" => false,
+        "required" => ["start_time"],
+        "properties" => {
+          "version" => {}, "state" => {},
+          "scheduler_state" => { "type" => "string", "minLength": 1 },
+          "reason" => { "type" => ["string", "null"] },
+          "start_time" => { "type" => "null" },
+          "end_time" => { "type" => "null" },
+          "estimated_start_time" => { "type" => "null" },
+          "estimated_end_time" => { "type" => "null" }
+        }
+      })
+    }.tap { |h| h["FAILED"] = h["COMPLETED"] }
 
     def self.load_all
       Dir.glob(new(id: '*').metadata_path).map do |path|
@@ -192,7 +278,7 @@ module FlightJob
       elsif File.exists? initial_metadata_path
         YAML.load File.read(initial_metadata_path)
       else
-        { "version" => 0, "created_at" => DateTime.now.rfc3339 }
+        { "version" => "1.alpha", "created_at" => DateTime.now.rfc3339 }
       end
     end
 
@@ -285,15 +371,6 @@ module FlightJob
       controls_dir.file(name)
     end
 
-    # Takes the scheduler's state and converts it to an internal flight-job
-    # one.
-    # NOTE: The `state=` method should be used when updating the internal
-    # state directly
-    def update_scheduler_state(scheduler_state)
-      metadata['state'] = STATE_MAP.fetch(scheduler_state, 'UNKNOWN')
-      metadata['scheduler_state'] = scheduler_state
-    end
-
     def submit
       # Validate and load the script
       unless valid?(:submit)
@@ -369,14 +446,25 @@ module FlightJob
       execute_command(*cmd, tag: 'monitor') do |status, stdout, stderr, data|
         if status.success?
           # Validate the output
-          validate_data(MONITOR_RESPONSE_SCHEMA, data, tag: "monitor (initial)")
+          validate_data(MONITOR_RESPONSE_SCHEMAS[:initial], data, tag: "monitor (initial)")
+          validate_data(MONITOR_RESPONSE_SCHEMAS[data['state']], data, tag: "monitor (#{data['state']})")
 
-          update_scheduler_state(data['state'])
+          data.each do |key, value|
+            # Ignore the metadata version
+            next if key == "version"
 
-          process_times data['estimated_start_time'],
-                        data['start_time'],
-                        data['estimated_end_time'],
-                        data['end_time']
+            # Treat empty string/nil as the same value
+            value = nil if value == ''
+
+            # Parse and set times
+            if /_time\Z/.match? key
+              metadata[key] = parse_time(value, type: key)
+
+            # Set other keys
+            else
+              metadata[key] = value
+            end
+          end
 
           if data['reason'] == ''
             metadata['reason'] = nil
@@ -415,29 +503,6 @@ module FlightJob
 
     def job_dir
       @job_dir ||= File.join(FlightJob.config.jobs_dir, id)
-    end
-
-    def process_times(est_start, start, est_end, end_time)
-      # The monitor script does not always distinguish between actual/estimated
-      # start/end times. Doing so reliable would require knowledge of the state
-      # mapping file as 'scontrol' does not make a distinction.
-      #
-      # Instead the estimated/actual times are inferred by the state. To prevent
-      # transient dependencies between attributes, their is only one version of
-      # the `start_time`/`end_time` fields are stored each. The state is then
-      # used to infer which is correct.
-
-      case state
-      when *PENDING_STATES
-        metadata['start_time'] = parse_time(est_start, type: "estimated_start_time")
-        metadata['end_time'] = parse_time(est_end, type: "estimated_end_time")
-      when *RUNNING_STATES
-        metadata['start_time'] = parse_time(start, type: "actual_start_time")
-        metadata['end_time'] = parse_time(est_end, type: "estimated_end_time")
-      else
-        metadata['start_time'] = parse_time(start, type: "actual_start_time")
-        metadata['end_time'] = parse_time(end_time, type: "actual_end_time")
-      end
     end
 
     def parse_time(time, type:)
