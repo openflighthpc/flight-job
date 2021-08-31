@@ -57,7 +57,11 @@ module FlightJob
         end
       end
 
-      def run
+      def run!
+        raise NotImplementedError
+      end
+
+      def run!
         # Validate and load the script
         unless valid?
           FlightJob.config.logger("The script is not in a valid submission state: #{id}\n") do
@@ -109,7 +113,7 @@ module FlightJob
           File.write(metadata_path, YAML.dump(metadata))
 
           # Create the indexing file if in non-terminal state
-          unless Job::STATES_LOOKUP[state] == :terminal
+          unless Job.terminal?
             FileUtils.touch active_index_path
           end
         end
