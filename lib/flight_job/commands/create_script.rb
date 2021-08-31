@@ -235,7 +235,7 @@ module FlightJob
             end
             if selected.empty?
               @prompt_for_selected = true
-              prompt.keypress pastel.yellow(<<~WARN)
+              prompt.keypress(pastel.yellow(<<~WARN.chomp))
 
                 You have not selected any questions to be re-ask!
                 Questions need to be explicitly selected with Space.
