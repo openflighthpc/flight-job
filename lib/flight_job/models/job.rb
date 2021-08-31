@@ -42,42 +42,97 @@ module FlightJob
                       .merge(RUNNING_STATES.map { |s| [s, :running] }.to_h)
                       .merge(TERMINAL_STATES.map { |s| [s, :terminal] }.to_h)
 
-    SCHEMA = JSONSchemer.schema({
-      "type" => "object",
-      "additionalProperties" => false,
-      "required" => ["created_at", "script_id", "state", "submit_status", "submit_stdout", "submit_stderr"],
-      "properties" => {
-        # ----------------------------------------------------------------------------
-        # Required
-        # ----------------------------------------------------------------------------
-        "created_at" => { "type" => "string", "format" => "date-time" },
-        "script_id" => { "type" => "string" },
-        "state" => { "type" => "string", "enum" => STATES },
-        "submit_status" => { "type" => "integer", "minimum" => 0, "maximum" => 255 },
-        "submit_stdout" => { "type" => "string" },
-        "submit_stderr" => { "type" => "string" },
-        # ----------------------------------------------------------------------------
-        # Psuedo - Required
-        #
-        # These should *probably* become required on the next major release of the metadata
-        # ----------------------------------------------------------------------------
-        "rendered_path" => { "type" => "string" },
-        "version" => { "const": "1.alpha" },
-        # ----------------------------------------------------------------------------
-        # Optional
-        # ----------------------------------------------------------------------------
-        "end_time" => { "type" => ["string", "null"], "format" => "date-time" },
-        "scheduler_id" => { "type" => ["string", "null"] },
-        "scheduler_state" => { "type" => ["string", "null"] },
-        "start_time" => { "type" => ["string", "null"], "format" => "date-time" },
-        "estimated_start_time" => { "type" => ["string", "null"], "format" => "date-time" },
-        "estimated_end_time" => { "type" => ["string", "null"], "format" => "date-time" },
-        "stdout_path" => { "type" => ["string", "null"] },
-        "stderr_path" => { "type" => ["string", "null"] },
-        "results_dir" => { "type" => ["string", "null"] },
-        "reason" => { "type" => ["string", "null"] },
-      }
-    })
+    # JSON:Schemer supports oneOf matcher, however this makes the kinda cryptic
+    # error messages, super cryptic
+    #
+    # Instead there is an initial "default" validation, checks for the shared
+    # required keys. Then the "job_type" is used to select the specific
+    # validator.
+    #
+    # It is assumed the initial validator is ran before the others
+    SHARED_KEYS = ["created_at", "job_type", "rendered_path", "script_id", "version"]
+    SCHEMAS = {
+      initial: JSONSchemer.schema({
+        "type" => "object",
+        "additionalProperties" => true,
+        "required" => SHARED_KEYS,
+        "properties" => {
+          "created_at" => { "type" => "string", "format" => "date-time" },
+          "job_type" => { "enum" => ["INITIALIZING", "SINGLETON", "FAILED_SUBMISSION"] },
+          "rendered_path" => { "type" => "string", "minLength": 1 },
+          "script_id" => { "type" => "string", "minLength": 1 },
+          "version" => { "const" => "1.beta" }
+        }
+      }),
+
+      "INITIALIZING" => JSONSchemer.schema({
+        "type" => "object",
+        "additionalProperties" => false,
+        "required" => SHARED_KEYS,
+        "properties" => {
+          **SHARED_KEYS.map { |k| [k, {}] }.to_h,
+          "job_type" => { "const" => "INITIALIZING" }
+        }
+      }),
+
+      "FAILED_SUBMISSION" => JSONSchemer.schema({
+        "type" => "object",
+        "additionalProperties" => false,
+        "required" => [*SHARED_KEYS, "submit_status", "submit_stdout", "submit_stderr"],
+        "properties" => {
+          **SHARED_KEYS.map { |k| [k, {}] }.to_h,
+          "job_type" => { "const" => "FAILED_SUBMISSION" },
+          # NOTE: There are two edge cases where submit_status is set to 126
+          # * 'flight-job' fails to report back the status, OR
+          # * 'submit.sh' lies about exiting 0
+          #
+          # If 'flight-job' never reports back the status, the job will eventually
+          # be transitioned to FAILED_SUBMISSION/126.
+          #
+          # However the 'submit.sh' may exit 0 with invalid submit response JSON. This
+          # is a *lie* and is also reported back as FAILED_SUBMISSION/126.
+          "submit_status" => { "type" => "integer", "minimum" => 1, "maximum" => 255 },
+          "submit_stdout" => { "type" => "string" },
+          "submit_stderr" => { "type" => "string" },
+        }
+      }),
+
+      "SINGLETON" => JSONSchemer.schema({
+        "type" => "object",
+        "additionalProperties" => false,
+        "required" => [
+          *SHARED_KEYS, 'submit_status', 'submit_stdout', 'submit_stderr',
+          'scheduler_id', 'state', 'results_dir', 'stdout_path'
+        ],
+        "properties" => {
+          # Required
+          **SHARED_KEYS.map { |k| [k, {}] }.to_h,
+          "job_type" => { "const" => "SINGLETON" },
+          "submit_status" => { const: 0 },
+          "submit_stdout" => { "type" => "string" },
+          "submit_stderr" => { "type" => "string" },
+          "state" => { "enum" => STATES },
+          "scheduler_id" => { "type" => "string", "minLength" => 1 },
+          "results_dir" => { "type" => "string", "minLength" => 1 },
+          "stdout_path" => { "type" => "string", "minLength" => 1 },
+          # Optional
+          #
+          # NOTE: The transient dependency between 'state' and times
+          # are enforced by the monitor scripts.
+          #
+          # It is assumed they metadata will not be edited manually,
+          # and thus will remain accurate.
+          "estimated_start_time" => { "type" => ['date-time', 'null'] },
+          "estimated_end_time" => { "type" => ['date-time', 'null'] },
+          "start_time" => { "type" => ["date-time", "null"] },
+          "end_time" => { "type" => ["date-time", "null"] },
+          "reason" => { "type" => ["string", "null"] },
+          # Optional - Non empty
+          "scheduler_state" => { "type" => "string", "minLength" => 1 },
+          "stderr_path" => { "type" => "string", "minLength" => 1 }
+        }
+      })
+    }
 
     def self.load_all
       Dir.glob(new(id: '*').metadata_path).map do |path|
@@ -85,6 +140,12 @@ module FlightJob
         job = new(id: id)
         if job.valid?(:load)
           job.tap(&:monitor)
+          if job.job_type == 'INITIALIZING'
+            FlightJob.logger.debug("Skipping initializing job: #{job.id}")
+            nil
+          else
+            job
+          end
         else
           FlightJob.logger.error("Failed to load missing/invalid job: #{id}")
           FlightJob.logger.info(job.errors.full_messages.join("\n"))
@@ -94,33 +155,53 @@ module FlightJob
     end
 
     def self.monitor_all
-      Dir.glob(new(id: '*').active_index_path)
-        .select { |p| File.exists?(p) }
-        .map { |p| File.basename(File.dirname(p)) }
-        .map { |id| new(id: id) }
-        .map(&:monitor)
+      Dir.glob(new(id: '*').active_index_path).each do |path|
+        # Load the job
+        id = File.basename(File.dirname(path))
+        job = new(id: id)
+
+        # Ensure it is valid
+        unless job.valid?(:load)
+          FlightJob.logger.error "Skipping monitor for invalid job: #{id}"
+          FlightJob.logger.info(job.errors.full_messages.join("\n"))
+          next
+        end
+
+        # Run the monitor
+        job.monitor
+      end
+    end
+
+    def self.submit(script)
+      new(submit_script: script).tap(&:submit)
     end
 
     validate on: :load do
-      unless submitted?
-        errors.add(:submitted, 'the job has not been submitted')
-      end
-
-      unless (schema_errors = SCHEMA.validate(metadata).to_a).empty?
-        FlightJob.logger.debug("The following metadata file is invalid: #{metadata_path}\n") do
-          JSON.pretty_generate(schema_errors)
-        end
-        errors.add(:metadata, 'is invalid')
-      end
-
       # Ensure the active file does not exist in terminal states
       # TODO: This will need to be reworked for array-jobs
-      if STATES_LOOKUP[state] == :terminal
+      if terminal?
         FileUtils.rm_f active_index_path
 
       # Otherwise, ensure the active file does exist
       else
         FileUtils.touch active_index_path
+      end
+    end
+
+    # Verifies the metadata is valid before saving it
+    validate on: [:load, :save_metadata] do
+      # Run the initial schema, followed by the specific one
+      schema_errors = SCHEMAS[:initial].validate(metadata).to_a
+      if schema_errors.empty?
+        schema_errors = SCHEMAS[metadata['job_type']].validate(metadata).to_a
+      end
+
+      # Add the schema errors if any
+      unless schema_errors.empty?
+        FlightJob.logger.debug("The following metadata file is invalid: #{metadata_path}\n") do
+          JSON.pretty_generate(schema_errors)
+        end
+        errors.add(:metadata, 'is invalid')
       end
     end
 
@@ -152,8 +233,19 @@ module FlightJob
       metadata['script_id']
     end
 
-    def script_id=(input)
-      metadata['script_id'] = input
+    def submit_script=(script)
+      # Initialize the job with the script
+      if metadata.empty?
+        metadata["created_at"] = Time.now.rfc3339
+        metadata["job_type"] = "INITIALIZING"
+        metadata["rendered_path"] = File.join(job_dir, script.script_name)
+        metadata["script_id"] = script.id
+        metadata["version"] = "1.beta"
+
+      # Error has the job already exists
+      else
+        raise InternalError, "Cannot set the 'script' as the metadata is already loaded"
+      end
     end
 
     def submitted?
@@ -168,22 +260,14 @@ module FlightJob
       @active_index_path ||= File.join(job_dir, 'active.index')
     end
 
-    # Stores the initial state of the metadata before the job is submitted
-    #
-    # A job does not truely exist until after it has been submitted, however this
-    # causes jobs to be lost if the submission catastrophically fails. As a fallback,
-    # The initial metadata is used to re-construct a failed job entry.
-    def initial_metadata_path
-      @initial_metadata_path ||= File.join(job_dir, 'metadata.initial.yaml')
-    end
-
     def metadata
       @metadata ||= if File.exists? metadata_path
         YAML.load File.read(metadata_path)
-      elsif File.exists? initial_metadata_path
-        YAML.load File.read(initial_metadata_path)
       else
-        { "version" => "1.alpha", "created_at" => DateTime.now.rfc3339 }
+        # NOTE: This is almost always an error condition, however it is up
+        # to the validation to handle it. New jobs should use the submit
+        # method
+        {}
       end
     end
 
@@ -206,7 +290,22 @@ module FlightJob
     end
 
     def state
-      metadata['state']
+      case job_type
+      when 'INITIALIZING'
+        'PENDING'
+      when 'FAILED_SUBMISSION'
+        'FAILED'
+      else
+        metadata['state'] || 'UNKNOWN'
+      end
+    rescue
+      # Various validations require the 'state', which depends on the
+      # metadata being correct.
+      #
+      # This error can be ignored, as the metadata is validated independently
+      Flight.logger.error "Failed to resolve the state for job '#{id}'"
+      Flight.logger.debug $!
+      return 'UNKNOWN'
     end
 
     def stdout_path
@@ -218,7 +317,7 @@ module FlightJob
     end
 
     def submitted?
-      metadata['submit_status'] == 0
+      job_type != 'INITIALIZING'
     end
 
     def scheduler_id
@@ -250,12 +349,12 @@ module FlightJob
       JobTransitions::SubmitTransition.new(self).run!
     end
 
+    # Deliberately not a case statement to allow fall through
     def monitor
-      if File.exists? initial_metadata_path
+      if job_type == 'INITIALIZING'
         JobTransitions::FailedSubmissionTransition.new(self).run
       end
-
-      unless terminal?
+      if job_type == 'SINGLETON'
         JobTransitions::MonitorSingletonTransition.new(self).run!
       end
     end
@@ -279,6 +378,23 @@ module FlightJob
 
     def terminal?
       STATES_LOOKUP[state] == :terminal
+    end
+
+    def job_type
+      metadata['job_type'] || raise(InternalError, <<~ERROR.chomp)
+        Failed to resolve the 'job_type' for job '#{id}'
+      ERROR
+    end
+
+    def save_metadata
+      if valid?(:save_metadata)
+        FileUtils.mkdir_p File.dirname(metadata_path)
+        File.write metadata_path, YAML.dump(metadata)
+      else
+        FlightJob.logger.error("Failed to savve job metadata: #{id}")
+        FlightJob.logger.info(errors.full_messages.join("\n"))
+        raise InternalError, "Unexpectedly failed to save job '#{id}' metadata"
+      end
     end
 
     protected

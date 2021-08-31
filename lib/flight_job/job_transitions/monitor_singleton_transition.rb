@@ -30,16 +30,6 @@ module FlightJob
     class MonitorSingletonTransition < SimpleDelegator
       include JobTransitions::JobTransitionHelper
 
-      # JSON:Schemer supports oneOf matcher, however this makes the kinda cryptic
-      # error messages, super cryptic
-      #
-      # Instead there is an initial "default" validation, which checks the 'state'
-      # is recognized. From that, the more exact validator is selected
-      #
-      # It is assumed the initial validator is ran before the others
-      #
-      # NOTE: The time formats are not checked at this validator, as ruby will
-      #       attempt to coerce them.
       MONITOR_RESPONSE_SCHEMAS = {
         initial: JSONSchemer.schema({
           "type" => "object",
@@ -144,7 +134,7 @@ module FlightJob
           FlightJob.logger.error "Can not monitor job '#{id}' as it did not report its scheduler_id"
           metadata['reason'] = "Did not report it's scheduler ID"
           metadata['state'] = "FAILED"
-          File.write(metadata_path, YAML.dump(metadata))
+          save_metadata
           return
         end
 
@@ -178,7 +168,7 @@ module FlightJob
             elsif data['reason']
               metadata['reason'] = data['reason']
             end
-            File.write(metadata_path, YAML.dump(metadata))
+            save_metadata
 
             # Remove the indexing file in terminal state
             FileUtils.rm_f active_index_path if terminal?

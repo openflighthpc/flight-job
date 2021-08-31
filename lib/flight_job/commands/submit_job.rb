@@ -31,8 +31,7 @@ module FlightJob
   module Commands
     class SubmitJob < Command
       def run
-        job = Job.new(script_id: script.id)
-        job.submit
+        job = Job.submit(script)
 
         # Patches the submit flag on to output_options
         # NOTE: There is probably a better way to do this in general,

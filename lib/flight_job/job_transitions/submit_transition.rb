@@ -71,13 +71,11 @@ module FlightJob
         end
         script = load_script
 
-        # Generate the initial metadata path file
-        FileUtils.mkdir_p File.dirname(initial_metadata_path)
-        File.write initial_metadata_path, YAML.dump(active_metadata)
+        # Write the initial metadata
+        save_metadata
+        FileUtils.touch active_index_path
 
         # Duplicate the script into the job's directory
-        # NOTE: Eventually this should probably be named after the job_name question
-        metadata["rendered_path"] = File.join(job_dir, script.script_name)
         FileUtils.cp script.script_path, metadata["rendered_path"]
 
         # Run the submission command
@@ -89,32 +87,35 @@ module FlightJob
           metadata['submit_stdout'] = out
           metadata['submit_stderr'] = err
 
-          # Set the initial state based on the exit status
-          if metadata['submit_status'] == 0
-            metadata['state'] = 'PENDING'
-          else
-            metadata['state'] = 'FAILED'
-          end
-
-          # Persist the current state of the job
-          FileUtils.mkdir_p File.dirname(metadata_path)
-          File.write metadata_path, YAML.dump(metadata)
-
-          # Parse stdout on successful commands
           if status.success?
-            validate_data(SUBMIT_RESPONSE_SCHEMA, data, tag: 'submit')
-            metadata['scheduler_id'] = data['id']
-            metadata['stdout_path'] = data['stdout'].blank? ? nil : data['stdout']
-            metadata['stderr_path'] = data['stderr'].blank? ? nil : data['stderr']
-            metadata['results_dir'] = data['results_dir']
+            begin
+              validate_data(SUBMIT_RESPONSE_SCHEMA, data, tag: 'submit')
+              # The job was submitted correctly and is now pending
+              metadata['job_type'] = 'SINGLETON'
+              metadata['state'] = 'PENDING'
+              metadata['scheduler_id'] = data['id']
+              metadata['stdout_path'] = data['stdout'].blank? ? nil : data['stdout']
+              metadata['stderr_path'] = data['stderr'].blank? ? nil : data['stderr']
+              metadata['results_dir'] = data['results_dir']
+              save_metadata
+            rescue CommandError
+              # The command lied about exiting 0! It did not report the json payload
+              # correctly. Changing the status to 126
+              metadata['job_type'] = 'FAILED_SUBMISSION'
+              metadata['submit_status'] = 126
+              metadata["submit_stderr"] << "\nFailed to parse JSON response"
+              save_metadata
+              raise $!
+            end
+          else
+            # The submission failed
+            metadata['job_type'] = 'FAILED_SUBMISSION'
+            save_metadata
           end
 
-          # Persist the updated version of the metadata
-          File.write(metadata_path, YAML.dump(metadata))
-
-          # Create the indexing file if in non-terminal state
-          unless Job.terminal?
-            FileUtils.touch active_index_path
+          # Remove the indexing file if in non-terminal state
+          if terminal?
+            FileUtils.rm_f active_index_path
           end
         end
       end
