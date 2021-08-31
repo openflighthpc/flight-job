@@ -79,16 +79,6 @@ module FlightJob
       }
     })
 
-    ACTIVE_SCHEMA = JSONSchemer.schema({
-      "type" => "object",
-      "additionalProperties" => false,
-      "required" => ["script_id", "created_at"],
-      "properties" => {
-        "script_id" => { "type" => "string" },
-        "created_at" => { "type" => "string", "format" => "date-time" },
-      }
-    })
-
     def self.load_all
       Dir.glob(new(id: '*').metadata_path).map do |path|
         id = File.basename(File.dirname(path))
@@ -103,16 +93,7 @@ module FlightJob
       end.reject(&:nil?).sort
     end
 
-    def self.transition_inactive
-      Dir.glob(new(id: '*').initial_metadata_path).each do |path|
-        new(id: File.basename(File.dirname(path))).transition_inactive
-      end
-    end
-
     def self.monitor_all
-      # TODO: Do this on monitor
-      transition_inactive
-
       Dir.glob(new(id: '*').active_index_path)
         .select { |p| File.exists?(p) }
         .map { |p| File.basename(File.dirname(p)) }
@@ -143,7 +124,6 @@ module FlightJob
       end
     end
 
-    # TODO: Move onto transition helper
     attr_writer :id
 
     # Implicitly generates an ID by trying to create a randomised directory
@@ -213,40 +193,6 @@ module FlightJob
       metadata.is_a?(Hash) ? metadata.slice('version', 'created_at', 'script_id') : {}
     end
 
-    # Checks it the job has got stuck during the submission
-    # This can happen if the job is interrupted during submission
-    def transition_inactive
-      # Remove the initial_metadata_path if metadata_path exists
-      FileUtils.rm_f initial_metadata_path if File.exists? metadata_path
-      return unless File.exists? initial_metadata_path
-
-      schema_errors = ACTIVE_SCHEMA.validate(active_metadata).to_a
-      if schema_errors.empty?
-        # Check if the maximum pending submission time has elapsed
-        start = DateTime.rfc3339(created_at).to_time.to_i
-        now = Time.now.to_i
-        if now - start > FlightJob.config.submission_period
-          FlightJob.logger.error <<~ERROR
-            The following job is being flaged as FAILED as it has not been submitted: #{id}
-          ERROR
-          metadata['state'] = 'FAILED'
-          metadata['submit_status'] = 126
-          metadata['submit_stdout'] = ''
-          metadata['submit_stderr'] = 'Failed to run the submission command for an unknown reason'
-          FileUtils.mkdir_p File.dirname(metadata_path)
-          File.write metadata_path, YAML.dump(metadata)
-          FileUtils.rm_f initial_metadata_path
-        else
-          FlightJob.logger.info "Ignoring the following job as it is pending submission: #{id}"
-        end
-      else
-        FlightJob.logger.error <<~ERROR.chomp
-          The following active file is invalid: #{initial_metadata_path}
-        ERROR
-        FileUtils.rm_f initial_metadata_path
-      end
-    end
-
     def load_script
       Script.new(id: script_id)
     end
@@ -305,7 +251,13 @@ module FlightJob
     end
 
     def monitor
-      JobTransitions::MonitorSingletonTransition.new(self).run!
+      if File.exists? initial_metadata_path
+        JobTransitions::FailedSubmissionTransition.new(self).run
+      end
+
+      unless terminal?
+        JobTransitions::MonitorSingletonTransition.new(self).run!
+      end
     end
 
     def decorate
