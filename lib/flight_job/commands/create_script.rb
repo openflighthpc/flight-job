@@ -113,13 +113,15 @@ module FlightJob
             text = summary.sub(/\n+\Z/, '')
             diff = TTY::Screen.rows - text.lines.count
             # Work around issues with LESS -SFRX flag
-            # The -F/--quit-if-one-screen flag disables less if the summary fits on one page
-            # However, the prompt_again question adds an additional X lines, which isn't being
-            # accounted for.
+            # The -F/--quit-if-one-screen flag disables less if the summary
+            # fits on one page
             #
-            # The 'pager' should still be used, as the user may have changed either PAGER/LESS
-            # env vars. Instead the text is padded with newlines, if its length is X lines less
-            # than the terminal height
+            # However, the prompt_again question adds an additional X lines,
+            # which isn't being accounted for.
+            #
+            # The 'pager' should still be used, as the user may have changed
+            # either PAGER/LESS env vars. Instead the text is padded with
+            # newlines, if its length is X lines less than the terminal height
             if 0 < diff && diff < 7
               text = "#{text}#{"\n" * diff}"
             end
@@ -196,7 +198,10 @@ module FlightJob
         # return [Boolean] if the user requested questions to be re-asked
         def prompt_again
           opts = {
-            default: if @prompt_for_name
+            default: if @prompt_for_selected
+                       @prompt_for_selected = false
+                       3
+                     elsif @prompt_for_name
                        1
                      elsif @prompt_for_notes
                        2
@@ -221,13 +226,25 @@ module FlightJob
               The exact question prompts may differ if the dependencies change.
             WARN
             opts = { show_help: :always, echo: false, help: MULTI_HELP }
-            selected = prompt.multi_select("Which questions would you like to change?", **opts) do |menu|
+            text = "Which questions would you like to change?"
+            selected = prompt.multi_select(text, **opts) do |menu|
               questions.each do |question|
                 next unless prompt?(question)
                 menu.choice question.text, question
               end
             end
-            prompt_questions(*selected) unless selected.empty?
+            if selected.empty?
+              @prompt_for_selected = true
+              prompt.keypress(pastel.yellow(<<~WARN.chomp))
+
+                You have not selected any questions to be re-ask!
+                Questions need to be explicitly selected with Space.
+
+                Press any key to continue...
+              WARN
+            else
+              prompt_questions(*selected)
+            end
             true
           when :name
             prompt_name
