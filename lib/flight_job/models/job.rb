@@ -89,9 +89,6 @@ module FlightJob
       }
     })
 
-    SUBMIT_RESPONSE_SCHEMA = JSONSchemer.schema(
-      YAML.load_file(File.join(__dir__, 'job/submit_response_schema.yaml'))
-    )
     # We have multiple schemas for the monitor response to workaround issues
     # with JSONSchemer and error reporting on `oneOf` matchers.
     MONITOR_RESPONSE_SCHEMAS = {
@@ -235,15 +232,7 @@ module FlightJob
       end
     end
 
-    validate on: :submit do
-      if submitted?
-        errors.add(:submitted, 'the job has already been submitted')
-      end
-      unless load_script.valid?(:load)
-        errors.add(:script, 'is missing or invalid')
-      end
-    end
-
+    # TODO: Move onto transition helper
     attr_writer :id
 
     # Implicitly generates an ID by trying to create a randomised directory
@@ -401,61 +390,7 @@ module FlightJob
     end
 
     def submit
-      # Validate and load the script
-      unless valid?(:submit)
-        FlightJob.config.logger("The script is not in a valid submission state: #{id}\n") do
-          errors.full_messages
-        end
-        raise InternalError, 'Unexpectedly failed to submit the job'
-      end
-      script = load_script
-
-      # Generate the initial metadata path file
-      FileUtils.mkdir_p File.dirname(initial_metadata_path)
-      File.write initial_metadata_path, YAML.dump(active_metadata)
-
-      # Duplicate the script into the job's directory
-      # NOTE: Eventually this should probably be named after the job_name question
-      metadata["rendered_path"] = File.join(job_dir, script.script_name)
-      FileUtils.cp script.script_path, metadata["rendered_path"]
-
-      # Run the submission command
-      FlightJob.logger.info("Submitting Job: #{id}")
-      cmd = [FlightJob.config.submit_script_path, metadata["rendered_path"]]
-      execute_command(*cmd, tag: 'submit') do |status, out, err, data|
-        # set the status/stdout/stderr
-        metadata['submit_status'] = status.exitstatus
-        metadata['submit_stdout'] = out
-        metadata['submit_stderr'] = err
-
-        # Set the initial state based on the exit status
-        if metadata['submit_status'] == 0
-          metadata['state'] = 'PENDING'
-        else
-          metadata['state'] = 'FAILED'
-        end
-
-        # Persist the current state of the job
-        FileUtils.mkdir_p File.dirname(metadata_path)
-        File.write metadata_path, YAML.dump(metadata)
-
-        # Parse stdout on successful commands
-        if status.success?
-          validate_data(SUBMIT_RESPONSE_SCHEMA, data, tag: 'submit')
-          metadata['scheduler_id'] = data['id']
-          metadata['stdout_path'] = data['stdout'].blank? ? nil : data['stdout']
-          metadata['stderr_path'] = data['stderr'].blank? ? nil : data['stderr']
-          metadata['results_dir'] = data['results_dir']
-        end
-
-        # Persist the updated version of the metadata
-        File.write(metadata_path, YAML.dump(metadata))
-
-        # Create the indexing file if in non-terminal state
-        unless STATES_LOOKUP[state] == :terminal
-          FileUtils.touch active_index_path
-        end
-      end
+      JobTransitions::SubmitTransition.new(self).run
     end
 
     def monitor
@@ -526,6 +461,10 @@ module FlightJob
       @controls_dir ||= ControlsDir.new(File.join(job_dir, 'controls'))
     end
 
+    def job_dir
+      @job_dir ||= File.join(FlightJob.config.jobs_dir, id)
+    end
+
     protected
 
     def <=>(other)
@@ -537,10 +476,6 @@ module FlightJob
     end
 
     private
-
-    def job_dir
-      @job_dir ||= File.join(FlightJob.config.jobs_dir, id)
-    end
 
     def parse_time(time, type:)
       return nil if ['', nil].include?(time)
