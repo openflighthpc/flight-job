@@ -212,6 +212,16 @@ module FlightJob
         end
         errors.add(:metadata, 'is invalid')
       end
+
+      # Ensure the active file does not exist in terminal states
+      # TODO: This will need to be reworked for array-jobs
+      if STATES_LOOKUP[state] == :terminal
+        FileUtils.rm_f active_index_path
+
+      # Otherwise, ensure the active file does exist
+      else
+        FileUtils.touch active_index_path
+      end
     end
 
     validate on: :submit do
@@ -261,6 +271,10 @@ module FlightJob
 
     def metadata_path
       @metadata_path ||= File.join(job_dir, 'metadata.yaml')
+    end
+
+    def active_index_path
+      @active_index_path ||= File.join(job_dir, 'active.index')
     end
 
     # Stores the initial state of the metadata before the job is submitted
@@ -425,6 +439,11 @@ module FlightJob
 
         # Persist the updated version of the metadata
         File.write(metadata_path, YAML.dump(metadata))
+
+        # Create the indexing file if in non-terminal state
+        unless STATES_LOOKUP[state] == :terminal
+          FileUtils.touch active_index_path
+        end
       end
     end
 
@@ -476,6 +495,9 @@ module FlightJob
             metadata['reason'] = data['reason']
           end
           File.write(metadata_path, YAML.dump(metadata))
+
+          # Remove the indexing file in terminal state
+          FileUtils.rm_f active_index_path
         end
       end
     end
