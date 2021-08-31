@@ -201,6 +201,17 @@ module FlightJob
       end
     end
 
+    def self.monitor_all
+      # TODO: Do this on monitor
+      transition_inactive
+
+      Dir.glob(new(id: '*').active_index_path)
+        .select { |p| File.exists?(p) }
+        .map { |p| File.basename(File.dirname(p)) }
+        .map { |id| new(id: id) }
+        .map(&:monitor)
+    end
+
     validate on: :load do
       unless submitted?
         errors.add(:submitted, 'the job has not been submitted')

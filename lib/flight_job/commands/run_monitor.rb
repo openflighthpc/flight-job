@@ -29,8 +29,7 @@ module FlightJob
   module Commands
     class RunMonitor < Command
       def run
-        Job.transition_inactive
-        Job.load_all
+        Job.monitor_all
       end
     end
   end
