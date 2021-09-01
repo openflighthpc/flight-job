@@ -44,24 +44,22 @@ module FlightJob
 
     # JSON:Schemer supports oneOf matcher, however this makes the kinda cryptic
     # error messages, super cryptic
-    #
-    # Instead there is an initial "default" validation, checks for the shared
-    # required keys. Then the "job_type" is used to select the specific
-    # validator.
-    #
-    # It is assumed the initial validator is ran before the others
     SHARED_KEYS = ["created_at", "job_type", "rendered_path", "script_id", "version"]
+    SHARED_PROPS = {
+      "created_at" => { "type" => "string", "format" => "date-time" },
+      "rendered_path" => { "type" => "string", "minLength": 1 },
+      "script_id" => { "type" => "string", "minLength": 1 },
+      "version" => { "const" => "1.beta" }
+    }
+
     SCHEMAS = {
       initial: JSONSchemer.schema({
         "type" => "object",
         "additionalProperties" => true,
         "required" => SHARED_KEYS,
         "properties" => {
-          "created_at" => { "type" => "string", "format" => "date-time" },
-          "job_type" => { "enum" => ["INITIALIZING", "SINGLETON", "FAILED_SUBMISSION"] },
-          "rendered_path" => { "type" => "string", "minLength": 1 },
-          "script_id" => { "type" => "string", "minLength": 1 },
-          "version" => { "const" => "1.beta" }
+          **SHARED_PROPS,
+          "job_type" => { "enum" => ["INITIALIZING", "SINGLETON", "FAILED_SUBMISSION"] }
         }
       }),
 
@@ -70,7 +68,7 @@ module FlightJob
         "additionalProperties" => false,
         "required" => SHARED_KEYS,
         "properties" => {
-          **SHARED_KEYS.map { |k| [k, {}] }.to_h,
+          **SHARED_PROPS,
           "job_type" => { "const" => "INITIALIZING" }
         }
       }),
@@ -80,7 +78,7 @@ module FlightJob
         "additionalProperties" => false,
         "required" => [*SHARED_KEYS, "submit_status", "submit_stdout", "submit_stderr"],
         "properties" => {
-          **SHARED_KEYS.map { |k| [k, {}] }.to_h,
+          **SHARED_PROPS,
           "job_type" => { "const" => "FAILED_SUBMISSION" },
           # NOTE: There are two edge cases where submit_status is set to 126
           # * 'flight-job' fails to report back the status, OR
@@ -95,25 +93,33 @@ module FlightJob
           "submit_stdout" => { "type" => "string" },
           "submit_stderr" => { "type" => "string" },
         }
-      }),
+      })
+    }
 
+    # The following are the keys which are shared by the "submitted" job types
+    SHARED_SUBMITTED_KEYS = [
+      *SHARED_KEYS, 'submit_status', 'submit_stdout', 'submit_stderr', 'scheduler_state'
+    ]
+    SHARED_SUBMITTED_PROPS = SHARED_PROPS.merge({
+      "submit_status" => { const: 0 },
+      "submit_stdout" => { "type" => "string" },
+      "submit_stderr" => { "type" => "string" },
+      "scheduler_id" => { "type" => "string", "minLength" => 1 },
+      "results_dir" => { "type" => "string", "minLength" => 1 },
+    })
+
+    SCHEMAS.merge!({
       "SINGLETON" => JSONSchemer.schema({
         "type" => "object",
         "additionalProperties" => false,
         "required" => [
-          *SHARED_KEYS, 'submit_status', 'submit_stdout', 'submit_stderr',
-          'scheduler_id', 'state', 'results_dir', 'stdout_path', 'stderr_path'
+          *SHARED_SUBMITTED_KEYS, 'state', 'stdout_path', 'stderr_path'
         ],
         "properties" => {
           # Required
-          **SHARED_KEYS.map { |k| [k, {}] }.to_h,
+          **SHARED_SUBMITTED_PROPS,
           "job_type" => { "const" => "SINGLETON" },
-          "submit_status" => { const: 0 },
-          "submit_stdout" => { "type" => "string" },
-          "submit_stderr" => { "type" => "string" },
           "state" => { "enum" => STATES },
-          "scheduler_id" => { "type" => "string", "minLength" => 1 },
-          "results_dir" => { "type" => "string", "minLength" => 1 },
           "stdout_path" => { "type" => "string", "minLength" => 1 },
           "stderr_path" => { "type" => "string", "minLength" => 1 },
           # Optional
@@ -131,8 +137,8 @@ module FlightJob
           # Optional - Non empty
           "scheduler_state" => { "type" => "string", "minLength" => 1 },
         }
-      })
-    }
+      }),
+    })
 
     def self.load_all
       Dir.glob(new(id: '*').metadata_path).map do |path|
