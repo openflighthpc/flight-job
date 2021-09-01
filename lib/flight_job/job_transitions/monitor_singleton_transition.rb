@@ -30,13 +30,15 @@ module FlightJob
     class MonitorSingletonTransition < SimpleDelegator
       include JobTransitions::JobTransitionHelper
 
-      MONITOR_RESPONSE_SCHEMAS = {
+      SHARED_KEYS = ["version", "state"]
+      SHARED_PROPS = { "version" => { "const" => 1 } }
+      SCHEMAS = {
         initial: JSONSchemer.schema({
           "type" => "object",
           "additionalProperties" => true,
-          "required" => ["version", "state"],
+          "required" => SHARED_KEYS,
           "properties" => {
-            "version" => { "const" => 1 },
+            **SHARED_PROPS,
             "state" => { "enum" => Job::STATES }
           }
         }),
@@ -44,9 +46,10 @@ module FlightJob
         "PENDING" => JSONSchemer.schema({
           "type" => "object",
           "additionalProperties" => false,
-          "required" => [],
+          "required" => SHARED_KEYS,
           "properties" => {
-            "version" => {}, "state" => {},
+            **SHARED_PROPS,
+            "state" => { "const" => "PENDING" },
             "scheduler_state" => { "type" => "string", "minLength": 1 },
             "reason" => { "type" => ["string", "null"] },
             "start_time" => { "type" => "null" },
@@ -59,9 +62,10 @@ module FlightJob
         "RUNNING" => JSONSchemer.schema({
           "type" => "object",
           "additionalProperties" => false,
-          "required" => ["start_time"],
+          "required" => [*SHARED_KEYS, "start_time"],
           "properties" => {
-            "version" => {}, "state" => {},
+            **SHARED_PROPS,
+            "state" => { "const" => "RUNNING" },
             "scheduler_state" => { "type" => "string", "minLength": 1 },
             "reason" => { "type" => ["string", "null"] },
             "start_time" => { "type" => "string", "minLength": 1 },
@@ -74,9 +78,10 @@ module FlightJob
         "COMPLETED" => JSONSchemer.schema({
           "type" => "object",
           "additionalProperties" => false,
-          "required" => ["start_time"],
+          "required" => [*SHARED_KEYS, "start_time", "end_time"],
           "properties" => {
-            "version" => {}, "state" => {},
+            **SHARED_PROPS,
+            "state" => { "enum" => ["COMPLETED", "FAILED"] },
             "scheduler_state" => { "type" => "string", "minLength": 1 },
             "reason" => { "type" => ["string", "null"] },
             "start_time" => { "type" => "string", "minLength": 1 },
@@ -89,9 +94,10 @@ module FlightJob
         "CANCELLED" => JSONSchemer.schema({
           "type" => "object",
           "additionalProperties" => false,
-          "required" => ["start_time"],
+          "required" => [*SHARED_KEYS, "end_time"],
           "properties" => {
-            "version" => {}, "state" => {},
+            **SHARED_PROPS,
+            "state" => { "const" => "CANCELLED" },
             "scheduler_state" => { "type" => "string", "minLength": 1 },
             "reason" => { "type" => ["string", "null"] },
             "start_time" => { "type" => ["null", "string"] },
@@ -104,9 +110,10 @@ module FlightJob
         "UNKNOWN" => JSONSchemer.schema({
           "type" => "object",
           "additionalProperties" => false,
-          "required" => ["start_time"],
+          "required" => SHARED_KEYS,
           "properties" => {
-            "version" => {}, "state" => {},
+            **SHARED_PROPS,
+            "state" => { "const" => "UNKNOWN" },
             "scheduler_state" => { "type" => "string", "minLength": 1 },
             "reason" => { "type" => ["string", "null"] },
             "start_time" => { "type" => "null" },
@@ -143,8 +150,8 @@ module FlightJob
         execute_command(*cmd, tag: 'monitor') do |status, stdout, stderr, data|
           if status.success?
             # Validate the output
-            validate_data(MONITOR_RESPONSE_SCHEMAS[:initial], data, tag: "monitor (initial)")
-            validate_data(MONITOR_RESPONSE_SCHEMAS[data['state']], data, tag: "monitor (#{data['state']})")
+            validate_data(SCHEMAS[:initial], data, tag: "monitor (initial)")
+            validate_data(SCHEMAS[data['state']], data, tag: "monitor (#{data['state']})")
 
             data.each do |key, value|
               # Ignore the metadata version
