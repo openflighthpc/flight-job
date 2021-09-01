@@ -29,46 +29,45 @@ module FlightJob
   module Commands
     class ViewJobOutput < Command
       def run
-        @job = load_job(args.first)
-        assert_job_submitted
-        assert_type_valid
-        assert_stderr_not_merged if opts.type == :stderr
-        file_path = @job.send("#{opts.type}_path")
-        assert_file_exists(file_path)
+        assert_command_type_valid
+        assert_file_path
         pager.page(File.read(file_path))
       end
 
       private
 
-      def assert_job_submitted
-        return if @job.submitted?
-        raise MissingError, "The job's standard " \
-          "#{opts.type == :stdout ? 'output' : 'error'} is not available as "\
-          "the job did not succesfully submit"
-      end
-
-      def assert_type_valid
+      def assert_command_type_valid
         return if [:stdout, :stderr].include?(opts.type)
-        raise InternalError, "Invalid output type #{opts.type.inspect}" 
+        raise InternalError, "Invalid output type #{opts.type.inspect}"
       end
 
-      def assert_stderr_not_merged
-        if @job.stderr_merged?
+      def assert_file_path
+        if opts.type == :stderr && job.stderr_merged?
           prog_name = ENV.fetch('FLIGHT_PROGRAM_NAME') { 'bin/job' }
           raise MissingError, <<~ERROR.chomp
             Cannot display the job's standard error as it has been merged with standard out.
             Please run the following instead:
-            #{pastel.yellow "#{prog_name} view-job-stdout #{@job.id}"}
+            #{pastel.yellow "#{prog_name} view-job-stdout #{job.id}"}
           ERROR
+        end
+
+        unless File.exists?(file_path)
+          raise MissingError, "The job's standard " \
+            "#{opts.type == :stdout ? 'output' : 'error'} file does not exists: "\
+            "#{pastel.yellow(file_path)}"
         end
       end
 
-      def assert_file_exists(path)
-        unless File.exists?(path)
-          raise MissingError, "The job's standard " \
-            "#{opts.type == :stdout ? 'output' : 'error'} file does not exists: "\
-            "#{pastel.yellow(path)}"
+      def file_path
+        if opts.type == :stdout
+          job.stdout_path
+        else
+          job.stderr_path
         end
+      end
+
+      def job
+        @job ||= load_job(args.first)
       end
     end
   end

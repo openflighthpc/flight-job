@@ -46,7 +46,10 @@ module FlightJob
 
   InternalError = Error.define_class(1)
   GeneralError = Error.define_class(2)
+
   InputError = GeneralError.define_class(3)
+  class InvalidOperation < InputError; end
+
   CommandError = GeneralError.define_class(6)
   DuplicateError = GeneralError.define_class(7)
 

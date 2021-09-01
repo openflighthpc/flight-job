@@ -309,11 +309,35 @@ module FlightJob
     end
 
     def stdout_path
-      metadata['stdout_path']
+      stdout_path!
+    rescue
+      Flight.logger.debug $!
+      nil
+    end
+
+    def stdout_path!
+      case job_type
+      when 'SINGLETON'
+        metadata['stdout_path']
+      else
+        raise InvalidOperation, failure_message("Could not get the standard output")
+      end
     end
 
     def stderr_path
-      metadata['stderr_path']
+      stderr_path!
+    rescue
+      Flight.logger.debug $!
+      nil
+    end
+
+    def stderr_path!
+      case job_type
+      when 'SINGLETON'
+        metadata['stderr_path']
+      else
+        raise InvalidOperation, failure_message("Could not get the standard error")
+      end
     end
 
     def submitted?
@@ -328,6 +352,7 @@ module FlightJob
       return false unless stdout_path
       return false unless File.exists? stdout_path
       File.stat(stdout_path).readable?
+    rer
     end
 
     def stderr_readable?
@@ -405,6 +430,34 @@ module FlightJob
       else
         Time.parse(created_at) <=> Time.parse(other.created_at)
       end
+    end
+
+    private
+
+    # Generates an error message according to the job_type
+    # The assumption being, the operation failed due to having the wrong type.
+    def failure_message(desc)
+      type = nil
+      begin
+        type = job_type
+      rescue
+        # NOOP - This method only generates messages, in practice this condition
+        # should have already been caught
+      end
+
+      suffix =  case type
+                when 'SINGLETON'
+                  "for '#{id}' as it is an individual job."
+                when 'ARRAY'
+                  "for '#{id}' as it is an array job."
+                when 'INITIALIZING'
+                  "for job '#{id}' as it is pending submission."
+                when 'FAILED_SUBMISSION'
+                  "for job '#{id}' as it did not succesfully submit."
+                else
+                  "for job '#{id}' for an unknown reason."
+                end
+      "#{desc} #{suffix}"
     end
   end
 end
