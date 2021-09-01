@@ -44,6 +44,7 @@ which "jq" >/dev/null
 read -r -d '' template <<'TEMPLATE' || true
 {
   version: 1,
+  job_type: "SINGLETON",
   id: ($id),
   stdout: ($stdout),
   stderr: ($stderr),
@@ -56,8 +57,8 @@ output=$($DIR/sbatch-wrapper.sh "$1")
 cat <<EOF >&2
 sbatch wrapper output:
 $output
-
 EOF
+
 if [[ $? -ne 0 ]]; then
   exit $?
 fi
@@ -68,23 +69,18 @@ if [[ $? -ne 0 ]]; then
   exit $?
 fi
 
-# Fetch the details about the job
+# Load the parsers
+source "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/parser.sh"
+
+# Run scontrol
 raw_control=$(scontrol show job "$id" --oneline)
 exit_status=$?
-control=$(echo "$raw_control" | head -n 1 | tr ' ' '\n')
 cat <<EOF >&2
 scontrol output:
-$control
+$(echo "$raw_control" | head -n 1 | tr ' ' '\n')
 EOF
 if [[ $exit_status -ne 0 ]]; then
   exit $exit_status
-fi
-
-# Skip the stdout/stderr for the "main" array job
-if [ -z "$(echo "$control" | grep "ArrayJobId")" ]; then
-  # Extract the sdout/stderr paths (most jobs)
-  stdout=$(echo "$control" | grep '^StdOut=' | cut -d= -f2)
-  stderr=$(echo "$control" | grep '^StdErr=' | cut -d= -f2)
 fi
 
 # Determine the results directory
@@ -92,9 +88,40 @@ working=$(echo "$control" | grep '^WorkDir=' | cut -d= -f2)
 name=$(echo "$control" | grep '^JobName=' | cut -d= -f2)
 results_dir="${working}/${name}-outputs/$id"
 
-# Render and return the JSON payload
-echo '{}' | jq  --arg id "$id" \
-                --arg stdout "$stdout" \
-                --arg stderr "$stderr" \
-                --arg results_dir "$results_dir" \
-                "$template" | tr -d "\n"
+# Fork the logic on ARRAY/SINGLETON
+if [ "$(parse_scontrol_job_type "$raw_control")" == "SINGLETON" ]; then
+  read -r -d '' template <<'TEMPLATE' || true
+{
+  version: 1,
+  job_type: "SINGLETON",
+  id: ($id),
+  stdout: ($stdout),
+  stderr: ($stderr),
+  results_dir: ($results_dir)
+}
+TEMPLATE
+
+  # Render and return the JSON payload
+  echo '{}' | jq  \
+    --arg id      "$(parse_scontrol_scheduler_id "$raw_control")" \
+    --arg stdout  "$(parse_scontrol_stdout "$raw_control") " \
+    --arg stderr  "$(parse_scontrol_stderr "$raw_control") " \
+    --arg results_dir "$results_dir" \
+    "$template" | tr -d "\n"
+else
+  read -r -d '' template <<'TEMPLATE' || true
+{
+  version: 1,
+  job_type: "ARRAY",
+  id: ($id),
+  lazy: true,
+  results_dir: ($results_dir)
+}
+TEMPLATE
+
+  # Render and return the JSON payload
+  echo '{}' | jq  \
+    --arg id      "$(parse_scontrol_scheduler_id "$raw_control")" \
+    --arg results_dir "$results_dir" \
+    "$template" | tr -d "\n"
+fi

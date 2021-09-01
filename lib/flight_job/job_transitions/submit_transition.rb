@@ -142,13 +142,18 @@ module FlightJob
           case data['job_type']
           when 'SINGLETON'
             metadata['job_type'] = 'SINGLETON'
-            metadata['state'] = 'PENDING'
+            metadata['results_dir'] = data['results_dir']
             metadata['scheduler_id'] = data['id']
+            metadata['state'] = 'PENDING'
             metadata['stdout_path'] = data['stdout']
             metadata['stderr_path'] = data['stderr']
+          when 'ARRAY'
+            metadata['job_type'] = 'ARRAY'
+            metadata['lazy'] = data['lazy']
             metadata['results_dir'] = data['results_dir']
-            save_metadata
+            metadata['scheduler_id'] = data['id']
           end
+          save_metadata
 
           # Remove the indexing file if in non-terminal state
           if terminal?

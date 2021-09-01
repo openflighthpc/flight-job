@@ -59,7 +59,7 @@ module FlightJob
         "required" => SHARED_KEYS,
         "properties" => {
           **SHARED_PROPS,
-          "job_type" => { "enum" => ["INITIALIZING", "SINGLETON", "FAILED_SUBMISSION"] }
+          "job_type" => { "enum" => ["INITIALIZING", "SINGLETON", "ARRAY", "FAILED_SUBMISSION"] }
         }
       }),
 
@@ -98,7 +98,7 @@ module FlightJob
 
     # The following are the keys which are shared by the "submitted" job types
     SHARED_SUBMITTED_KEYS = [
-      *SHARED_KEYS, 'submit_status', 'submit_stdout', 'submit_stderr', 'scheduler_state'
+      *SHARED_KEYS, 'submit_status', 'submit_stdout', 'submit_stderr'
     ]
     SHARED_SUBMITTED_PROPS = SHARED_PROPS.merge({
       "submit_status" => { const: 0 },
@@ -138,6 +138,21 @@ module FlightJob
           "scheduler_state" => { "type" => "string", "minLength" => 1 },
         }
       }),
+
+      "ARRAY" => JSONSchemer.schema({
+        "type" => "object",
+        "additionalProperties" => false,
+        "required" => [*SHARED_SUBMITTED_KEYS, 'lazy'],
+        "properties" => {
+          # Required
+          **SHARED_SUBMITTED_PROPS,
+          "job_type" => { "const" => "ARRAY" },
+          "lazy" => { "type" => "boolean" },
+          # Optional
+          "estimated_start_time" => { "type" => ['date-time', 'null'] },
+          "estimated_end_time" => { "type" => ['date-time', 'null'] },
+        }
+      })
     })
 
     def self.load_all

@@ -122,9 +122,30 @@ function _parse_state {
 # ==============================================================================
 # scontrol parsers
 #
-# NOTE: Unless otherwise stated, these parsers are designed for an individual
-# job/task
+# NOTE:
+# * Unless otherwise stated, these parsers are designed for an individual job/task
+# * scontrol needs to be called with the --oneline flag
 # ==============================================================================
+
+# This function works on all scontrol outputs
+function parse_scontrol_job_type {
+  local control=$(echo "$1" | tr ' ' '\n')
+  if echo "$control" | grep "ArrayJobId" >/dev/null; then
+    printf "ARRAY"
+  else
+    printf "SINGLETON"
+  fi
+}
+
+# This function works on all scontrol outputs
+function parse_scontrol_scheduler_id {
+  local control=$(echo "$1" | head -n 1 | tr ' ' '\n')
+  if [ "$(parse_scontrol_job_type "$1")" == "ARRAY" ]; then
+    echo "$control" | grep '^ArrayJobId=' | cut -d= -f2
+  else
+    echo "$control" | grep '^JobId=' | cut -d= -f2
+  fi
+}
 
 function parse_scontrol_state {
   local scheduler_state=$(parse_scontrol_scheduler_state "$1")
@@ -142,6 +163,16 @@ function parse_scontrol_reason {
   if [[ "$reason" != "None" ]]; then
     printf "$reason"
   fi
+}
+
+function parse_scontrol_stdout {
+  local control=$(echo "$1" | head -n 1 | tr ' ' '\n')
+  echo "$control" | grep '^StdOut=' | cut -d= -f2
+}
+
+function parse_scontrol_stderr {
+  local control=$(echo "$1" | head -n 1 | tr ' ' '\n')
+  echo "$control" | grep '^StdErr=' | cut -d= -f2
 }
 
 function parse_scontrol_start_time {
@@ -183,8 +214,8 @@ function parse_scontrol_estimated_end_time {
 # ==============================================================================
 # sacct parsers
 #
-# NOTE: Unless otherwise stated, these parsers are designed for an individual
-# job/task
+# NOTE: All sacct parsers are designed for a single row with:
+#       --format State,Reason,START,END,AllocTRES
 # ==============================================================================
 
 function parse_sacct_state {
