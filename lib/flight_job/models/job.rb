@@ -425,6 +425,7 @@ module FlightJob
       @controls_dir ||= ControlsDir.new(File.join(job_dir, 'controls'))
     end
 
+    # NOTE: Requires parity with task_dir
     def job_dir
       @job_dir ||= File.join(FlightJob.config.jobs_dir, id)
     end

@@ -66,20 +66,44 @@ module FlightJob
               validate_data(TASK_SCHEMAS[state], datum, tag: "monitor-array task: #{index} (#{state})")
             end
 
-            # Create/Update Each task
-            data['tasks'].each do |index, datum|
-              process_task(index, datum)
+            # Builds each task
+            tasks = data['tasks'].map do |index, datum|
+              times = datum.slice('start_time', 'end_time', 'estimated_start_time', 'estimated_end_time')
+                           .map { |k, v| [k, parse_time(v, type: k)] }
+                           .select { |_, v| v }
+                           .to_h
+              Task.new(job_id: id, index: index).tap do |task|
+                task.metadata.merge!({
+                  'state' => datum['state'],
+                  'scheduler_state' => datum['scheduler_state'],
+                  'reason' => datum['reason'],
+                  # TODO' => Set me
+                  'stdout_path' => '/dev/null',
+                  'stderr_path' => '/dev/null',
+                  **times
+                })
+              end
+            end
+
+            # Log and raise any invalid tasks
+            invalid_tasks = tasks.reject { |t| t.valid?(:save_metadata) }
+            unless invalid_tasks.empty?
+              invalid_tasks.each do |task|
+                FlightJob.logger.error("Failed to save task metadata: #{task.tag}")
+                FlightJob.logger.info(errors.full_messages.join("\n"))
+              end
+              raise InternalError, <<~ERROR.chomp
+                Unexpectedly failed to monitor '#{id}' due to invalid task(s)!
+              ERROR
+            end
+
+            # Save all the tasks metadata
+            tasks.each do |task|
+              FileUtils.mkdir_p File.dirname(task.metadata_path)
+              File.write task.metadata_path, YAML.dump(task.metadata)
             end
 
             # Update the lazy flag
-            # NOTE: This is deliberately done after the tasks have been updated
-            #
-            # It is difficult to preform a "transaction" as multiple metadata files
-            # are being updated. However it can be reasonable assumed the various
-            # updates will succeed, as the response has been validated.
-            #
-            # Updating the lazy flag at the end gives the monitor a chance to run
-            # again if an error has occurred.
             metadata["lazy"] = data["lazy"]
             save_metadata
 
@@ -91,16 +115,12 @@ module FlightJob
 
       private
 
-      def process_task(index, data)
-      end
-
       def parse_time(time, type:)
         return nil if ['', nil].include?(time)
         Time.parse(time).strftime("%Y-%m-%dT%T%:z")
       rescue ArgumentError
         FlightJob.logger.error "Failed to parse #{type}: #{time}"
         FlightJob.logger.debug $!.full_message
-        raise_command_error
       end
     end
   end
