@@ -86,18 +86,21 @@
 # submit_script_path: libexec/job/<scheduler>/submit.sh
 
 # ==============================================================================
-# Monitor Script Path
-# Specify the path to the script which monitors jobs.
+# Monitor Script Paths
+# Specify the paths to the scripts which monitor jobs.  Separate scripts are
+# used for monitoring array and non-array jobs.
 #
-# The default value will automatically use the 'scheduler' config. This feature
+# The default values will automatically use the 'scheduler' config. This feature
 # is not supported when overridden.
 #
 # Relative paths are expanded according to the "Relative path expansion" rules
 # described below.
 #
-# The environment variable flight_JOB_monitor_script_path takes precedence.
+# The environment variables flight_JOB_monitor_script_path and
+# flight_JOB_monitor_array_script_path take precedence.
 # ==============================================================================
 # monitor_script_path: libexec/job/<scheduler>/monitor.sh
+# monitor_array_script_path: libexec/job/<scheduler>/monitor-array.sh
 
 # ==============================================================================
 # Script Adapter Path

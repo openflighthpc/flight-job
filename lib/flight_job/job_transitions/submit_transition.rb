@@ -156,7 +156,8 @@ module FlightJob
           save_metadata
 
           # Remove the indexing file if in non-terminal state
-          if terminal?
+          # TODO: Do this properly
+          if terminal? && job_type != 'ARRAY'
             FileUtils.rm_f active_index_path
           end
         end

@@ -147,6 +147,11 @@ function parse_scontrol_scheduler_id {
   fi
 }
 
+function parse_scontrol_task_index {
+  local control=$(echo "$1" | head -n 1 | tr ' ' '\n')
+  echo "$control" | grep '^ArrayTaskId=' | cut -d= -f2
+}
+
 function parse_scontrol_state {
   local scheduler_state=$(parse_scontrol_scheduler_state "$1")
   _parse_state "$scheduler_state"
@@ -215,7 +220,7 @@ function parse_scontrol_estimated_end_time {
 # sacct parsers
 #
 # NOTE: All sacct parsers are designed for a single row with:
-#       --format State,Reason,START,END,AllocTRES
+#       --format State,Reason,START,END,AllocTRES,JobID
 # ==============================================================================
 
 function parse_sacct_state {
@@ -262,4 +267,9 @@ function parse_sacct_estimated_end_time {
   local state="$2"
   local time=$(echo "$1" | cut -d'|' -f4)
   _parse_estimated_end_time "$time" "$state"
+}
+
+function parse_sacct_task_index {
+  local state="$2"
+  echo "$1" | cut -d'|' -f6 | sed 's/^.*_//g'
 }

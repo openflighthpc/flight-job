@@ -199,12 +199,16 @@ module FlightJob
 
     validate on: :load do
       # Ensure the active file does not exist in terminal states
-      # TODO: This will need to be reworked for array-jobs
       if terminal?
         FileUtils.rm_f active_index_path
 
       # Otherwise, ensure the active file does exist
       else
+        FileUtils.touch active_index_path
+      end
+
+      # TODO: Properly do this
+      if (metadata || {}).to_h['job_type'] == 'ARRAY'
         FileUtils.touch active_index_path
       end
     end
@@ -403,6 +407,9 @@ module FlightJob
       if job_type == 'SINGLETON'
         JobTransitions::MonitorSingletonTransition.new(self).run!
       end
+      if job_type == 'ARRAY'
+        JobTransitions::MonitorArrayTransition.new(self).run!
+      end
     end
 
     def decorate
@@ -426,6 +433,8 @@ module FlightJob
       STATES_LOOKUP[state] == :terminal
     end
 
+    # TODO: Do not error here, it causes issues in the validation
+    # Default to FAILED_SUBMISSION (probably?)
     def job_type
       metadata['job_type'] || raise(InternalError, <<~ERROR.chomp)
         Failed to resolve the 'job_type' for job '#{id}'

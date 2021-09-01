@@ -34,7 +34,7 @@ module FlightJob
         now = Time.now.to_i
         if now - start > FlightJob.config.submission_period
           FlightJob.logger.error <<~ERROR
-            The following job is being flaged as FAILED as it has not been submitted: #{id}
+            The following job is being flagged as FAILED as it has not been submitted: #{id}
           ERROR
           metadata['job_type'] = "FAILED_SUBMISSION"
           metadata['submit_status'] = 126
