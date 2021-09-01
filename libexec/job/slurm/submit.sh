@@ -43,7 +43,7 @@ which "jq" >/dev/null
 # Specify the template for the JSON response
 read -r -d '' template <<'TEMPLATE' || true
 {
-  version: 0,
+  version: 1,
   id: ($id),
   stdout: ($stdout),
   stderr: ($stderr),

@@ -31,17 +31,46 @@ module FlightJob
       include JobTransitionHelper
       include ActiveModel::Validations
 
-      SUBMIT_RESPONSE_SCHEMA = JSONSchemer.schema({
-        "type" => "object",
-        "additionalProperties" => false,
-        "required" => ["id", "results_dir"],
-        "properties" => {
-          "id" => { "type" => "string" },
-          "stdout" => { "type" => ["string", "null"] },
-          "stderr" => { "type" => ["string", "null"] },
-          "results_dir" => { "type" => "string" },
-        }
-      })
+      SHARED_KEYS = ["job_type", "version", "id", "results_dir"]
+      SHARED_PROPS = {
+        "version" => { "const" => 1 },
+        "id" => { "type" => "string", "minLength" => 1 },
+        "results_dir" => { "type" => "string", "minLength" => 1 }
+      }
+      SCHEMAS = {
+        initial:  JSONSchemer.schema({
+          "type" => "object",
+          "additionalProperties" => true,
+          "required" => SHARED_KEYS,
+          "properties" => {
+            **SHARED_PROPS,
+            "job_type" => { "enum" => ["SINGLETON", "ARRAY"] }
+          }
+        }),
+
+        'SINGLETON' => JSONSchemer.schema({
+          "type" => "object",
+          "additionalProperties" => false,
+          "required" => [*SHARED_KEYS, "stdout", "stderr", "results_dir"],
+          "properties" => {
+            **SHARED_PROPS,
+            "job_type" => { "const" => "SINGLETON" },
+            "stdout" => { "type" => "string", "minLength" => 1 },
+            "stderr" => { "type" => "string", "minLength" => 1 }
+          }
+        }),
+
+        "ARRAY" => JSONSchemer.schema({
+          "type" => "object",
+          "additionalProperties" => false,
+          "required" => [*SHARED_KEYS, "lazy"],
+          "properties" => {
+            **SHARED_PROPS,
+            "job_type" => { "const" => "ARRAY" },
+            "lazy" => { "const" => true }
+          }
+        })
+      }
 
       validate do
         __getobj__.valid?
@@ -87,29 +116,37 @@ module FlightJob
           metadata['submit_stdout'] = out
           metadata['submit_stderr'] = err
 
-          if status.success?
-            begin
-              validate_data(SUBMIT_RESPONSE_SCHEMA, data, tag: 'submit')
-              # The job was submitted correctly and is now pending
-              metadata['job_type'] = 'SINGLETON'
-              metadata['state'] = 'PENDING'
-              metadata['scheduler_id'] = data['id']
-              metadata['stdout_path'] = data['stdout'].blank? ? nil : data['stdout']
-              metadata['stderr_path'] = data['stderr'].blank? ? nil : data['stderr']
-              metadata['results_dir'] = data['results_dir']
-              save_metadata
-            rescue CommandError
-              # The command lied about exiting 0! It did not report the json payload
-              # correctly. Changing the status to 126
-              metadata['job_type'] = 'FAILED_SUBMISSION'
-              metadata['submit_status'] = 126
-              metadata["submit_stderr"] << "\nFailed to parse JSON response"
-              save_metadata
-              raise $!
-            end
-          else
-            # The submission failed
+          # Return early if the submission failed
+          unless status.success?
             metadata['job_type'] = 'FAILED_SUBMISSION'
+            FileUtils.rm_f active_index_path
+            return
+          end
+
+          # Validate the payload format
+          begin
+            validate_data(SCHEMAS[:initial], data, tag: 'submit (initial)')
+            type = data['job_type']
+            validate_data(SCHEMAS[type], data, tag: "submit (#{type})")
+          rescue CommandError
+            # The command lied about exiting 0! It did not report the json payload
+            # correctly. Changing the status to 126
+            metadata['job_type'] = 'FAILED_SUBMISSION'
+            metadata['submit_status'] = 126
+            metadata["submit_stderr"] << "\nFailed to parse JSON response"
+            save_metadata
+            raise $!
+          end
+
+          # The job was submitted correctly and is now pending
+          case data['job_type']
+          when 'SINGLETON'
+            metadata['job_type'] = 'SINGLETON'
+            metadata['state'] = 'PENDING'
+            metadata['scheduler_id'] = data['id']
+            metadata['stdout_path'] = data['stdout']
+            metadata['stderr_path'] = data['stderr']
+            metadata['results_dir'] = data['results_dir']
             save_metadata
           end
 

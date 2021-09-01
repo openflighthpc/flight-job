@@ -102,7 +102,7 @@ module FlightJob
         "additionalProperties" => false,
         "required" => [
           *SHARED_KEYS, 'submit_status', 'submit_stdout', 'submit_stderr',
-          'scheduler_id', 'state', 'results_dir', 'stdout_path'
+          'scheduler_id', 'state', 'results_dir', 'stdout_path', 'stderr_path'
         ],
         "properties" => {
           # Required
@@ -115,6 +115,7 @@ module FlightJob
           "scheduler_id" => { "type" => "string", "minLength" => 1 },
           "results_dir" => { "type" => "string", "minLength" => 1 },
           "stdout_path" => { "type" => "string", "minLength" => 1 },
+          "stderr_path" => { "type" => "string", "minLength" => 1 },
           # Optional
           #
           # NOTE: The transient dependency between 'state' and times
@@ -129,7 +130,6 @@ module FlightJob
           "reason" => { "type" => ["string", "null"] },
           # Optional - Non empty
           "scheduler_state" => { "type" => "string", "minLength" => 1 },
-          "stderr_path" => { "type" => "string", "minLength" => 1 }
         }
       })
     }
