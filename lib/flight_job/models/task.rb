@@ -38,15 +38,13 @@ module FlightJob
       "type" => "object",
       "additionalProperties" => false,
       "required" => [
-        "version", 'state', 'stdout_path', 'stderr_path', "scheduler_state"
+        "version", 'state', "scheduler_state"
       ],
       "properties" => {
         # Required
         "version" => { "const" => 1 },
         "scheduler_state" => { "type" => "string", "minLength" => 1 },
         "state" => { "enum" => STATES },
-        "stdout_path" => { "type" => "string", "minLength" => 1 },
-        "stderr_path" => { "type" => "string", "minLength" => 1 },
         # Optional
         #
         # NOTE: The transient dependency between 'state' and times
@@ -59,6 +57,9 @@ module FlightJob
         "start_time" => { "type" => ["date-time", "null"] },
         "end_time" => { "type" => ["date-time", "null"] },
         "reason" => { "type" => ["string", "null"] },
+        # Optional - Non empty
+        "stdout_path" => { "type" => "string", "minLength" => 1 },
+        "stderr_path" => { "type" => "string", "minLength" => 1 }
       }
     })
 

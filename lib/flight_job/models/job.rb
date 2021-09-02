@@ -113,15 +113,14 @@ module FlightJob
         "type" => "object",
         "additionalProperties" => false,
         "required" => [
-          *SHARED_SUBMITTED_KEYS, 'state', 'stdout_path', 'stderr_path'
+          *SHARED_SUBMITTED_KEYS, 'state', 'scheduler_state'
         ],
         "properties" => {
           # Required
           **SHARED_SUBMITTED_PROPS,
           "job_type" => { "const" => "SINGLETON" },
           "state" => { "enum" => STATES },
-          "stdout_path" => { "type" => "string", "minLength" => 1 },
-          "stderr_path" => { "type" => "string", "minLength" => 1 },
+          "scheduler_state" => { "type" => "string", "minLength" => 1 },
           # Optional
           #
           # NOTE: The transient dependency between 'state' and times
@@ -135,7 +134,8 @@ module FlightJob
           "end_time" => { "type" => ["date-time", "null"] },
           "reason" => { "type" => ["string", "null"] },
           # Optional - Non empty
-          "scheduler_state" => { "type" => "string", "minLength" => 1 },
+          "stdout_path" => { "type" => "string", "minLength" => 1 },
+          "stderr_path" => { "type" => "string", "minLength" => 1 },
         }
       }),
 

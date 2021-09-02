@@ -85,10 +85,10 @@ module FlightJob
             .each { |k, v| object.metadata[k] = (v == "" ? nil : v) }
 
         # Apply the scheduler_state, defaulting to UNKNOWN when appropriate
-        if metadata['state'] == 'UNKNOWN' && [nil, ''].include?(opts['scheduler_state'])
-          metadata['scheduler_state'] = 'unknown'
+        if object.metadata['state'] == 'UNKNOWN' && [nil, ''].include?(opts['scheduler_state'])
+          object.metadata['scheduler_state'] = 'unknown'
         else
-          metadata['scheduler_state'] = opts['scheduler_state']
+          object.metadata['scheduler_state'] = opts['scheduler_state']
         end
 
         # Parse and apply the time based keys
@@ -103,15 +103,15 @@ module FlightJob
           next if [nil, ""].include? path
 
           # Set the path
-          if metadata[key].nil?
-            metadata[key] = path
+          if object.metadata[key].nil?
+            object.metadata[key] = path
 
           # This shouldn't happen in practice. This scheduler is assumable doing
           # something odd? Log the error and continue.
-          elsif metadata[key] != path
+          elsif object.metadata[key] != path
             FlightJob.logger.error <<~ERROR.chomp
               Attempted to modify the #{key} for #{object_tag(object)}
-              Original: #{metadata[key]}
+              Original: #{object.metadata[key]}
               Provided: #{path}
 
               The provided value has been discared!
