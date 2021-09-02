@@ -45,17 +45,56 @@ module FlightJob
         end
       end
 
-      delegate :id, :state, to: :object
-      delegate_metadata :script_id, :start_time, :end_time, :scheduler_id, :scheduler_state,
+      delegate :id, :state, :job_type, to: :object
+      delegate_metadata :script_id, :scheduler_id, :scheduler_state,
         :stdout_path, :stderr_path, :results_dir, :reason, :created_at,
         :submit_status, :submit_stdout, :submit_stderr, :estimated_start_time, :estimated_end_time
 
       def actual_start_time
-        start_time
+        case job_type
+        when 'SINGLETON'
+          object.metadata['start_time']
+        when 'ARRAY'
+          # NOTE: Assumes the "first" index actually started first
+          # Revisit if required
+          (first_task&.metadata || {})['start_time']
+        end
+      end
+
+      def estimated_start_time
+        case job_type
+        when 'SINGLETON'
+          object.metadata['estimated_start_time']
+        when 'ARRAY'
+          if actual_start_time
+            nil
+          else
+            # Assumes the first pending job will start first and thus have the estimated time
+            # TODO: Augment with metadata version
+            (first_pending_task&.metadata || {})['estimated_start_time']
+          end
+        end
       end
 
       def actual_end_time
-        end_time
+        case job_type
+        when 'SINGLETON'
+          object.metadata['actual_end_time']
+        when 'ARRAY'
+          # TODO
+          nil
+        end
+      end
+
+      def estimated_end_time
+        case job_type
+        when 'SINGLETON'
+          object.metadata['estimated_end_time']
+        when 'ARRAY'
+          # Assumes the last non terminal task will be the last to finish
+          # TODO: Augment with metadata version
+          (last_non_terminal_task&.metadata ||{})['estimated_end_time']
+        end
       end
 
       def desktop_id
@@ -69,6 +108,7 @@ module FlightJob
           # Required - Must not be nil
           #          - Empty string maybe acceptable depending on the attribute
           # ----------------------------------------------------------------------------
+          "job_type" => job_type,
           "id" => id,
           "created_at" => created_at,
           "script_id" => script_id,
@@ -78,11 +118,16 @@ module FlightJob
           "submit_stderr" => submit_stderr,
           # ----------------------------------------------------------------------------
           # Optional - Maybe nil
+          #
+          # NOTE: Original start_time/end_time could have been either actual/estimated
+          # However the start_time/end_time metadata keys are always the actual time
+          #
+          # The original behaviour is being maintained in the serialization
           # ----------------------------------------------------------------------------
-          "end_time" => end_time,
+          "end_time" => actual_end_time || estimated_end_time,
           "scheduler_id" => scheduler_id,
           "scheduler_state" => scheduler_state,
-          "start_time" => start_time,
+          "start_time" => actual_start_time || estimated_start_time,
           "stdout_path" => stdout_path,
           "stderr_path" => stderr_path,
           "results_dir" => results_dir,
@@ -115,6 +160,23 @@ module FlightJob
             hash['result_files'] = nil
           end
         end
+      end
+
+      private
+
+      def first_task
+        @first_task = Task.load_first(id) || false if @first_task.nil?
+        @first_task ? @first_task : nil
+      end
+
+      def first_pending_task
+        @first_pending_task = Task.load_first_pending(id) || false if @first_pending_task.nil?
+        @first_pending_task ? @first_pending_task : nil
+      end
+
+      def last_non_terminal_task
+        @last_non_terminal_task = Task.load_last_non_terminal(id) || false if @last_non_terminal_task.nil?
+        @last_non_terminal_task ? @last_non_terminal_task : nil
       end
     end
   end

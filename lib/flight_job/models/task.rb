@@ -90,6 +90,49 @@ module FlightJob
       reform_state_index_file
     end
 
+    def self.load(job_id, index)
+      new(job_id: job_id, index: index).tap do |task|
+        unless task.valid?(:load)
+          FlightJob.logger.error("Failed to load task: #{task.tag}\n") do
+            task.errors.full_messages
+          end
+          raise InternalError, "Unexpectedly failed to load task: #{task.tag}"
+        end
+      end
+    end
+
+    def self.load_first(job_id)
+      index = task_indices(job_id).first
+      return nil unless index
+      self.load(job_id, index)
+    end
+
+    def self.load_first_pending(job_id)
+      path = Dir.glob(Job.task_state_index_path(job_id, '*', 'PENDING'))
+                .sort.first
+      return nil unless path
+      self.load(job_id, File.extname(path).sub(/\A\./, ''))
+    end
+
+    def self.load_last_non_terminal(job_id)
+      paths = Job::NON_TERMINAL_STATES.reduce([]) do |memo, state|
+        new_paths = Dir.glob(Job.task_state_index_path(job_id, '*', state))
+        [*memo, *new_paths]
+      end
+      index = paths.map { |path| File.extname(path).sub(/\A\./, '') }.sort.last
+      return nil unless index
+      self.load(job_id, index)
+    end
+
+    private_class_method
+
+    def self.task_indices(job_id)
+      Dir.glob(new(job_id: job_id, index: '*').metadata_path).map do |path|
+        name = File.basename(path)
+        /\Ametadata\.(?<index>.*)\.yaml\Z/.match(name).named_captures['index']
+      end.sort
+    end
+
     def tag
       "#{job_id}.#{index}"
     end
