@@ -51,12 +51,10 @@ module FlightJob
         'SINGLETON' => JSONSchemer.schema({
           "type" => "object",
           "additionalProperties" => false,
-          "required" => [*SHARED_KEYS, "stdout", "stderr", "results_dir"],
+          "required" => [*SHARED_KEYS, "results_dir"],
           "properties" => {
             **SHARED_PROPS,
-            "job_type" => { "const" => "SINGLETON" },
-            "stdout" => { "type" => "string", "minLength" => 1 },
-            "stderr" => { "type" => "string", "minLength" => 1 }
+            "job_type" => { "const" => "SINGLETON" }
           }
         }),
 
@@ -119,6 +117,7 @@ module FlightJob
           # Return early if the submission failed
           unless status.success?
             metadata['job_type'] = 'FAILED_SUBMISSION'
+            save_metadata
             FileUtils.rm_f active_index_path
             return
           end
@@ -145,15 +144,16 @@ module FlightJob
             metadata['results_dir'] = data['results_dir']
             metadata['scheduler_id'] = data['id']
             metadata['state'] = 'PENDING'
-            metadata['stdout_path'] = data['stdout']
-            metadata['stderr_path'] = data['stderr']
+
+            MonitorSingletonTransition.new(__getobj__).run!
           when 'ARRAY'
             metadata['job_type'] = 'ARRAY'
             metadata['lazy'] = data['lazy']
             metadata['results_dir'] = data['results_dir']
             metadata['scheduler_id'] = data['id']
+
+            MonitorArrayTransition.new(__getobj__).run!
           end
-          save_metadata
 
           # Remove the indexing file if in non-terminal state
           # TODO: Do this properly

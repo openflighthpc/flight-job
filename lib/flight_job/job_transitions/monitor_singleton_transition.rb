@@ -30,8 +30,12 @@ module FlightJob
     class MonitorSingletonTransition < SimpleDelegator
       include JobTransitions::JobTransitionHelper
 
-      SHARED_KEYS = ["version", "state"]
-      SHARED_PROPS = { "version" => { "const" => 1 } }
+      SHARED_KEYS = ["version", "state", "stdout_path", "stderr_path", "scheduler_state"]
+      SHARED_PROPS = {
+        "version" => { "const" => 1 },
+        "stdout_path" => { "type" => ['null', "string"] },
+        "stderr_path" => { "type" => ['null', "string"] }
+      }
       SCHEMAS = {
         initial: JSONSchemer.schema({
           "type" => "object",
@@ -39,7 +43,7 @@ module FlightJob
           "required" => SHARED_KEYS,
           "properties" => {
             **SHARED_PROPS,
-            "state" => { "enum" => Job::STATES }
+            "state" => { "enum" => Job::STATES },
           }
         }),
 
@@ -114,7 +118,7 @@ module FlightJob
           "properties" => {
             **SHARED_PROPS,
             "state" => { "const" => "UNKNOWN" },
-            "scheduler_state" => { "type" => "string", "minLength": 1 },
+            "scheduler_state" => { "type" => ["null", "string"] },
             "reason" => { "type" => ["string", "null"] },
             "start_time" => { "type" => "null" },
             "end_time" => { "type" => "null" },
@@ -153,45 +157,14 @@ module FlightJob
             validate_data(SCHEMAS[:initial], data, tag: "monitor (initial)")
             validate_data(SCHEMAS[data['state']], data, tag: "monitor (#{data['state']})")
 
-            data.each do |key, value|
-              # Ignore the metadata version
-              next if key == "version"
-
-              # Treat empty string/nil as the same value
-              value = nil if value == ''
-
-              # Parse and set times
-              if /_time\Z/.match? key
-                metadata[key] = parse_time(value, type: key)
-
-              # Set other keys
-              else
-                metadata[key] = value
-              end
-            end
-
-            if data['reason'] == ''
-              metadata['reason'] = nil
-            elsif data['reason']
-              metadata['reason'] = data['reason']
-            end
+            # Update the attributes
+            apply_task_attributes(__getobj__, data)
             save_metadata
 
             # Remove the indexing file in terminal state
             FileUtils.rm_f active_index_path if terminal?
           end
         end
-      end
-
-      private
-
-      def parse_time(time, type:)
-        return nil if ['', nil].include?(time)
-        Time.parse(time).strftime("%Y-%m-%dT%T%:z")
-      rescue ArgumentError
-        FlightJob.logger.error "Failed to parse #{type}: #{time}"
-        FlightJob.logger.debug $!.full_message
-        raise_command_error
       end
     end
   end

@@ -68,20 +68,8 @@ module FlightJob
 
             # Builds each task
             tasks = data['tasks'].map do |index, datum|
-              times = datum.slice('start_time', 'end_time', 'estimated_start_time', 'estimated_end_time')
-                           .map { |k, v| [k, parse_time(v, type: k)] }
-                           .select { |_, v| v }
-                           .to_h
               Task.new(job_id: id, index: index).tap do |task|
-                task.metadata.merge!({
-                  'state' => datum['state'],
-                  'scheduler_state' => datum['scheduler_state'],
-                  'reason' => datum['reason'],
-                  # TODO' => Set me
-                  'stdout_path' => '/dev/null',
-                  'stderr_path' => '/dev/null',
-                  **times
-                })
+                apply_task_attributes(task, datum)
               end
             end
 
@@ -111,16 +99,6 @@ module FlightJob
             # FileUtils.rm_f active_index_path if terminal?
           end
         end
-      end
-
-      private
-
-      def parse_time(time, type:)
-        return nil if ['', nil].include?(time)
-        Time.parse(time).strftime("%Y-%m-%dT%T%:z")
-      rescue ArgumentError
-        FlightJob.logger.error "Failed to parse #{type}: #{time}"
-        FlightJob.logger.debug $!.full_message
       end
     end
   end

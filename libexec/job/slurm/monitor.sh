@@ -54,6 +54,12 @@ read -r -d '' template <<'TEMPLATE' || true
   reason: (
     if $reason == "" then null else $reason end
   ),
+  stdout_path: (
+    if $stdout_path == "" then null else $stdout_path end
+  ),
+  stderr_path: (
+    if $stderr_path == "" then null else $stderr_path end
+  ),
   start_time: (
     if $start_time == ""  then null else $start_time end
   ),
@@ -85,6 +91,8 @@ if [[ "$exit_status" -eq 0 ]]; then
   end_time=$(             parse_scontrol_end_time   "$raw_control" "$state")
   estimated_start_time=$( parse_scontrol_estimated_start_time "$raw_control" "$state")
   estimated_end_time=$(   parse_scontrol_estimated_end_time   "$raw_control" "$state")
+  stdout_path=$(          parse_scontrol_stdout "$raw_control")
+  stderr_path=$(          parse_scontrol_stderr "$raw_control")
 elif [[ "$raw_control" == "slurm_load_jobs error: Invalid job id specified" ]]; then
   # Fallback to sacct if scontrol does not recognise the ID
   raw_acct=$(sacct --noheader --parsable --jobs "$1" --format State,Reason,START,END,AllocTRES)
@@ -114,6 +122,11 @@ EOF
     estimated_start_time=$( parse_sacct_estimated_start_time "$acct" "$state")
     estimated_end_time=$(   parse_sacct_estimated_end_time   "$acct" "$state")
 
+    # sacct does not store the stdout/stderr paths
+    # Hopefully they have already been set ¯\_(ツ)_/¯
+    stdout_path=""
+    stderr_path=""
+
   # Exit the monitor process if sacct fails to prevent the job being updated
   else
     echo "$sacct" >&3
@@ -131,4 +144,6 @@ echo '{}' | jq  --arg state "$state" \
                 --arg estimated_end_time "$estimated_end_time" \
                 --arg start_time "$start_time" \
                 --arg end_time "$end_time" \
+                --arg stdout_path "$stdout_path" \
+                --arg stderr_path "$stderr_path" \
                 "$template" | tr -d "\n"

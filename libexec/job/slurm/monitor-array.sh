@@ -54,6 +54,12 @@ read -r -d '' task_template <<'TEMPLATE' || true
   reason: (
     if $reason == "" then null else $reason end
   ),
+  stdout_path: (
+    if $stdout_path == "" then null else $stdout_path end
+  ),
+  stderr_path: (
+    if $stderr_path == "" then null else $stderr_path end
+  ),
   start_time: (
     if $start_time == ""  then null else $start_time end
   ),
@@ -96,12 +102,16 @@ if [[ "$exit_status" -eq 0 ]]; then
       end_time=$(             parse_scontrol_end_time   "$line" "$state")
       estimated_start_time=$( parse_scontrol_estimated_start_time "$line" "$state")
       estimated_end_time=$(   parse_scontrol_estimated_end_time   "$line" "$state")
+      stdout_path=$(          parse_scontrol_stdout "$line")
+      stderr_path=$(          parse_scontrol_stderr "$line")
 
       json=$( \
         echo '{}' | jq  \
           --arg state "$state" \
           --arg scheduler_state "$scheduler_state" \
           --arg reason "$reason" \
+          --arg stdout_path "$stdout_path" \
+          --arg stderr_path "$stderr_path" \
           --arg estimated_start_time "$estimated_start_time" \
           --arg estimated_end_time "$estimated_end_time" \
           --arg start_time "$start_time" \
@@ -149,6 +159,8 @@ EOF
           --arg state "$state" \
           --arg scheduler_state "$scheduler_state" \
           --arg reason "$reason" \
+          --arg stdout_path "" \
+          --arg stderr_path "" \
           --arg estimated_start_time "$estimated_start_time" \
           --arg estimated_end_time "$estimated_end_time" \
           --arg start_time "$start_time" \

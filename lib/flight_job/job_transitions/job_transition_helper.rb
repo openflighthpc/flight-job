@@ -78,6 +78,67 @@ module FlightJob
           raise_command_error
         end
       end
+
+      def apply_task_attributes(object, opts)
+        # Apply the generic keys to the metadata
+        opts.slice("state", "reason")
+            .each { |k, v| object.metadata[k] = (v == "" ? nil : v) }
+
+        # Apply the scheduler_state, defaulting to UNKNOWN when appropriate
+        if metadata['state'] == 'UNKNOWN' && [nil, ''].include?(opts['scheduler_state'])
+          metadata['scheduler_state'] = 'unknown'
+        else
+          metadata['scheduler_state'] = opts['scheduler_state']
+        end
+
+        # Parse and apply the time based keys
+        opts.slice("start_time", "end_time", "estimated_start_time", "estimated_end_time")
+            .each { |k, t| object.metadata[k] = parse_time(t, type: k, object: object) }
+
+        # Conditionally apply path keys
+        opts.slice("stdout_path", "stderr_path")
+            .each do |key, path|
+          # The scheduler *may* loose track of the paths eventually, this is to be
+          # expected and can be safely ignored
+          next if [nil, ""].include? path
+
+          # Set the path
+          if metadata[key].nil?
+            metadata[key] = path
+
+          # This shouldn't happen in practice. This scheduler is assumable doing
+          # something odd? Log the error and continue.
+          elsif metadata[key] != path
+            FlightJob.logger.error <<~ERROR.chomp
+              Attempted to modify the #{key} for #{object_tag(object)}
+              Original: #{metadata[key]}
+              Provided: #{path}
+
+              The provided value has been discared!
+            ERROR
+          end
+        end
+      end
+
+      def parse_time(time, object:, type:)
+        return nil if ['', nil].include?(time)
+        Time.parse(time).strftime("%Y-%m-%dT%T%:z")
+      rescue ArgumentError
+        FlightJob.logger.error "Failed to parse #{object_tag(object)} #{type}: #{time}"
+        FlightJob.logger.debug $!.full_message
+        return nil
+      end
+
+      def object_tag(object)
+        case object
+        when Job
+          "job '#{object.id}'"
+        when Task
+          "task #{object.tag}"
+        else
+          "unknown"
+        end
+      end
     end
   end
 end

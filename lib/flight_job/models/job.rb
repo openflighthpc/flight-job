@@ -399,15 +399,13 @@ module FlightJob
       JobTransitions::SubmitTransition.new(self).run!
     end
 
-    # Deliberately not a case statement to allow fall through
     def monitor
-      if job_type == 'INITIALIZING'
+      case job_type
+      when 'INITIALIZING'
         JobTransitions::FailedSubmissionTransition.new(self).run
-      end
-      if job_type == 'SINGLETON'
+      when 'SINGLETON'
         JobTransitions::MonitorSingletonTransition.new(self).run!
-      end
-      if job_type == 'ARRAY'
+      when 'ARRAY'
         JobTransitions::MonitorArrayTransition.new(self).run!
       end
     end
@@ -447,7 +445,7 @@ module FlightJob
         FileUtils.mkdir_p File.dirname(metadata_path)
         File.write metadata_path, YAML.dump(metadata)
       else
-        FlightJob.logger.error("Failed to savve job metadata: #{id}")
+        FlightJob.logger.error("Failed to save job metadata: #{id}")
         FlightJob.logger.info(errors.full_messages.join("\n"))
         raise InternalError, "Unexpectedly failed to save job '#{id}' metadata"
       end

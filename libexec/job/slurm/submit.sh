@@ -95,8 +95,6 @@ if [ "$(parse_scontrol_job_type "$raw_control")" == "SINGLETON" ]; then
   version: 1,
   job_type: "SINGLETON",
   id: ($id),
-  stdout: ($stdout),
-  stderr: ($stderr),
   results_dir: ($results_dir)
 }
 TEMPLATE
@@ -104,8 +102,6 @@ TEMPLATE
   # Render and return the JSON payload
   echo '{}' | jq  \
     --arg id      "$(parse_scontrol_scheduler_id "$raw_control")" \
-    --arg stdout  "$(parse_scontrol_stdout "$raw_control") " \
-    --arg stderr  "$(parse_scontrol_stderr "$raw_control") " \
     --arg results_dir "$results_dir" \
     "$template" | tr -d "\n"
 else
