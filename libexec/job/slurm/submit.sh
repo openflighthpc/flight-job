@@ -110,7 +110,6 @@ else
   version: 1,
   job_type: "ARRAY",
   id: ($id),
-  lazy: true,
   results_dir: ($results_dir)
 }
 TEMPLATE

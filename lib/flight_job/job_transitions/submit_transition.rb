@@ -61,11 +61,10 @@ module FlightJob
         "ARRAY" => JSONSchemer.schema({
           "type" => "object",
           "additionalProperties" => false,
-          "required" => [*SHARED_KEYS, "lazy"],
+          "required" => SHARED_KEYS,
           "properties" => {
             **SHARED_PROPS,
-            "job_type" => { "const" => "ARRAY" },
-            "lazy" => { "const" => true }
+            "job_type" => { "const" => "ARRAY" }
           }
         })
       }
@@ -148,7 +147,7 @@ module FlightJob
             MonitorSingletonTransition.new(__getobj__).run!
           when 'ARRAY'
             metadata['job_type'] = 'ARRAY'
-            metadata['lazy'] = data['lazy']
+            metadata['lazy'] = true
             metadata['results_dir'] = data['results_dir']
             metadata['scheduler_id'] = data['id']
 
