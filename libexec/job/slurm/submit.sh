@@ -41,18 +41,6 @@ source "${DIR}/parser.sh"
 set -e
 which "jq" >/dev/null
 
-# Specify the template for the JSON response
-read -r -d '' template <<'TEMPLATE' || true
-{
-  version: 1,
-  job_type: "SINGLETON",
-  id: ($id),
-  stdout: ($stdout),
-  stderr: ($stderr),
-  results_dir: ($results_dir)
-}
-TEMPLATE
-
 # Submit the job to the scheduler
 output=$($DIR/sbatch-wrapper.sh "$1")
 cat <<EOF >&2
