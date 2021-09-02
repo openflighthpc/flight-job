@@ -90,10 +90,7 @@ EOF
 if [[ "$exit_status" -eq 0 ]]; then
   while IFS= read -r line; do
     index=$(parse_scontrol_task_index "$line")
-    if echo "$index" | grep '-' >/dev/null; then
-      # Skipping the pseudo-task entry, setting the lazy create flag
-      lazy="true"
-    else
+    if echo "$index" | grep -P '^\d+$' >/dev/null; then
       # Generate and store the JSON for the task
       state=$(                parse_scontrol_state  "$line")
       scheduler_state=$(      parse_scontrol_scheduler_state "$line")
@@ -119,6 +116,9 @@ if [[ "$exit_status" -eq 0 ]]; then
           "$task_template" \
       )
       tasks="$tasks, \"$index\" : $json"
+    else
+      # Skipping the pseudo-task entry, setting the lazy create flag
+      lazy="true"
     fi
   done <<< "$raw_control"
 elif [[ "$raw_control" == "slurm_load_jobs error: Invalid job id specified" ]]; then
