@@ -29,8 +29,6 @@ module FlightJob
   module Commands
     class ViewJobOutput < Command
       def run
-        @job = load_job(args.first)
-
         assert_output_type_valid
         assert_stderr_not_merged if viewing_stderr?
         assert_file_exists
@@ -41,39 +39,59 @@ module FlightJob
       private
 
       def assert_output_type_valid
-        return if [:stdout, :stderr].include?(opts.type)
+        return if [:job_stdout, :job_stderr, :task_stdout, :task_stderr].include?(opts.type)
         raise InternalError, "Invalid output type #{opts.type.inspect}"
       end
 
       def assert_stderr_not_merged
-        if @job.stderr_merged?
+        if stderr_merged?
           prog_name = ENV.fetch('FLIGHT_PROGRAM_NAME') { 'bin/job' }
+          cmd = viewing_job? ? 'view-job-stdout' : 'view-array-task-stdout'
+          object_name = viewing_job? ? 'job' : 'task'
           raise MissingError, <<~ERROR.chomp
-            Cannot display the job's standard error as it has been merged with standard out.
+            Cannot display the #{object_name}'s standard error as it has been merged with standard out.
             Please run the following instead:
-            #{pastel.yellow "#{prog_name} view-job-stdout #{@job.id}"}
+            #{pastel.yellow "#{prog_name} #{cmd} #{args.join(" ")}"}
           ERROR
         end
       end
 
       def assert_file_exists
         unless File.exists?(file_path)
-          raise MissingError, "The job's standard " \
-            "#{opts.type == :stdout ? 'output' : 'error'} file does not exists: "\
+          output_type = viewing_stderr? ? 'error' : 'output'
+          object_name = viewing_job? ? 'job' : 'task'
+          raise MissingError, "The #{object_name}'s standard " \
+            "#{output_type} file does not exists: "\
             "#{pastel.yellow(file_path)}"
         end
       end
 
       def file_path
         if viewing_stderr?
-          @job.stderr_path!
+          object.metadata['stderr_path']
         else
-          @job.stdout_path!
+          object.metadata['stdout_path']
+        end
+      end
+
+      def object
+        @object ||= if viewing_job?
+          load_job(*args)
+        else
+          Task.load(*args)
         end
       end
 
       def viewing_stderr?
-        opts.type == :stderr
+        [:job_stderr, :task_stderr].include?(opts.type)
+      end
+
+      def viewing_job?
+        [:job_stdout, :job_stderr].include?(opts.type)
+      end
+
+      def stderr_merged?
+        object.metadata.slice('stdout_path', 'stderr_path').values.uniq.length == 1
       end
     end
   end
