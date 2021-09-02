@@ -86,10 +86,7 @@ module FlightJob
             end
 
             # Save all the tasks metadata
-            tasks.each do |task|
-              FileUtils.mkdir_p File.dirname(task.metadata_path)
-              File.write task.metadata_path, YAML.dump(task.metadata)
-            end
+            tasks.each { |t| t.save_metadata(validate: false) }
 
             # Update the lazy flag
             metadata["lazy"] = data["lazy"]

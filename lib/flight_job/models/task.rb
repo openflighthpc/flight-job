@@ -82,6 +82,14 @@ module FlightJob
       end
     end
 
+    # Reform the index file on load
+    validate on: :load do
+      next unless metadata.is_a? Hash
+      state = metadata['state']
+      next unless STATES.include? state
+      reform_state_index_file
+    end
+
     def tag
       "#{job_id}.#{index}"
     end
@@ -98,12 +106,40 @@ module FlightJob
       end
     end
 
+    def save_metadata(validate: true)
+      if validate && !valid?(:save_metadata)
+        FlightJob.logger.error("Failed to save task metadata: #{tag}")
+        FlightJob.logger.info(errors.full_messages.join("\n"))
+        raise InternalError, "Unexpectedly failed to save task '#{tag}' metadata"
+      else
+        FileUtils.mkdir_p File.dirname(metadata_path)
+        File.write metadata_path, YAML.dump(metadata)
+        reform_state_index_file
+      end
+    end
+
     private
 
     # NOTE: Requires parity with job_dir
     def task_dir
       @task_dir ||= File.join(FlightJob.config.jobs_dir, job_id, 'tasks')
     end
+
+    # A glob of all possible state index files
+    def state_index_files
+      Dir.glob(Job.task_state_index_path(job_id, index, '*')).sort
+    end
+
+    # The correct index file
+    def state_index_file
+      Job.task_state_index_path(job_id, index, metadata['state'])
+    end
+
+    def reform_state_index_file
+      return if state_index_files == [state_index_file]
+      state_index_files.each { |f| FileUtils.rm_f f }
+      FileUtils.mkdir_p File.dirname(state_index_file)
+      FileUtils.touch state_index_file
+    end
   end
 end
-
