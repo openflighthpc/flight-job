@@ -83,40 +83,25 @@ if [[ $exit_status -ne 0 ]]; then
   exit $exit_status
 fi
 
-# Determine the results directory
+# Determine the results directory / Job Type
 working=$(echo "$control" | grep '^WorkDir=' | cut -d= -f2)
 name=$(echo "$control" | grep '^JobName=' | cut -d= -f2)
 results_dir="${working}/${name}-outputs/$id"
+job_type=$(parse_scontrol_job_type "$raw_control")
 
-# Fork the logic on ARRAY/SINGLETON
-if [ "$(parse_scontrol_job_type "$raw_control")" == "SINGLETON" ]; then
-  read -r -d '' template <<'TEMPLATE' || true
+# Create the JSON template
+read -r -d '' template <<'TEMPLATE' || true
 {
   version: 1,
-  job_type: "SINGLETON",
+  job_type: ($job_type),
   id: ($id),
   results_dir: ($results_dir)
 }
 TEMPLATE
 
-  # Render and return the JSON payload
-  echo '{}' | jq  \
-    --arg id      "$(parse_scontrol_scheduler_id "$raw_control")" \
-    --arg results_dir "$results_dir" \
-    "$template" | tr -d "\n"
-else
-  read -r -d '' template <<'TEMPLATE' || true
-{
-  version: 1,
-  job_type: "ARRAY",
-  id: ($id),
-  results_dir: ($results_dir)
-}
-TEMPLATE
-
-  # Render and return the JSON payload
-  echo '{}' | jq  \
-    --arg id      "$(parse_scontrol_scheduler_id "$raw_control")" \
-    --arg results_dir "$results_dir" \
-    "$template" | tr -d "\n"
-fi
+# Render and return the JSON payload
+echo '{}' | jq  \
+  --arg id      "$(parse_scontrol_scheduler_id "$raw_control")" \
+  --arg results_dir "$results_dir" \
+  --arg job_type "$job_type" \
+  "$template" | tr -d "\n"

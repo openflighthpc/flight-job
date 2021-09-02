@@ -31,43 +31,17 @@ module FlightJob
       include JobTransitionHelper
       include ActiveModel::Validations
 
-      SHARED_KEYS = ["job_type", "version", "id", "results_dir"]
-      SHARED_PROPS = {
-        "version" => { "const" => 1 },
-        "id" => { "type" => "string", "minLength" => 1 },
-        "results_dir" => { "type" => "string", "minLength" => 1 }
-      }
-      SCHEMAS = {
-        initial:  JSONSchemer.schema({
-          "type" => "object",
-          "additionalProperties" => true,
-          "required" => SHARED_KEYS,
-          "properties" => {
-            **SHARED_PROPS,
-            "job_type" => { "enum" => ["SINGLETON", "ARRAY"] }
-          }
-        }),
-
-        'SINGLETON' => JSONSchemer.schema({
-          "type" => "object",
-          "additionalProperties" => false,
-          "required" => [*SHARED_KEYS, "results_dir"],
-          "properties" => {
-            **SHARED_PROPS,
-            "job_type" => { "const" => "SINGLETON" }
-          }
-        }),
-
-        "ARRAY" => JSONSchemer.schema({
-          "type" => "object",
-          "additionalProperties" => false,
-          "required" => SHARED_KEYS,
-          "properties" => {
-            **SHARED_PROPS,
-            "job_type" => { "const" => "ARRAY" }
-          }
-        })
-      }
+      SCHEMA = JSONSchemer.schema({
+        "type" => "object",
+        "additionalProperties" => false,
+        "required" => ["job_type", "version", "id", "results_dir"],
+        "properties" => {
+          "version" => { "const" => 1 },
+          "id" => { "type" => "string", "minLength" => 1 },
+          "results_dir" => { "type" => "string", "minLength" => 1 },
+          "job_type" => { "enum" => ["SINGLETON", "ARRAY"] }
+        }
+      })
 
       validate do
         __getobj__.valid?
@@ -123,9 +97,7 @@ module FlightJob
 
           # Validate the payload format
           begin
-            validate_data(SCHEMAS[:initial], data, tag: 'submit (initial)')
-            type = data['job_type']
-            validate_data(SCHEMAS[type], data, tag: "submit (#{type})")
+            validate_data(SCHEMA, data, tag: 'submit')
           rescue CommandError
             # The command lied about exiting 0! It did not report the json payload
             # correctly. Changing the status to 126
@@ -137,27 +109,17 @@ module FlightJob
           end
 
           # The job was submitted correctly and is now pending
+          metadata['results_dir'] = data['results_dir']
+          metadata['scheduler_id'] = data['id']
+          metadata['job_type'] = data['job_type']
+
+          # Run the monitor
           case data['job_type']
           when 'SINGLETON'
-            metadata['job_type'] = 'SINGLETON'
-            metadata['results_dir'] = data['results_dir']
-            metadata['scheduler_id'] = data['id']
             metadata['state'] = 'PENDING'
-
             MonitorSingletonTransition.new(__getobj__).run!
           when 'ARRAY'
-            metadata['job_type'] = 'ARRAY'
-            metadata['lazy'] = true
-            metadata['results_dir'] = data['results_dir']
-            metadata['scheduler_id'] = data['id']
-
             MonitorArrayTransition.new(__getobj__).run!
-          end
-
-          # Remove the indexing file if in non-terminal state
-          # TODO: Do this properly
-          if terminal? && job_type != 'ARRAY'
-            FileUtils.rm_f active_index_path
           end
         end
       end
