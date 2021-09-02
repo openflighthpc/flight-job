@@ -198,10 +198,6 @@ module FlightJob
       new(submit_script: script).tap(&:submit)
     end
 
-    def self.task_state_index_path(job_id, index, state)
-      File.join(FlightJob.config.jobs_dir, job_id, 'states', "#{state}.#{index}")
-    end
-
     validate on: :load do
       # Ensure the active file does not exist in terminal states
       if terminal?

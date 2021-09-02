@@ -81,8 +81,11 @@ module FlightJob
         when 'SINGLETON'
           object.metadata['actual_end_time']
         when 'ARRAY'
-          # TODO
-          nil
+          if last_non_terminal_task
+            # NOOP
+          else
+            (last_end_time_task&.metadata || {})['end_time']
+          end
         end
       end
 
@@ -177,6 +180,11 @@ module FlightJob
       def last_non_terminal_task
         @last_non_terminal_task = Task.load_last_non_terminal(id) || false if @last_non_terminal_task.nil?
         @last_non_terminal_task ? @last_non_terminal_task : nil
+      end
+
+      def last_end_time_task
+        @last_end_time_task = Task.load_last_end_time(id) || false if @last_end_time_task.nil?
+        @last_end_time_task ? @last_end_time_task : nil
       end
     end
   end

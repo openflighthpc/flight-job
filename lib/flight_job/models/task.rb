@@ -82,11 +82,17 @@ module FlightJob
       end
     end
 
-    # Reform the index file on load
+    # Reform the state index file on load
     validate on: :load do
       next unless metadata.is_a? Hash
       state = metadata['state']
       next unless STATES.include? state
+      reform_state_index_file
+    end
+
+    # Reform the end_time index file on load
+    validate on: :load do
+      next unless metadata.is_a? Hash
       reform_state_index_file
     end
 
@@ -108,7 +114,7 @@ module FlightJob
     end
 
     def self.load_first_pending(job_id)
-      path = Dir.glob(Job.task_state_index_path(job_id, '*', 'PENDING'))
+      path = Dir.glob(state_index_path(job_id, '*', 'PENDING'))
                 .sort.first
       return nil unless path
       self.load(job_id, File.extname(path).sub(/\A\./, ''))
@@ -116,12 +122,34 @@ module FlightJob
 
     def self.load_last_non_terminal(job_id)
       paths = Job::NON_TERMINAL_STATES.reduce([]) do |memo, state|
-        new_paths = Dir.glob(Job.task_state_index_path(job_id, '*', state))
+        new_paths = Dir.glob(state_index_path(job_id, '*', state))
         [*memo, *new_paths]
       end
       index = paths.map { |path| File.extname(path).sub(/\A\./, '') }.sort.last
       return nil unless index
       self.load(job_id, index)
+    end
+
+    def self.load_last_end_time(job_id)
+      index = Dir.glob(end_time_index_path(job_id, '*', '*'))
+                 .map { |p| File.basename(p).split('.', 2) }
+                 .sort_by { |t, _| t.to_i }
+                 .last&.last
+      return nil unless index
+      self.load(job_id, index)
+    end
+
+    def self.state_index_path(job_id, index, state)
+      File.join(FlightJob.config.jobs_dir, job_id, 'states', "#{state}.#{index}")
+    end
+
+    def self.end_time_index_path(job_id, index, time)
+      if time == '*'
+        epoch_time = '*' # Allow globs
+      else
+        epoch_time = Time.parse(time).to_i
+      end
+      File.join(FlightJob.config.jobs_dir, job_id, 'terminated', "#{epoch_time}.#{index}")
     end
 
     private_class_method
@@ -158,6 +186,7 @@ module FlightJob
         FileUtils.mkdir_p File.dirname(metadata_path)
         File.write metadata_path, YAML.dump(metadata)
         reform_state_index_file
+        reform_end_time_index_file
       end
     end
 
@@ -170,12 +199,12 @@ module FlightJob
 
     # A glob of all possible state index files
     def state_index_files
-      Dir.glob(Job.task_state_index_path(job_id, index, '*')).sort
+      Dir.glob(self.class.state_index_path(job_id, index, '*')).sort
     end
 
     # The correct index file
     def state_index_file
-      Job.task_state_index_path(job_id, index, metadata['state'])
+      self.class.state_index_path(job_id, index, metadata['state'])
     end
 
     def reform_state_index_file
@@ -183,6 +212,28 @@ module FlightJob
       state_index_files.each { |f| FileUtils.rm_f f }
       FileUtils.mkdir_p File.dirname(state_index_file)
       FileUtils.touch state_index_file
+    end
+
+    def end_time_index_files
+      Dir.glob(self.class.end_time_index_path(job_id, index, '*')).sort
+    end
+
+    def end_time_index_file
+      time = metadata['end_time']
+      return nil unless time
+      self.class.end_time_index_path(job_id, index, time)
+    end
+
+    def reform_end_time_index_file
+      files = end_time_index_files
+      file = end_time_index_file
+      return if files.empty? && file.nil?
+      return if files == [file]
+      files.each { |f| FileUtils.rm_f f }
+      if file
+        FileUtils.mkdir_p File.dirname(file)
+        FileUtils.touch file
+      end
     end
   end
 end
