@@ -105,6 +105,9 @@ module FlightJob
 
     def self.load(job_id, index)
       new(job_id: job_id, index: index).tap do |task|
+        unless File.exists? task.metadata_path
+          raise MissingError, "Could not locate task: #{task.tag}"
+        end
         unless task.valid?(:load)
           FlightJob.logger.error("Failed to load task: #{task.tag}\n") do
             task.errors.full_messages
@@ -194,6 +197,17 @@ module FlightJob
         File.write metadata_path, YAML.dump(metadata)
         reform_state_index_file
         reform_end_time_index_file
+      end
+    end
+
+    def job
+      @job ||= Job.new(id: job_id).tap do |j|
+        unless j.valid?(:load)
+          FlightJob.logger.error("Failed to load job: #{job_id}\n") do
+            j.errors.full_messages
+          end
+          raise InternalError, "Unexpectedly failed to load job: #{job_id}"
+        end
       end
     end
 

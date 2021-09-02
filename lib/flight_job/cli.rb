@@ -214,6 +214,10 @@ module FlightJob
       c.summary = 'List all the tasks for an array job'
     end
 
+    create_command 'info-array-task', 'JOB_ID INDEX' do |c|
+      c.summary = 'Display details about an array task'
+    end
+
     create_command 'run-monitor' do |c|
       c.summary = 'Update the internal state of the data cache'
     end
@@ -227,6 +231,7 @@ module FlightJob
     alias_command 'info',   'info-job'
 
     alias_command 'list-tasks', 'list-array-tasks'
+    alias_command 'info-task', 'info-array-task'
 
     if Flight.env.development?
       create_command 'console' do |c|

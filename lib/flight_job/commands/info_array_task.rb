@@ -25,32 +25,13 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-
-require 'output_mode'
-
 module FlightJob
-  module Outputs::ListArrayTasks
-    extend OutputMode::TLDR::Index
-
-    register_column(header: 'Index', row_color: :yellow, &:index)
-    register_column(header: 'Job ID', &:job_id)
-    register_column(header: 'State') { |t| t.metadata['state'] }
-
-    register_column(header: 'Started at') do |task, verbose:|
-      Outputs.format_time(task.metadata['start_time'], verbose)
-    end
-    register_column(header: 'Ended at') do |task, verbose:|
-      Outputs.format_time(task.metadata['end_time'], verbose)
-    end
-
-    register_column(header: 'Estimated Start', verbose: true) { |t| t.metadata['estimated_start_time'] }
-    register_column(header: 'Estimated Finish', verbose: true) { |t| t.metadata['estimated_end_time'] }
-
-    register_column(header: 'StdOut Path', verbose: true) { |t| t.metadata['stdout_path'] }
-    register_column(header: 'StdErr Path', verbose: true) { |t| t.metadata['stderr_path'] }
-
-    def self.build_output(**opts)
-      super(row_color: :cyan, header_color: :bold, **opts)
+  module Commands
+    class InfoArrayTask < Command
+      def run
+        puts render_output(Outputs::InfoArrayTask, Task.load(*args))
+      end
     end
   end
 end
+
