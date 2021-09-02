@@ -45,10 +45,37 @@ module FlightJob
         end
       end
 
-      delegate :id, :state, :job_type, to: :object
+      delegate :id, :job_type, to: :object
       delegate_metadata :script_id, :scheduler_id, :scheduler_state,
         :stdout_path, :stderr_path, :results_dir, :reason, :created_at,
         :submit_status, :submit_stdout, :submit_stderr, :estimated_start_time, :estimated_end_time
+
+      def state
+        case job_type
+        when 'FAILED_SUBMISSION'
+          'FAILED'
+        when 'SINGLETON'
+          object.metadata['state']
+        when 'ARRAY'
+          states = Dir.glob(Task.state_index_path(id, '*', '*'))
+                      .map { |p| File.basename(p).split('.').first }
+                      .uniq
+          if states.include?('RUNNING')
+            'RUNNING'
+          elsif states.include?('PENDING')
+            'PENDING'
+          elsif object.metadata['lazy']
+            'HOLD'
+          elsif object.metadata['cancelled']
+            # NOTE: Not currently supported
+            'CANCELLED'
+          elsif states == ['COMPLETED']
+            'COMPLETED'
+          else
+            'FAILED'
+          end
+        end
+      end
 
       def actual_start_time
         case job_type
