@@ -210,6 +210,10 @@ module FlightJob
       c.summary = 'Permanently remove a job'
     end
 
+    create_command 'list-array-tasks', 'JOB_ID' do |c|
+      c.summary = 'List all the tasks for an array job'
+    end
+
     create_command 'run-monitor' do |c|
       c.summary = 'Update the internal state of the data cache'
     end
@@ -221,6 +225,8 @@ module FlightJob
     alias_command 'ls-job-results', 'list-job-results'
     alias_command 'list',   'list-jobs'
     alias_command 'info',   'info-job'
+
+    alias_command 'list-tasks', 'list-array-tasks'
 
     if Flight.env.development?
       create_command 'console' do |c|

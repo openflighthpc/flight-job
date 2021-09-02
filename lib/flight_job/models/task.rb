@@ -96,6 +96,13 @@ module FlightJob
       reform_state_index_file
     end
 
+    def self.load_job_tasks(job_id)
+      Dir.glob(new(job_id: job_id, index: '*').metadata_path).map do |path|
+        index = File.basename(path).split('.')[1]
+        self.load(job_id, index)
+      end.sort_by(&:index)
+    end
+
     def self.load(job_id, index)
       new(job_id: job_id, index: index).tap do |task|
         unless task.valid?(:load)
@@ -188,6 +195,14 @@ module FlightJob
         reform_state_index_file
         reform_end_time_index_file
       end
+    end
+
+    def serializable_hash(*_)
+      metadata.dup.tap { |data|
+        data.delete('version')
+        data['actual_start_time'] = data.delete('start_time')
+        data['actual_end_time'] = data.delete('end_time')
+      }
     end
 
     private

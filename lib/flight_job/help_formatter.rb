@@ -100,6 +100,7 @@ module FlightJob
         ['script', 'scripts', 'script-notes'] => 'Scripts:',
         ['job', 'jobs'] => 'Jobs:',
         ['job-results', 'job-stdout', 'job-stderr'] => 'Job Files:',
+        ['array-task', 'array-tasks'] => "Array Tasks:"
       }
     end
 
