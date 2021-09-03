@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["script_id", "created_at"],
+  "properties": {
+    "version": {},
+    "script_id": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" },
+  }
+}

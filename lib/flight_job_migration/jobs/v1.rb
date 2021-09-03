@@ -26,6 +26,7 @@
 #==============================================================================
 
 require 'json_schemer'
+require 'tempfile'
 
 module FlightJobMigration
   class MigrationError < FlightJob::InternalError; end
@@ -34,8 +35,17 @@ module FlightJobMigration
     SCHEMA_V0 = JSONSchemer.schema(
       YAML.load(File.read Flight.config.join_schema_path('version0.yaml'))
     )
+    SCHEMA_V0_INITIAL = JSONSchemer.schema(
+      YAML.load(File.read Flight.config.join_schema_path('version0.initial.yaml'))
+    )
+
     SCHEMA_V1_RAW = YAML.load(
       File.read Flight.config.join_schema_path("version1.yaml")
+    )
+    SCHEMA_V1_INITIALIZING = JSONSchemer.schema(
+      SCHEMA_V1_RAW["oneOf"].find do |schema|
+        schema["properties"]["job_type"]["const"] == "INITIALIZING"
+      end
     )
     SCHEMA_V1_SINGLETON = JSONSchemer.schema(
       SCHEMA_V1_RAW["oneOf"].find do |schema|
@@ -64,14 +74,22 @@ module FlightJobMigration
 
       def migrate!
         Flight.logger.info "Migrating job '#{id}'"
-        validate_original
-        case original['submit_status']
-        when 0
-          migrate_singleton
+        if File.exists? metadata_path
+          validate_original
+          populate_metadata_from_original
+          case original['submit_status']
+          when 0
+            migrate_singleton
+          else
+            metadata['job_type'] = 'FAILED_SUBMISSION'
+            save_metadata
+          end
+        elsif File.exists? initial_path
+          migrate_initializing
         else
-          metadata['job_type'] = 'FAILED_SUBMISSION'
+          raise MigrationError, "File does not exist: #{metadata_path}"
         end
-        save_metadata
+        Flight.logger.warn "Migrated job '#{id}' to version 1"
       end
 
       # Checks if the selected metadata is already the correct version
@@ -102,6 +120,8 @@ module FlightJobMigration
         schema = case metadata["job_type"]
                  when 'SINGLETON'
                    SCHEMA_V1_SINGLETON
+                 when 'INITIALIZING'
+                   SCHEMA_V1_INITIALIZING
                  else
                    SCHEMA_V1_FAILED_SUBMISSION
                  end
@@ -110,6 +130,14 @@ module FlightJobMigration
         Flight.logger.error "Failed to validate (version 1): #{metadata_path}"
         Flight.logger.debug JSON.pretty_generate(errors)
         raise MigrationError, "Metadata is invalid: #{metadata_path}"
+      end
+
+      def validate_initial
+        errors = SCHEMA_V0_INITIAL.validate(initial).to_a
+        return if errors.empty?
+        Flight.logger.error "Failed to validate (version 0): #{initial_path}"
+        Flight.logger.debug JSON.pretty_generate(errors)
+        raise MigrationError, "Metadata is invalid: #{initial_path}"
       end
 
       def migrate_singleton
@@ -139,18 +167,52 @@ module FlightJobMigration
         # The following where previously optional, but are now required
         metadata['scheduler_id'] = original['scheduler_id'] || 'unknown'
         metadata['scheduler_state'] = original['scheduler_state'] || 'unknown'
+        save_metadata
+      end
+
+      def migrate_initializing
+        validate_initial
+        metadata["version"] = 1
+        metadata["job_type"] = "INITIALIZING"
+        metadata.merge! initial.slice("created_at", "script_id")
+        metadata["rendered_path"] = generate_rendered_path
+        validate_metadata
+
+        # Create the metadata file with FileUtils.mv
+        # NOTE: This should cause the migration to fail in the event
+        # of a race condition
+        Tempfile.open("flight-job-metadata-migration") do |file|
+          file.write YAML.dump(metadata)
+          file.rewind
+          FileUtils.mv file.path, metadata_path
+        end
+
+        # Hide the initial path
+        FileUtils.mv initial_path, File.join(job_dir, '.metadata.initial.yaml')
       end
 
       def original
         @original ||= if File.exists? metadata_path
-                        YAML.load File.read(metadata_path)
-                      else
-                        raise MigrationError, "File does not exist: #{metadata_path}"
-                      end
+          YAML.load File.read(metadata_path)
+        else
+          {}
+        end
+      end
+
+      def initial
+        @initial ||= if File.exists? initial_path
+          YAML.load File.read(initial_path)
+        else
+          {}
+        end
       end
 
       def metadata
-        @metadata ||= original.slice(
+        @metadata ||= {}
+      end
+
+      def populate_metadata_from_original
+        hash = original.slice(
           "created_at", "script_id", "submit_status", "submit_stdout", "submit_stderr",
           "rendered_path"
         ).tap do |data|
@@ -160,13 +222,13 @@ module FlightJobMigration
           # Some earlier jobs appear to be missing 'created_at'? TBC
           data["created_at"] ||= Time.at(0).to_datetime.rfc3339
         end
+        metadata.merge!(hash)
       end
 
       def save_metadata
         validate_metadata
         File.write backup_metadata_path, YAML.dump(original)
         File.write metadata_path, YAML.dump(metadata)
-        Flight.logger.warn "Migrated job '#{id}' to version 1"
       end
 
       def metadata_path
@@ -175,6 +237,10 @@ module FlightJobMigration
 
       def backup_metadata_path
         File.join(job_dir, '.metadata.v0.yaml')
+      end
+
+      def initial_path
+        File.join(job_dir, 'metadata.initial.yaml')
       end
 
       # Legacy Jobs may not have a rendered path
