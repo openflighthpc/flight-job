@@ -122,16 +122,29 @@ module FlightJob
         schema_errors = SCHEMAS[metadata['job_type']].validate(metadata).to_a
       end
 
-      # Attempt to migrate the data on errors
-      if schema_errors.any? && FlightJobMigration::Jobs.migrate(job_dir)
-        @metadata = nil
-        schema_errors = SCHEMAS[:initial].validate(metadata).to_a
-        if schema_errors.empty?
-          schema_errors = SCHEMAS[metadata['job_type']].validate(metadata).to_a
+      # Remove the migration flag file
+      if schema_errors.empty?
+        FileUtils.rm_f failed_migration_path
+
+      # Log skipping the migration
+      elsif File.exists? failed_migration_path
+        Flight.logger.warn "Skipping job '#{id}' migration as it previously failed!"
+
+      # Attempt to migrate the data
+      else
+        if FlightJobMigration::Jobs.migrate(job_dir)
+          @metadata = nil
+          schema_errors = SCHEMAS[:initial].validate(metadata).to_a
+          if schema_errors.empty?
+            schema_errors = SCHEMAS[metadata['job_type']].validate(metadata).to_a
+          end
+        else
+          # Flag the failure
+          FileUtils.touch failed_migration_path
         end
       end
 
-      # Add the schema errors if any
+      # Add the schema errors
       unless schema_errors.empty?
         FlightJob.logger.debug("The following metadata file is invalid: #{metadata_path}\n") do
           JSON.pretty_generate(schema_errors)
@@ -185,6 +198,12 @@ module FlightJob
 
     def submitted?
       File.exists? metadata_path
+    end
+
+    def failed_migration_path
+      @failed_migration_path ||= File.join(
+        job_dir, ".migration-failed.#{SCHEMA_VERSION}.0"
+      )
     end
 
     def metadata_path
