@@ -33,14 +33,14 @@ require 'open3'
 
 module FlightJob
   class Job < ApplicationModel
-    RAW_SCHEMA = YAML.load File.read(Flight.config.job_schema_path)
-    SCHEMA_VERSION = RAW_SCHEMA['__meta__']['VERSION']['const']
+    RAW_SCHEMA = JSON.parse File.read(Flight.config.job_schema_path)
+    SCHEMA_VERSION = RAW_SCHEMA['oneOf'][0]["properties"]['version']['const']
 
     PENDING_STATES = ['PENDING']
     TERMINAL_STATES = ['FAILED', 'COMPLETED', 'CANCELLED', 'UNKNOWN']
     RUNNING_STATES = ['RUNNING']
     NON_TERMINAL_STATES = [*PENDING_STATES, *RUNNING_STATES]
-    STATES = RAW_SCHEMA['__meta__']['STATES_ENUM']['enum']
+    STATES = [*NON_TERMINAL_STATES, *TERMINAL_STATES]
 
     STATES_LOOKUP = {}.merge(PENDING_STATES.map { |s| [s, :pending] }.to_h)
                       .merge(RUNNING_STATES.map { |s| [s, :running] }.to_h)
@@ -49,7 +49,7 @@ module FlightJob
     # Break up the raw schema into its components
     # This makes slightly nicer error reporting by removing the oneOf
     SCHEMAS = {
-      initial: JSONSchemer.schema(RAW_SCHEMA['__meta__']['INITIAL'])
+      initial: JSONSchemer.schema(RAW_SCHEMA.dup.tap { |s| s.delete("oneOf") })
     }
     RAW_SCHEMA['oneOf'].each do |schema|
       type = schema['properties']['job_type']['const']

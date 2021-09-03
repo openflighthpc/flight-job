@@ -22,15 +22,13 @@ __meta__:
   STATES_ENUM: &STATES_ENUM
     enum: ["PENDING", "RUNNING", "FAILED", "COMPLETED", "CANCELLED", "UNKNOWN"]
 
-  INITIAL:
-    type: "object"
-    additionalProperties: true
-    <<: *SHARED_REQUIRED
-    properties:
-      <<: *SHARED_PROPERTIES
-      job_type:
-        enum: ["INITIALIZING", "SINGLETON", "ARRAY", "FAILED_SUBMISSION"]
-
+type: "object"
+additionalProperties: true
+<<: *SHARED_REQUIRED
+properties:
+  <<: *SHARED_PROPERTIES
+  job_type:
+    enum: ["INITIALIZING", "SINGLETON", "ARRAY", "FAILED_SUBMISSION"]
 oneOf:
   # INITIALIZING Jobs
   - type: "object"

@@ -124,7 +124,7 @@ module FlightJob
     end
 
     def job_schema_path
-      join_schema_path('version1.yaml')
+      join_schema_path('version1.json')
     end
 
     def directives_name

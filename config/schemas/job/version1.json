@@ -1,0 +1,320 @@
+{
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "created_at",
+    "job_type",
+    "rendered_path",
+    "script_id",
+    "version"
+  ],
+  "properties": {
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "rendered_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "script_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "const": 1
+    },
+    "job_type": {
+      "enum": [
+        "INITIALIZING",
+        "SINGLETON",
+        "ARRAY",
+        "FAILED_SUBMISSION"
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "created_at",
+        "job_type",
+        "rendered_path",
+        "script_id",
+        "version"
+      ],
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rendered_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "script_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "const": 1
+        },
+        "job_type": {
+          "const": "INITIALIZING"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "required": [
+            "created_at",
+            "job_type",
+            "rendered_path",
+            "script_id",
+            "version"
+          ]
+        },
+        {
+          "required": [
+            "submit_status",
+            "submit_stdout",
+            "submit_stderr"
+          ]
+        }
+      ],
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rendered_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "script_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "const": 1
+        },
+        "job_type": {
+          "const": "FAILED_SUBMISSION"
+        },
+        "submit_status": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 255
+        },
+        "submit_stdout": {
+          "type": "string"
+        },
+        "submit_stderr": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "required": [
+            "created_at",
+            "job_type",
+            "rendered_path",
+            "script_id",
+            "version"
+          ]
+        },
+        {
+          "required": [
+            "submit_status",
+            "submit_stdout",
+            "submit_stderr",
+            "scheduler_id"
+          ]
+        },
+        {
+          "required": [
+            "state",
+            "scheduler_state"
+          ]
+        }
+      ],
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rendered_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "script_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "const": 1
+        },
+        "submit_status": {
+          "const": 0
+        },
+        "submit_stdout": {
+          "type": "string"
+        },
+        "submit_stderr": {
+          "type": "string"
+        },
+        "scheduler_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "results_dir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "job_type": {
+          "const": "SINGLETON"
+        },
+        "state": {
+          "enum": [
+            "PENDING",
+            "RUNNING",
+            "FAILED",
+            "COMPLETED",
+            "CANCELLED",
+            "UNKNOWN"
+          ]
+        },
+        "scheduler_state": {
+          "type": "string",
+          "minLength": 1
+        },
+        "estimated_start_time": {
+          "type": [
+            "date-time",
+            "null"
+          ]
+        },
+        "estimated_end_time": {
+          "type": [
+            "date-time",
+            "null"
+          ]
+        },
+        "start_time": {
+          "type": [
+            "date-time",
+            "null"
+          ]
+        },
+        "end_time": {
+          "type": [
+            "date-time",
+            "null"
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "stdout_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stderr_path": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "required": [
+            "created_at",
+            "job_type",
+            "rendered_path",
+            "script_id",
+            "version"
+          ]
+        },
+        {
+          "required": [
+            "submit_status",
+            "submit_stdout",
+            "submit_stderr",
+            "scheduler_id"
+          ]
+        },
+        {
+          "required": [
+            "lazy"
+          ]
+        }
+      ],
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rendered_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "script_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "const": 1
+        },
+        "submit_status": {
+          "const": 0
+        },
+        "submit_stdout": {
+          "type": "string"
+        },
+        "submit_stderr": {
+          "type": "string"
+        },
+        "scheduler_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "results_dir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "job_type": {
+          "const": "ARRAY"
+        },
+        "lazy": {
+          "type": "boolean"
+        },
+        "estimated_start_time": {
+          "type": [
+            "date-time",
+            "null"
+          ]
+        },
+        "estimated_end_time": {
+          "type": [
+            "date-time",
+            "null"
+          ]
+        }
+      }
+    }
+  ]
+}

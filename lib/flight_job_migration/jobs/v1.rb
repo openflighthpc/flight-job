@@ -33,14 +33,14 @@ module FlightJobMigration
 
   module Jobs
     SCHEMA_V0 = JSONSchemer.schema(
-      YAML.load(File.read Flight.config.join_schema_path('version0.yaml'))
+      JSON.parse(File.read Flight.config.join_schema_path('version0.json'))
     )
     SCHEMA_V0_INITIAL = JSONSchemer.schema(
-      YAML.load(File.read Flight.config.join_schema_path('version0.initial.yaml'))
+      JSON.parse(File.read Flight.config.join_schema_path('version0.initial.json'))
     )
 
-    SCHEMA_V1_RAW = YAML.load(
-      File.read Flight.config.join_schema_path("version1.yaml")
+    SCHEMA_V1_RAW = JSON.parse(
+      File.read Flight.config.join_schema_path("version1.json")
     )
     SCHEMA_V1_INITIALIZING = JSONSchemer.schema(
       SCHEMA_V1_RAW["oneOf"].find do |schema|
