@@ -32,6 +32,15 @@ require_relative 'flight'
 module FlightJobMigration
   module Jobs
     autoload 'MigrateV1', File.expand_path('flight_job_migration/jobs/v1.rb', __dir__)
+
+    def self.migrate(dir)
+      migratation = Jobs::MigrateV1.new(dir)
+      if migratation.applicable?
+        migratation.migrate
+      else
+        false
+      end
+    end
   end
 
   def self.migrate

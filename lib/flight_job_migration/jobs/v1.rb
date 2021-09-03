@@ -67,9 +67,11 @@ module FlightJobMigration
 
       def migrate
         migrate!
+        return true
       rescue
         Flight.logger.error "Failed to migrate job '#{File.basename(job_dir)}'"
         Flight.logger.debug $!
+        return false
       end
 
       def migrate!

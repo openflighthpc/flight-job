@@ -122,6 +122,15 @@ module FlightJob
         schema_errors = SCHEMAS[metadata['job_type']].validate(metadata).to_a
       end
 
+      # Attempt to migrate the data on errors
+      if schema_errors.any? && FlightJobMigration::Jobs.migrate(job_dir)
+        @metadata = nil
+        schema_errors = SCHEMAS[:initial].validate(metadata).to_a
+        if schema_errors.empty?
+          schema_errors = SCHEMAS[metadata['job_type']].validate(metadata).to_a
+        end
+      end
+
       # Add the schema errors if any
       unless schema_errors.empty?
         FlightJob.logger.debug("The following metadata file is invalid: #{metadata_path}\n") do
