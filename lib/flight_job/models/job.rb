@@ -114,8 +114,8 @@ module FlightJob
       end
     end
 
-    # Verifies the metadata is valid before saving it
-    validate on: [:load, :save_metadata] do
+    # Verifies the metadata on load
+    validate on: :load do
       # Run the initial schema, followed by the specific one
       schema_errors = SCHEMAS[:initial].validate(metadata).to_a
       if schema_errors.empty?
@@ -152,6 +152,24 @@ module FlightJob
         errors.add(:metadata, 'is invalid')
       end
     end
+
+    # Verify the metadata is valid on save
+    validate on: :save_metadata do
+      # Run the initial schema, followed by the specific one
+      schema_errors = SCHEMAS[:initial].validate(metadata).to_a
+      if schema_errors.empty?
+        schema_errors = SCHEMAS[metadata['job_type']].validate(metadata).to_a
+      end
+
+      # Add the schema errors
+      unless schema_errors.empty?
+        FlightJob.logger.debug("The following metadata file is invalid: #{metadata_path}\n") do
+          JSON.pretty_generate(schema_errors)
+        end
+        errors.add(:metadata, 'is invalid')
+      end
+    end
+
 
     attr_writer :id
 
