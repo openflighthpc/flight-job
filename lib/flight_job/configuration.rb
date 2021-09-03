@@ -120,7 +120,7 @@ module FlightJob
       message: 'must be one of fatal, error, warn, info, debug or disabled'
     }
 
-    def job_schema_path(basename)
+    def join_schema_path(basename)
       File.expand_path(
         File.join('../../config/schemas/job', basename),
         __dir__
@@ -128,7 +128,7 @@ module FlightJob
     end
 
     def job_schema_path
-      job_schema_path('version1.yaml')
+      join_schema_path('version1.yaml')
     end
 
     def directives_name

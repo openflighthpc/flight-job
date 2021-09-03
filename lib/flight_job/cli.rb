@@ -240,6 +240,14 @@ module FlightJob
       c.summary = 'Update the internal state of the data cache'
     end
 
+    create_command 'run-migration' do |c|
+      c.summary = 'Update the version of the internal data cache'
+      c.action do
+        require_relative '../flight_job_migration.rb'
+        FlightJobMigration.migrate
+      end
+    end
+
     alias_command 'create', 'create-script'
     alias_command 'submit', 'submit-job'
     alias_command 'cp',     'copy-template'
