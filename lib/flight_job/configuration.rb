@@ -61,6 +61,10 @@ module FlightJob
               transform: relative_to(root_path)
     validates :jobs_dir, presence: true
 
+    attribute :migration_config_path,
+      default: '~/.config/flight/job/migration.yaml',
+      transform: relative_to(root_path)
+
     attribute :scheduler, default: 'slurm'
     validates :scheduler, presence: true
 
@@ -115,6 +119,17 @@ module FlightJob
       within: %w(fatal error warn info debug disabled),
       message: 'must be one of fatal, error, warn, info, debug or disabled'
     }
+
+    def job_schema_path(basename)
+      File.expand_path(
+        File.join('../../config/schemas/job', basename),
+        __dir__
+      )
+    end
+
+    def job_schema_path
+      job_schema_path('version1.yaml')
+    end
 
     def directives_name
       "directives.#{scheduler}.erb"
