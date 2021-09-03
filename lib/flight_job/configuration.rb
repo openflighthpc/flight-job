@@ -61,10 +61,6 @@ module FlightJob
               transform: relative_to(root_path)
     validates :jobs_dir, presence: true
 
-    attribute :migration_config_path,
-      default: '~/.config/flight/job/migration.yaml',
-      transform: relative_to(root_path)
-
     attribute :scheduler, default: 'slurm'
     validates :scheduler, presence: true
 
