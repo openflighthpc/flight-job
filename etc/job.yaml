@@ -103,6 +103,19 @@
 # monitor_array_script_path: libexec/job/<scheduler>/monitor-array.sh
 
 # ==============================================================================
+# Cancel Script Path
+# Specify the path to the script which cancels jobs.
+#
+# The default value will automatically use the 'scheduler' config. This feature
+# is not supported when overridden.
+#
+# Relative paths are expanded from flight_ROOT. **
+#
+# The environment variable flight_JOB_cancel_script_path takes precedence.
+# ==============================================================================
+# cancel_script_path: libexec/job/<scheduler>/cancel.sh
+
+# ==============================================================================
 # Script Adapter Path
 # Specify the path to the script adapter/shim. This adapter will be rendered
 # between the 'directives' and 'workload' sections of the job's script. It is
