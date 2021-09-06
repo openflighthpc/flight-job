@@ -206,8 +206,12 @@ module FlightJob
       end
     end
 
+    create_command 'cancel-job', 'JOB_ID' do |c|
+      c.summary = 'Cancel the specified job'
+    end
+
     create_command 'delete-job', 'JOB_ID' do |c|
-      c.summary = 'Permanently remove a job'
+      c.summary = 'Permanently the record of a job'
     end
 
     create_command 'list-array-tasks', 'JOB_ID' do |c|

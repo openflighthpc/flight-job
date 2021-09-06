@@ -299,6 +299,39 @@ module FlightJob
       end
     end
 
+    def cancel
+      if terminal?
+        # In practice, this condition shouldn't be reached. However preventing it
+        # is up to the CLI's implementation
+        FlightJob.logger.warn "Cancelling Terminated Job: #{id}"
+      else
+        FlightJob.logger.warn "Cancelling Job: #{id}"
+      end
+
+      execute_command(Flight.config.cancel_script_path, scheduler_id) do |status, _o, _e|
+        # Run the monitor when:
+        # * Cancel runs successful, or
+        # * If the job is non-terminal (it may have changed)
+        monitor if status.success? || terminal?
+
+        # Notify the cancel succeeded
+        if status.success?
+          true
+
+        # Notify the cancel failed, but the job is otherwise terminated
+        elsif terminal?
+          false
+
+        # Error due to the cancel failing
+        else
+          raise CommandError, <<~ERROR.chomp
+            Unexpectedly failed to cancel job '#{id}'!
+            Please contact your system administrator for futher assistance.
+          ERROR
+        end
+      end
+    end
+
     def decorate
       Decorators::JobDecorator.new(self)
     end
