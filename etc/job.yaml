@@ -27,12 +27,12 @@
 
 # ==============================================================================
 # Templates Directory
-# Specify where the templates will be stored.
-# The environment variable flight_JOB_templates_dir takes precedence.
+# Specify the directory containing the templates.
 #
 # Relative paths are expanded from flight_ROOT. **
 #
-# This key cannot be set within your user config.
+# This value can be set in a user's config file.
+# The environment variable flight_JOB_templates_dir takes precedence.
 # ==============================================================================
 # templates_dir: usr/share/job/templates
 
@@ -42,9 +42,8 @@
 #
 # Relative paths are expanded from flight_ROOT. **
 #
+# This value can be set in a user's config file.
 # The environment variable flight_JOB_scripts_dir takes precedence.
-#
-# This key can be set within your user config.
 # ==============================================================================
 # scripts_dir: ~/.local/share/flight/job/scripts
 
@@ -54,9 +53,8 @@
 #
 # Relative paths are expanded from flight_ROOT. **
 #
+# This value can be set in a user's config file.
 # The environment variable flight_JOB_jobs_dir takes precedence.
-#
-# This key can be set within your user config.
 # ==============================================================================
 # jobs_dir: ~/.local/share/flight/job/jobs
 
@@ -67,8 +65,6 @@
 # settings for various other configs.
 #
 # The environment variable flight_JOB_scheduler takes precedence
-#
-# This key cannot be set within your user config.
 # ==============================================================================
 # scheduler: slurm
 
@@ -82,8 +78,6 @@
 # Relative paths are expanded from flight_ROOT. **
 #
 # The environment variable flight_JOB_submit_script_path takes precedence.
-#
-# This key cannot be set within your user config.
 # ==============================================================================
 # submit_script_path: libexec/job/<scheduler>/submit.sh
 
@@ -97,8 +91,6 @@
 # Relative paths are expanded from flight_ROOT. **
 #
 # The environment variable flight_JOB_monitor_script_path takes precedence.
-#
-# This key cannot be set within your user config.
 # ==============================================================================
 # monitor_script_path: libexec/job/<scheduler>/monitor.sh
 
@@ -120,8 +112,6 @@
 # Relative paths are expanded from flight_ROOT. **
 #
 # The environment variable flight_JOB_adapter_script_path takes precedence.
-#
-# This key cannot be set within your user config.
 # ==============================================================================
 # adapter_script_path: usr/share/job/adapter.<scheduler>.erb
 
@@ -139,8 +129,6 @@
 # Ensure all flight-job states are valid (see: lib/flight_job/models/script.rb)
 #
 # The environment variable flight_JOB_state_map_path takes precedence.
-#
-# This key cannot be set within your user config.
 # ==============================================================================
 # state_map_path: etc/job/state-maps/<scheduler>.yaml
 
@@ -150,9 +138,8 @@
 # edge cases in small terminals. The terminal is responsible for wrapping the
 # text if its width is smaller than the minimum.
 #
+# This value can be set in a user's config file.
 # The environment variable flight_JOB_minimum_terminal_width takes precedence.
-#
-# This key cannot be set within your user config.
 # ==============================================================================
 # minimum_terminal_width: 80
 
@@ -161,8 +148,6 @@
 # The maximum allowed length for script IDs
 #
 # The environment variable flight_JOB_max_id_length takes precedence.
-#
-# This key cannot be set within your user config.
 # ==============================================================================
 # max_id_length: 16
 
@@ -172,8 +157,6 @@
 # in Bytes.
 #
 # The environment variable flight_JOB_stdin_size takes precedence.
-#
-# This key cannot be set within your user config.
 # ==============================================================================
 # max_stdin_size: 1048576 # (1 MB)
 
@@ -183,8 +166,6 @@
 # is considered failed.
 #
 # The environment variable flight_JOB_submission_period takes precedence.
-#
-# This key cannot be set within your user config.
 # ==============================================================================
 # submission_period: 3600
 
@@ -195,9 +176,8 @@
 #
 # Relative paths are expanded from flight_ROOT. **
 #
+# This value can be set in a user's config file.
 # The environment variable flight_JOB_log_path takes precedence.
-#
-# This key can be set within your user config.
 # ==============================================================================
 # log_path: ~/.cache/flight/log/share/job.log
 
@@ -206,9 +186,8 @@
 # Set at which severity the application will log
 # Valid levels: 'fatal', 'error', 'warn', 'info', 'debug'
 #
+# This value can be set in a user's config file.
 # The environment variable flight_JOB_log_level takes precedence.
-#
-# This key can be set within your user config.
 # ==============================================================================
 # log_level: warn
 
