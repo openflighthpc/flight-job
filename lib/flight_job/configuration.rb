@@ -36,11 +36,18 @@ module FlightJob
   class ConfigError < InternalError; end
 
   class Configuration
-    extend FlightConfiguration::DSL
+    include FlightConfiguration::DSL
     include FlightConfiguration::RichActiveValidationErrorMessage
     include ActiveModel::Validations
 
     application_name 'job'
+
+    user_configs :jobs_dir,
+      :log_level,
+      :log_path,
+      :minimum_terminal_width,
+      :scripts_dir,
+      :templates_dir
 
     attribute :templates_dir, default: 'usr/share/job/templates',
               transform: relative_to(root_path)
@@ -109,9 +116,6 @@ module FlightJob
       message: 'must be one of fatal, error, warn, info, debug or disabled'
     }
 
-    # NOTE: The directives_name doesn't need to be configurable (currently?)
-    #       However the config is required to generate it, so it is best
-    #       located here.
     def directives_name
       "directives.#{scheduler}.erb"
     end

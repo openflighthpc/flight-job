@@ -27,10 +27,12 @@
 
 # ==============================================================================
 # Templates Directory
-# Specify where the templates will be stored.
-# The environment variable flight_JOB_templates_dir takes precedence.
+# Specify the directory containing the templates.
 #
 # Relative paths are expanded from flight_ROOT. **
+#
+# This value can be set in a user's config file.
+# The environment variable flight_JOB_templates_dir takes precedence.
 # ==============================================================================
 # templates_dir: usr/share/job/templates
 
@@ -40,6 +42,7 @@
 #
 # Relative paths are expanded from flight_ROOT. **
 #
+# This value can be set in a user's config file.
 # The environment variable flight_JOB_scripts_dir takes precedence.
 # ==============================================================================
 # scripts_dir: ~/.local/share/flight/job/scripts
@@ -50,6 +53,7 @@
 #
 # Relative paths are expanded from flight_ROOT. **
 #
+# This value can be set in a user's config file.
 # The environment variable flight_JOB_jobs_dir takes precedence.
 # ==============================================================================
 # jobs_dir: ~/.local/share/flight/job/jobs
@@ -134,6 +138,7 @@
 # edge cases in small terminals. The terminal is responsible for wrapping the
 # text if its width is smaller than the minimum.
 #
+# This value can be set in a user's config file.
 # The environment variable flight_JOB_minimum_terminal_width takes precedence.
 # ==============================================================================
 # minimum_terminal_width: 80
@@ -171,6 +176,7 @@
 #
 # Relative paths are expanded from flight_ROOT. **
 #
+# This value can be set in a user's config file.
 # The environment variable flight_JOB_log_path takes precedence.
 # ==============================================================================
 # log_path: ~/.cache/flight/log/share/job.log
@@ -180,6 +186,7 @@
 # Set at which severity the application will log
 # Valid levels: 'fatal', 'error', 'warn', 'info', 'debug'
 #
+# This value can be set in a user's config file.
 # The environment variable flight_JOB_log_level takes precedence.
 # ==============================================================================
 # log_level: warn
