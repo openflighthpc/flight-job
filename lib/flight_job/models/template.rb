@@ -46,13 +46,13 @@ module FlightJob
         "oneOf" => [
           # String validators
           {
-            "type" => "object",
-            "additionalProperties" => false,
             "properties" => {
               "type" => { "const" => "string" },
               "pattern" => { "type" => "string", "format" => "regex" },
               "enum" => { "type" => "array", "items" => { "type" => "string" } }
-            }
+            },
+            "type" => "object",
+            "additionalProperties" => false
           },
           # Number validators
           {
@@ -217,14 +217,53 @@ module FlightJob
 
     attr_accessor :id, :index
 
+    ONE_OF_VALIDATOR = /\A\/\$defs\/validator_def\/oneOf\/(?<index>\d+)/
+
     # Validates the metadata and questions file
     validate do
       if metadata
         unless (schema_errors = SCHEMA.validate(metadata).to_a).empty?
           FlightJob.logger.error("The following metadata file is invalid: #{metadata_path}")
+          FlightJob.logger.debug ("Schema:\n") do
+            JSON.pretty_generate schema_errors.first["root_schema"]
+          end
           FlightJob.logger.debug "Errors:\n" do
+            # Pre-process the errors, locating any oneOf validation errors
+            partitions = schema_errors.to_a.each_with_object({}) do |error, memo|
+              next unless ONE_OF_VALIDATOR.match?(error["schema_pointer"])
+              key = File.dirname(error["data_pointer"])
+              memo[key] ||= []
+              memo[key] << error
+            end
+
+            # Determine a matcher for the correct oneOf statement
+            regexes = partitions.each_with_object({}) do |(key, errors), memo|
+              indices = errors.map { |e| e["schema"].is_a?(Hash) ? [e, e["schema"]["const"]] : [nil, nil] }
+                              .select { |_, t| t }
+                              .map do |error, _|
+                ONE_OF_VALIDATOR.match(error["schema_pointer"]).named_captures["index"].to_i
+              end.uniq.sort
+              # Finds the missing index (aka the match)
+              index = (0..(indices.last + 1)).find { |i| indices[i] != i }
+              memo[key] = Regexp.new("\\A/\\$defs/validator_def/oneOf/#{index}")
+            end
+
+            # The oneOf validator matcher generates a lot of extraneous errors which aren't
+            # useful even for debugging purposes. Instead they are replaced with a simple
+            # skipping message
             schema_errors.each_with_index.map do |error, index|
-              "Error #{index + 1}:\n#{JSON.pretty_generate(error)}"
+              error.delete("root_schema")
+              full_error = "Error #{index + 1}:\n#{JSON.pretty_generate(error)}"
+              if ONE_OF_VALIDATOR.match?(error["schema_pointer"])
+                regex = regexes[File.dirname(error["data_pointer"])]
+                if regex.match? error["schema_pointer"]
+                  full_error
+                else
+                  "Error #{index + 1}: Skipping schema_pointer: #{error["schema_pointer"]}"
+                end
+              else
+                full_error
+              end
             end.join("\n")
           end
           errors.add(:metadata, 'is not valid')

@@ -20,6 +20,8 @@ generation_questions:
     default: '~'
     format:
       type: text
+    validate:
+      type: 'string'
 
   - id: stdout_file
     text: "Set an output file for STDOUT"
