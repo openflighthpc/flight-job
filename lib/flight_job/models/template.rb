@@ -31,6 +31,77 @@ require_relative '../questions_sort'
 
 module FlightJob
   class Template < ApplicationModel
+    VALIDATOR_DEF = {
+      "validator_def" => {
+        "type" => "object",
+        "additionalProperties" => true,
+        "required" => ["type"],
+        "properties" => {
+          "required" => { "type" => "boolean" },
+          # The following keys are properties, however they deliberately partially
+          # shadows the JSON:Schema type
+          # NOTE: All the types must have a oneOf entry!
+          "type" => { "enum" => ["string", "array", "number", "integer", "boolean"] },
+        },
+        "oneOf" => [
+          # String validators
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => {
+              "type" => { "const" => "string" },
+              "pattern" => { "type" => "string", "format" => "regex" },
+              "enum" => { "type" => "array", "items" => { "type" => "string" } }
+            }
+          },
+          # Number validators
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => {
+              "type" => { "const" => "number" },
+              "enum" => { "type" => "array", "items" => { "type" => ["number", "integer"] } },
+              "minimum" => { "type" => ["number", "integer"] },
+              "maximum" => { "type" => ["number", "integer"] },
+              "exclusive_minimum" => { "type" => ["number", "integer"] },
+              "exclusive_maximum" => { "type" => ["number", "integer"] }
+            }
+          },
+          # Integer validators
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => {
+              "type" => { "const" => "integer" },
+              "enum" => { "type" => "array", "items" => { "type" => "integer" } },
+              "minimum" => { "type" => "integer" },
+              "maximum" => { "type" => "integer" },
+              "exclusive_minimum" => { "type" => "integer" },
+              "exclusive_maximum" => { "type" => "integer" }
+            }
+          },
+          # Boolean validator
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => {
+              "type" => { "const" => "boolean" }
+            }
+          },
+          # Array validator
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => {
+              "type" => { "const" => "array" },
+              # NOTE: The 'items' key is optional, this allows for mixed array types without validation
+              "items" => { "$ref" => "#/$defs/validator_def" }
+            }
+          }
+        ]
+      }
+    }
+
     FORMAT_SPEC = {
       "type" => "object",
       "additionalProperties" => false,
@@ -82,6 +153,7 @@ module FlightJob
           # Eventually multiple formats will be supported
           'default' => {},
           'format' => FORMAT_SPEC,
+          'validate' => { "$ref" => "#/$defs/validator_def" },
           'ask_when' => ASK_WHEN_SPEC
         },
         "if" => { "properties" => { "format" => {
@@ -113,7 +185,8 @@ module FlightJob
         'synopsis' => { "type" => 'string' },
         'tags' => { "type" => 'array', 'items' => { 'type' => 'string' }},
         'version' => { "type" => 'integer', 'enum' => [0] },
-      }
+      },
+      "$defs" => {}.merge!(VALIDATOR_DEF)
     })
 
     def self.load_all(validate: true)
