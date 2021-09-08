@@ -27,7 +27,7 @@
 
 module FlightJob
   class Question < ApplicationModel
-    attr_accessor :id, :text, :description, :default, :format, :ask_when, :template
+    attr_accessor :id, :text, :description, :default, :format, :ask_when, :template, :validate
 
     def related_question_id
       return nil unless ask_when
