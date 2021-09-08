@@ -37,7 +37,6 @@ module FlightJob
         "additionalProperties" => true,
         "required" => ["type"],
         "properties" => {
-          "required" => { "type" => "boolean" },
           # The following keys are properties, however they deliberately partially
           # shadows the JSON:Schema type
           # NOTE: All the types must have a oneOf entry!
@@ -46,13 +45,14 @@ module FlightJob
         "oneOf" => [
           # String validators
           {
+            "type" => "object",
+            "additionalProperties" => false,
             "properties" => {
               "type" => { "const" => "string" },
+              "required" => { "type" => "boolean" },
               "pattern" => { "type" => "string", "format" => "regex" },
               "enum" => { "type" => "array", "items" => { "type" => "string" } }
             },
-            "type" => "object",
-            "additionalProperties" => false
           },
           # Number validators
           {
@@ -60,6 +60,7 @@ module FlightJob
             "additionalProperties" => false,
             "properties" => {
               "type" => { "const" => "number" },
+              "required" => { "type" => "boolean" },
               "enum" => { "type" => "array", "items" => { "type" => ["number", "integer"] } },
               "minimum" => { "type" => ["number", "integer"] },
               "maximum" => { "type" => ["number", "integer"] },
@@ -73,6 +74,7 @@ module FlightJob
             "additionalProperties" => false,
             "properties" => {
               "type" => { "const" => "integer" },
+              "required" => { "type" => "boolean" },
               "enum" => { "type" => "array", "items" => { "type" => "integer" } },
               "minimum" => { "type" => "integer" },
               "maximum" => { "type" => "integer" },
@@ -85,7 +87,8 @@ module FlightJob
             "type" => "object",
             "additionalProperties" => false,
             "properties" => {
-              "type" => { "const" => "boolean" }
+              "type" => { "const" => "boolean" },
+              "required" => { "type" => "boolean" }
             }
           },
           # Array validator
@@ -94,6 +97,7 @@ module FlightJob
             "additionalProperties" => false,
             "properties" => {
               "type" => { "const" => "array" },
+              "required" => { "type" => "boolean" },
               # NOTE: The 'items' key is optional, this allows for mixed array types without validation
               "items" => { "$ref" => "#/$defs/validator_def" }
             }
@@ -185,6 +189,7 @@ module FlightJob
         'synopsis' => { "type" => 'string' },
         'tags' => { "type" => 'array', 'items' => { 'type' => 'string' }},
         'version' => { "type" => 'integer', 'enum' => [0] },
+        '__meta__' => {}
       },
       "$defs" => {}.merge!(VALIDATOR_DEF)
     })
@@ -199,7 +204,7 @@ module FlightJob
         templates.select do |template|
           next true if template.valid?
           FlightJob.logger.error("Failed to load missing/invalid template: #{template.id}")
-          FlightJob.logger.info(template.errors.full_messages.join("\n"))
+          FlightJob.logger.warn(template.errors.full_messages.join("\n"))
           false
         end
 
@@ -227,6 +232,8 @@ module FlightJob
           FlightJob.logger.debug ("Schema:\n") do
             JSON.pretty_generate schema_errors.first["root_schema"]
           end
+          # Visually separates the root schema from the errors within the logs
+          FlightJob.logger.debug("\n-------------------------------------------------")
 
           # Parsers the errors for those with the correct oneOf match
           flags = OneOfParser.new('validator_def', 'type', /\A\/generation_questions\/\d+\/validate/, schema_errors).flags
@@ -241,7 +248,8 @@ module FlightJob
               # Display the error as it either:
               # * Does not match the 'oneOf' validator, or
               # * Matches with the correct type
-              error.delete('root_schema')
+              root = error.delete('root_schema')
+              error.delete('schema')if error['schema'] == root
               FlightJob.logger.warn "Error #{index + 1}" do
                 JSON.pretty_generate(error)
               end
@@ -283,7 +291,7 @@ module FlightJob
         errors.add(:questions, "could not locate referenced question: #{$!.message}")
       rescue
         FlightJob.logger.error "Failed to validate the template questions due to another error: #{id}"
-        FlightJob.logger.debug("Error:\n") { $!.messages }
+        FlightJob.logger.debug("Error:\n") { $!.message }
         errors.add(:questions, 'could not be validated')
       end
     end
@@ -312,15 +320,14 @@ module FlightJob
     # This allows it to be directly passed to the API layer.
     # Consider refactoring when introducing a non-backwards compatible change
     def metadata
-      @metadata ||= begin
-        YAML.load(File.read(metadata_path)).to_h
-      end
+      return @metadata unless @metadata.nil?
+      @metadata = YAML.load(File.read(metadata_path)).to_h
     rescue Errno::ENOENT
       errors.add(:metadata, "has not been saved")
-      {}
+      @metadata = false
     rescue Psych::SyntaxError
       errors.add(:metadata, "is not valid YAML")
-      {}
+      @metadata = false
     end
 
     def serializable_hash(opts = nil)
