@@ -198,7 +198,7 @@ module FlightJob
       if validate
         templates.select do |template|
           next true if template.valid?
-          FlightJob.logger.error("Failed to load missing/invalid template: #{id}")
+          FlightJob.logger.error("Failed to load missing/invalid template: #{template.id}")
           FlightJob.logger.info(template.errors.full_messages.join("\n"))
           false
         end
@@ -227,44 +227,25 @@ module FlightJob
           FlightJob.logger.debug ("Schema:\n") do
             JSON.pretty_generate schema_errors.first["root_schema"]
           end
-          FlightJob.logger.debug "Errors:\n" do
-            # Pre-process the errors, locating any oneOf validation errors
-            partitions = schema_errors.to_a.each_with_object({}) do |error, memo|
-              next unless ONE_OF_VALIDATOR.match?(error["schema_pointer"])
-              key = File.dirname(error["data_pointer"])
-              memo[key] ||= []
-              memo[key] << error
-            end
 
-            # Determine a matcher for the correct oneOf statement
-            regexes = partitions.each_with_object({}) do |(key, errors), memo|
-              indices = errors.map { |e| e["schema"].is_a?(Hash) ? [e, e["schema"]["const"]] : [nil, nil] }
-                              .select { |_, t| t }
-                              .map do |error, _|
-                ONE_OF_VALIDATOR.match(error["schema_pointer"]).named_captures["index"].to_i
-              end.uniq.sort
-              # Finds the missing index (aka the match)
-              index = (0..(indices.last + 1)).find { |i| indices[i] != i }
-              memo[key] = Regexp.new("\\A/\\$defs/validator_def/oneOf/#{index}")
-            end
+          # Parsers the errors for those with the correct oneOf match
+          flags = OneOfParser.new('validator_def', 'type', /\A\/generation_questions\/\d+\/validate/, schema_errors).flags
 
-            # The oneOf validator matcher generates a lot of extraneous errors which aren't
-            # useful even for debugging purposes. Instead they are replaced with a simple
-            # skipping message
-            schema_errors.each_with_index.map do |error, index|
-              error.delete("root_schema")
-              full_error = "Error #{index + 1}:\n#{JSON.pretty_generate(error)}"
-              if ONE_OF_VALIDATOR.match?(error["schema_pointer"])
-                regex = regexes[File.dirname(error["data_pointer"])]
-                if regex.match? error["schema_pointer"]
-                  full_error
-                else
-                  "Error #{index + 1}: Skipping schema_pointer: #{error["schema_pointer"]}"
-                end
-              else
-                full_error
+          # Generate the errors
+          schema_errors.each_with_index.map do |error, index|
+            if flags[index] == false
+              # Suppress the error as it matches the oneOf validator with the wrong type
+              msg = "Error #{index + 1}: Skipping schema_pointer: #{error["schema_pointer"]}"
+              FlightJob.logger.debug msg
+            else
+              # Display the error as it either:
+              # * Does not match the 'oneOf' validator, or
+              # * Matches with the correct type
+              error.delete('root_schema')
+              FlightJob.logger.warn "Error #{index + 1}" do
+                JSON.pretty_generate(error)
               end
-            end.join("\n")
+            end
           end
           errors.add(:metadata, 'is not valid')
         end
