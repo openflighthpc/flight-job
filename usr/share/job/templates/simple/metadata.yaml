@@ -115,12 +115,12 @@ generation_questions:
     default: 'your.email@example.com'
     format:
       type: text
-    ask_when:
-      value: question.notification_wanted.answer
-      eq: 'yes'
     validate:
       type: 'string'
       required: true
+    ask_when:
+      value: question.notification_wanted.answer
+      eq: 'yes'
 
   - id: notification_events
     text: When should notifications be sent?
