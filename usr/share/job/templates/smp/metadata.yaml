@@ -16,6 +16,16 @@ description: |
   allocate your job. You may wish to consider using a mpi slots job to reserve
   cores over multiple nodes.
 
+__meta__:
+  SLURM_TIME: &SLURM_TIME "^\
+\\d+|\
+\\d+:\\d+|\
+\\d+:\\d+:\\d+|\
+\\d+-\\d+|\
+\\d+-\\d+:\\d|\
+\\d+-\\d+:\\d+:\\d+\
+$"
+
 generation_questions:
   - id: working_dir
     text: "Working directory"
@@ -25,6 +35,9 @@ generation_questions:
     default: '~'
     format:
       type: text
+    validate:
+      type: 'string'
+      required: true
 
   - id: stdout_file
     text: "Set an output file for STDOUT"
@@ -34,6 +47,9 @@ generation_questions:
     default: job-%j.output
     format:
       type: text
+    validate:
+      type: 'string'
+      required: true
 
   - id: merge_stderr_with_stdout
     text: "Merge STDERR into STDOUT"
@@ -49,6 +65,9 @@ generation_questions:
           value: 'yes'
         - text: 'No'
           value: 'no'
+    validate:
+      type: 'string'
+      enum: ["yes", "no"]
 
   - id: stderr_file
     text: "Set an output file for STDERR"
@@ -58,6 +77,9 @@ generation_questions:
     default: job-%j.error
     format:
       type: text
+    validate:
+      type: 'string'
+      required: true
     ask_when:
       value: question.merge_stderr_with_stdout.answer
       eq: 'no'
@@ -70,6 +92,9 @@ generation_questions:
     default: 'smp.sh'
     format:
       type: text
+    validate:
+      type: 'string'
+      required: true
 
   - id: notification_wanted
     text: Do you want email notifications for this job?
@@ -84,6 +109,9 @@ generation_questions:
           value: 'yes'
         - text: 'No'
           value: 'no'
+    validate:
+      type: 'string'
+      enum: ["yes", "no"]
 
   - id: notification_address
     text: Notification email address.
@@ -92,6 +120,9 @@ generation_questions:
     default: 'your.email@example.com'
     format:
       type: text
+    validate:
+      type: 'string'
+      required: true
     ask_when:
       value: question.notification_wanted.answer
       eq: 'yes'
@@ -112,6 +143,9 @@ generation_questions:
           value: 'FAIL'
         - text: 'All'
           value: 'ALL'
+    validate:
+      type: 'string'
+      enum: ['BEGIN', 'END', 'FAIL', 'ALL']
     ask_when:
       value: question.notification_wanted.answer
       eq: 'yes'
@@ -131,6 +165,9 @@ generation_questions:
     default: '3-0'
     format:
       type: text
+    validate:
+      type: 'string'
+      pattern: *SLURM_TIME
 
   - id: memory_limit
     text: Expected hard memory limit
@@ -145,6 +182,9 @@ generation_questions:
     default: '1024'
     format:
       type: text
+    validate:
+      type: 'string'
+      pattern: '^\d+$'
 
   - id: number_of_slots
     text: Processing requirements
@@ -158,6 +198,9 @@ generation_questions:
     default: '2'
     format:
       type: text
+    validate:
+      type: 'string'
+      pattern: '^\d+$'
 
   - id: workload
     text: "Who, or what, should we greet"
@@ -166,3 +209,5 @@ generation_questions:
     default: "World"
     format:
       type: text
+    validate:
+      type: 'string'
