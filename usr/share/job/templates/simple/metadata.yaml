@@ -190,4 +190,3 @@ generation_questions:
       type: text
     validate:
       type: 'string'
-      required: true
