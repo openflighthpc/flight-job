@@ -178,7 +178,7 @@ generation_questions:
 
       Note that this setting is specified in megabytes.  e.g. specify `1024`
       for 1 gigabyte.
-    default: '1024'
+    default: 1024
     format:
       type: number
     validate:

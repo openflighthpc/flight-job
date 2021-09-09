@@ -78,6 +78,24 @@ module FlightJob
         <%  end -%>
       TEMPLATE
 
+      VALIDATION_ERROR = ERB.new(<<~'TEMPLATE', nil, '-')
+        Cannot continue as the following errors occurred whilst validating the answers
+        <% errors.each do |key, msgs| -%>
+        <%   next if msgs.empty? -%>
+
+        The '<%= key -%>' is valid as it:
+        <%   msgs.each do |msg| -%>
+        <%= ::FlightJob::Commands::CreateScript.bulletify(msg) %>
+        <%   end -%>
+        <% end -%>
+      TEMPLATE
+
+      def self.bulletify(msg)
+        first, rest = msg.split("\n", 2)
+        lines = rest.to_s.chomp.split("\n").map { |l| "   #{l}" }.join("\n")
+        " * #{first}#{ "\n" + lines unless lines.empty? }"
+      end
+
       # NOTE: The questions must be topologically sorted on their dependencies otherwise
       # these prompts will not function correctly
       QuestionPrompter = Struct.new(:pastel, :pager, :questions, :notes, :name) do
@@ -381,9 +399,7 @@ module FlightJob
           # Generate the warnings and prompt again
           $stderr.puts pastel.red.bold "The given value is invalid as it:"
           errors.each do |_, msg|
-            first, rest = msg.split("\n", 2)
-            lines = rest.to_s.chomp.split("\n").map { |l| "   #{l}" }.join("\n")
-            $stderr.puts pastel.red " * #{first}#{ "\n" + lines unless lines.empty? }"
+            $stderr.puts pastel.red(Commands::CreateScript.bulletify(msg))
           end
           $stderr.puts pastel.yellow "Please try again..."
           prompt_question(question)
@@ -537,7 +553,23 @@ module FlightJob
                    opts.answers
                  end
         JSON.parse(string).tap do |hash|
-          raise InputError, 'The answers are not a JSON hash' unless hash.is_a?(Hash)
+          # Inject the defaults if possible
+          if hash.is_a?(Hash)
+            template.generation_questions.each do |question|
+              next if question.default.nil?
+              next unless hash[question.id].nil?
+              hash[question.id] = question.default
+            end
+          end
+
+          # Validate the answers
+          errors = template.validate_generation_questions_values(hash)
+          next if errors.all? { |_, msgs| msgs.empty? }
+
+          # Raise the validation error
+          bind = OpenStruct.new(errors).instance_exec { binding }
+          msg = VALIDATION_ERROR.result(bind)
+          raise InputError, msg.chomp
         end
       rescue JSON::ParserError
         raise InputError, <<~ERROR.chomp

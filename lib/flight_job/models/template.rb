@@ -167,10 +167,12 @@ module FlightJob
           "properties" => { "type" => { "const" => "multiselect" } }
         } } },
         "then" => { "properties" => {
-          "default" => { "type" => "array", "items" => { "type" => "string" } }
+          "default" => {
+            "type" => "array", "items" => { "type" => ["string", "integer", "number", "boolean"] }
+          }
         } },
         "else" => { "properties" => {
-          "default" => { "type" => "string" }
+          "default" => { "type" => ["string", "integer", "number", "boolean"] }
         } }
       }
     }
@@ -358,6 +360,25 @@ module FlightJob
     def generation_questions
       @questions ||= questions_data.map do |datum|
         Question.new(**datum.symbolize_keys)
+      end
+    end
+
+    def validate_generation_questions_values(hash)
+      @validate_generation_questions_values ||= JSONSchemer.schema({
+        "type" => "object",
+        "additionalProperties" => false,
+        "properties" => generation_questions.map { |q| [q.id, {}] }.to_h
+      })
+      errors = @validate_generation_questions_values.validate(hash).to_a
+      {}.tap do |all_errors|
+        unless errors.empty?
+          # TODO: Humanize this
+          all_errors[:root] = ['An error occurred']
+        end
+        generation_questions.each do |q|
+          value = hash.is_a?(Hash) ? hash[q.id] : nil
+          all_errors[q.id] = q.validate_value(value).map { |_, m| m }
+        end
       end
     end
 
