@@ -33,5 +33,48 @@ module FlightJob
       return nil unless ask_when
       ask_when['value'].split('.')[1]
     end
+
+    def required?
+      validate['required']
+    end
+
+    # Takes the 'validate' key and converts it to the JSON:Schmea
+    def validate_schema
+      @validate_schema ||= {}.tap do |payload|
+        payload['default'] = default if default
+        next unless validate
+        case validate['type']
+        when 'string'
+          payload['type'] = ['string']
+          payload['type'] << 'null' unless required?
+          payload['enum'] = validate['enum'] if validate['enum']
+          # The not-blank is enforced via a pattern, this can create a conflict if a pattern
+          # is already specified. Hence the pattern matchers are stored within an allOf
+          payload['allOf'] = [].tap do |allOf|
+            allOf << { 'pattern' => '^.+$', 'title' => 'Not Blank' } unless required?
+            allOf << { 'pattern' => validate['pattern'] } if validate['pattern']
+          end
+        when 'number'
+          payload['type'] = ['number']
+          payload['type'] << 'null' unless required?
+          payload['enum'] = validate['enum'] if validate['enum']
+          payload['maximum'] = validate['maximum'] if validate['maximum']
+          payload['exclusiveMaximum'] = validate['exclusive_maximum'] if validate['exclusive_maximum']
+          payload['minimum'] = validate['minimum'] if validate['minimum']
+          payload['exclusiveMinimum'] = validate['exclusive_minimum'] if validate['exclusive_minimum']
+        when 'integer'
+          payload['type'] = ['integer']
+          payload['type'] << 'null' unless required?
+          payload['enum'] = validate['enum'] if validate['enum']
+          payload['maximum'] = validate['maximum'] if validate['maximum']
+          payload['exclusiveMaximum'] = validate['exclusive_maximum'] if validate['exclusive_maximum']
+          payload['minimum'] = validate['minimum'] if validate['minimum']
+          payload['exclusiveMinimum'] = validate['exclusive_minimum'] if validate['exclusive_minimum']
+        when 'boolean'
+          payload['type'] = ['boolean']
+          payload['type'] << 'null' unless required?
+        end
+      end
+    end
   end
 end

@@ -340,6 +340,12 @@ module FlightJob
           # NOTE: Consider using a file registry instead
           hash['scripts'] = Script.load_all.select { |s| s.template_id == id }
         end
+
+        # Replace the 'validate' key with the JSON:Schema specification
+        hash['generation_questions'] = hash['generation_questions'].map(&:dup)
+        hash['generation_questions'].each_with_index do |data, index|
+          data['validate'] = generation_questions[index].validate_schema
+        end
       end
     end
 
