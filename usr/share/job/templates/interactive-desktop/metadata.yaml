@@ -140,9 +140,9 @@ generation_questions:
           value: 'FAIL'
         - text: 'All'
           value: 'ALL'
-    validate:
-      type: 'string'
-      enum: ['BEGIN', 'END', 'FAIL', 'ALL']
+    # validate:
+    #   type: 'string'
+    #   enum: ['BEGIN', 'END', 'FAIL', 'ALL']
     ask_when:
       value: question.notification_wanted.answer
       eq: 'yes'

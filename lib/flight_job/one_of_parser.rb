@@ -55,7 +55,7 @@ module FlightJob
   # This parser processes each error and returns one of the following:
   # * nil -   The error is unrelated to the 'oneOf' match
   # * false - The error failed on the 'oneOf' match but for the incorrect 'const-key'
-  # * true -  The error failed on the 'oneOf' and the 'const-key'
+  # * true -  The error failed on the 'oneOf' with the correct 'const-key'
 
   OneOfParser = Struct.new(:def_key, :const_key, :grouping_regex, :errors_array) do
     def flags

@@ -90,18 +90,18 @@ module FlightJob
               "type" => { "const" => "boolean" },
               "required" => { "type" => "boolean" }
             }
-          },
-          # Array validator
-          {
-            "type" => "object",
-            "additionalProperties" => false,
-            "properties" => {
-              "type" => { "const" => "array" },
-              "required" => { "type" => "boolean" },
-              # NOTE: The 'items' key is optional, this allows for mixed array types without validation
-              "items" => { "$ref" => "#/$defs/validator_def" }
-            }
           }
+          # Array validator
+          # {
+          #   "type" => "object",
+          #   "additionalProperties" => false,
+          #   "properties" => {
+          #     "type" => { "const" => "array" },
+          #     "required" => { "type" => "boolean" },
+          #     # NOTE: The 'items' key is optional, this allows for mixed array types without validation
+          #     "items" => { "$ref" => "#/$defs/validator_def" }
+          #   }
+          # }
         ]
       }
     }
