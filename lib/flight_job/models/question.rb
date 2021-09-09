@@ -48,7 +48,7 @@ module FlightJob
         when 'type'
           type = error['schema']['type'].first
           if required? && value == nil
-            [:required, "Is required"]
+            [:required, "Must not be null"]
           else
             [:type, "Must be a #{type}#{ " or omitted" unless required? }"]
           end
@@ -93,7 +93,7 @@ module FlightJob
           # The not-blank is enforced via a pattern, this can create a conflict if a pattern
           # is already specified. Hence the pattern matchers are stored within an allOf
           payload['allOf'] = [].tap do |allOf|
-            unless required?
+            if required?
               allOf << {
                 'pattern' => '^.+$',
                 'title' => 'Not Blank',
