@@ -39,7 +39,7 @@ module FlightJob
     end
 
     def validate_value(value)
-      @validate_value ||= JSONSchemer.schema(validate_schema)
+      @validate_value ||= JSONSchemer.schema(validate_schema, insert_property_defaults: true)
       @validate_value.validate(value).map do |error|
         FlightJob.logger.debug("Validation Error '#{id}'") do
           JSON.pretty_generate(error.tap { |e| e.delete('root_schema') })
@@ -84,7 +84,6 @@ module FlightJob
     # * 'pattern' matchers must give a 'description' which will be used as the error message
     def validate_schema
       @validate_schema ||= {}.tap do |payload|
-        payload['default'] = default if default
         next unless validate
         case validate['type']
         when 'string'
