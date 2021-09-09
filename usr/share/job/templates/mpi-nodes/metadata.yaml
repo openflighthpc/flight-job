@@ -25,9 +25,12 @@ __meta__:
 \\d+:\\d+|\
 \\d+:\\d+:\\d+|\
 \\d+-\\d+|\
-\\d+-\\d+:\\d|\
+\\d+-\\d+:\\d+|\
 \\d+-\\d+:\\d+:\\d+\
 $"
+  SLURM_TIME_ERROR: &SLURM_TIME_ERROR |-
+    Must be one of the following time formats:
+    MM, MM:SS, HH:MM:SS, DD-HH, DD-HH:MM, DD-HH:MM:SS
 
 generation_questions:
   - id: working_dir
@@ -146,9 +149,11 @@ generation_questions:
           value: 'FAIL'
         - text: 'All'
           value: 'ALL'
-    # validate:
-    #   type: 'string'
-    #   enum: ['BEGIN', 'END', 'FAIL', 'ALL']
+    validate:
+      type: array
+      items:
+        type: 'string'
+        enum: ['BEGIN', 'END', 'FAIL', 'ALL']
     ask_when:
       value: question.notification_wanted.answer
       eq: 'yes'
@@ -171,6 +176,7 @@ generation_questions:
     validate:
       type: 'string'
       pattern: *SLURM_TIME
+      pattern_error: *SLURM_TIME_ERROR
 
   - id: memory_limit
     text: Expected hard memory limit
