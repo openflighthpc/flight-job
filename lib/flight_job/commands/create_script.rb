@@ -83,7 +83,7 @@ module FlightJob
         <% errors.each do |key, msgs| -%>
         <%   next if msgs.empty? -%>
 
-        The '<%= key -%>' is valid as it:
+        '<%= key -%>' is invalid as it:
         <%   msgs.each do |msg| -%>
         <%= ::FlightJob::Commands::CreateScript.bulletify(msg) %>
         <%   end -%>
@@ -557,7 +557,7 @@ module FlightJob
           if hash.is_a?(Hash)
             template.generation_questions.each do |question|
               next if question.default.nil?
-              next unless hash[question.id].nil?
+              next if hash.key? question.id
               hash[question.id] = question.default
             end
           end
