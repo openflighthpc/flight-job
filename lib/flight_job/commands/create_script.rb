@@ -83,7 +83,7 @@ module FlightJob
         <% errors.each do |key, msgs| -%>
         <%   next if msgs.empty? -%>
 
-        '<%= key -%>' is invalid as it:
+        <%= key == :root ? "The root value" : "'" + key + "'" -%> is invalid as it:
         <%   msgs.each do |msg| -%>
         <%= ::FlightJob::Commands::CreateScript.bulletify(msg) %>
         <%   end -%>

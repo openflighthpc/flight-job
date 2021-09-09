@@ -372,12 +372,29 @@ module FlightJob
       errors = @validate_generation_questions_values.validate(hash).to_a
       {}.tap do |all_errors|
         unless errors.empty?
-          # TODO: Humanize this
-          all_errors[:root] = ['An error occurred']
+          all_errors[:root] = []
+          errors.each do |error|
+            FlightJob.logger.debug("Validation Error 'root-value'") do
+              JSON.pretty_generate(error.tap { |e| e.delete('root_schema') })
+            end
+
+            if error['schema_pointer'] == '/additionalProperties'
+              all_errors[:root] << "Contains an unrecognized key: #{error["data_pointer"][1..-1]}"
+            elsif error['type'] == 'object'
+              all_errors[:root] << "Must be an object"
+            else
+              FlightJob.logger.error("Could not humanize the following error") do
+                JSON.pretty_generate error.tap { |e| e.delete('root_schema') }
+              end
+              all_errors[:root] << 'Could not process error, please check the logs'
+            end
+          end
         end
-        generation_questions.each do |q|
-          value = hash.is_a?(Hash) ? hash[q.id] : nil
-          all_errors[q.id] = q.validate_value(value).map { |_, m| m }
+        if hash.is_a?(Hash)
+          generation_questions.each do |q|
+            value = hash[q.id]
+            all_errors[q.id] = q.validate_value(value).map { |_, m| m }
+          end
         end
       end
     end
