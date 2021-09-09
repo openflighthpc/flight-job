@@ -33,6 +33,7 @@ module FlightJob
   class Template < ApplicationModel
     VALIDATOR_DEF = {
       "validator_def" => {
+        "$comment" => "strip-schema",
         "type" => "object",
         "additionalProperties" => true,
         "required" => ["type"],
@@ -40,7 +41,9 @@ module FlightJob
           # The following keys are properties, however they deliberately partially
           # shadows the JSON:Schema type
           # NOTE: All the types must have a oneOf entry!
-          "type" => { "enum" => ["string", "array", "number", "integer", "boolean"] },
+          #
+          # NOTE: array must be last
+          "type" => { "enum" => ["string", "number", "integer", "boolean", "array"] },
         },
         "oneOf" => [
           # String validators
@@ -52,7 +55,7 @@ module FlightJob
               "required" => { "type" => "boolean" },
               "pattern" => { "type" => "string", "format" => "regex" },
               "pattern_error" => { "type" => "string" },
-              "enum" => { "type" => "array", "items" => { "type" => "string" } }
+              "enum" => { "type" => "array", "items" => { "type" => "string" }, "minItems" => 1 }
             },
           },
           # Number validators
@@ -62,7 +65,7 @@ module FlightJob
             "properties" => {
               "type" => { "const" => "number" },
               "required" => { "type" => "boolean" },
-              "enum" => { "type" => "array", "items" => { "type" => ["number", "integer"] } },
+              "enum" => { "type" => "array", "items" => { "type" => ["number", "integer"], "minItems" => 1 } },
               "minimum" => { "type" => ["number", "integer"] },
               "maximum" => { "type" => ["number", "integer"] },
               "exclusive_minimum" => { "type" => ["number", "integer"] },
@@ -76,7 +79,7 @@ module FlightJob
             "properties" => {
               "type" => { "const" => "integer" },
               "required" => { "type" => "boolean" },
-              "enum" => { "type" => "array", "items" => { "type" => "integer" } },
+              "enum" => { "type" => "array", "items" => { "type" => "integer", "minItems" => 1 } },
               "minimum" => { "type" => "integer" },
               "maximum" => { "type" => "integer" },
               "exclusive_minimum" => { "type" => "integer" },
@@ -91,21 +94,26 @@ module FlightJob
               "type" => { "const" => "boolean" },
               "required" => { "type" => "boolean" }
             }
-          }
+          },
           # Array validator
-          # {
-          #   "type" => "object",
-          #   "additionalProperties" => false,
-          #   "properties" => {
-          #     "type" => { "const" => "array" },
-          #     "required" => { "type" => "boolean" },
-          #     # NOTE: The 'items' key is optional, this allows for mixed array types without validation
-          #     "items" => { "$ref" => "#/$defs/validator_def" }
-          #   }
-          # }
+          # NOTE: Must be last
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => {
+              "type" => { "const" => "array" },
+              "required" => { "type" => "boolean" },
+              "items" => { "$ref" => "#/$defs/array_validator_def" }
+            }
+          }
         ]
       }
     }
+
+    # Prevent deeply nested arrays
+    VALIDATOR_DEF["array_validator_def"] = VALIDATOR_DEF["validator_def"].deep_dup
+    VALIDATOR_DEF["array_validator_def"]["properties"]["type"]["enum"].delete("array")
+    VALIDATOR_DEF["array_validator_def"]["oneOf"].delete_if { |s| s["properties"]["type"]["const"] == "array" }
 
     FORMAT_SPEC = {
       "type" => "object",
@@ -179,6 +187,7 @@ module FlightJob
 
     SCHEMA = JSONSchemer.schema({
       "type" => "object",
+      "$comment" => "strip-schema",
       "additionalProperties" => false,
       "required" => ['synopsis', 'version', 'generation_questions', 'name', 'copyright', 'license'],
       "properties" => {
@@ -239,11 +248,18 @@ module FlightJob
           FlightJob.logger.debug("\n-------------------------------------------------")
 
           # Parsers the errors for those with the correct oneOf match
-          flags = OneOfParser.new('validator_def', 'type', /\A\/generation_questions\/\d+\/validate/, schema_errors).flags
+          # NOTE: The regex is used to group errors which share a oneOf validation
+          regex = /\A\/generation_questions\/\d+\/validate/
+          top_flags = OneOfParser.new('validator_def', 'type', regex, schema_errors).flags
+
+          # Re-run the parser for the array validators
+          array_regex = /\A\/generation_questions\/\d+\/validate\/items/
+          array_flags = OneOfParser.new('array_validator_def', 'type', array_regex, schema_errors).flags
 
           # Generate the errors
           schema_errors.each_with_index.map do |error, index|
-            if flags[index] == false
+            flags = [top_flags[index], array_flags[index]]
+            if flags.include?(false)
               # Suppress the error as it matches the oneOf validator with the wrong type
               msg = "Error #{index + 1}: Skipping schema_pointer: #{error["schema_pointer"]}"
               FlightJob.logger.debug msg
@@ -251,8 +267,10 @@ module FlightJob
               # Display the error as it either:
               # * Does not match the 'oneOf' validator, or
               # * Matches with the correct type
-              root = error.delete('root_schema')
-              error.delete('schema')if error['schema'] == root
+              error.delete('root_schema')
+              if error['schema'].is_a? Hash
+                error.delete('schema') if error['schema']['$comment'] == 'strip-schema'
+              end
               FlightJob.logger.warn "Error #{index + 1}" do
                 JSON.pretty_generate(error)
               end
