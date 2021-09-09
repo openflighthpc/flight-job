@@ -41,14 +41,19 @@ module FlightJob
     def validate_value(value)
       @validate_value ||= JSONSchemer.schema(validate_schema)
       @validate_value.validate(value).map do |error|
-        FlightJob.logger.debug("Validation Error '#{id}'") { JSON.pretty_generate(error) }
-        if error['type'] == 'type'
+        FlightJob.logger.debug("Validation Error '#{id}'") do
+          JSON.pretty_generate(error.tap { |e| e.delete('root_schema') })
+        end
+        case error['type']
+        when 'type'
           type = error['schema']['type'].first
           if required? && value == nil
-            [:required, "Is a required"]
+            [:required, "Is required"]
           else
             [:type, "Must be a #{type}#{ " or omitted" unless required? }"]
           end
+        when 'pattern'
+          [:pattern, error['schema']['description']]
         else
           FlightJob.logger.error("Could not humanize the following error") do
             JSON.pretty_generate error.tap { |e| e.delete('root_schema') }
@@ -64,6 +69,9 @@ module FlightJob
     # * 'type' must be an array of one or two elements
     # * 'type' must have the primary type in the 0th position
     # * 'type' must contain 'null' in the 1st position unless required
+    #
+    # * 'pattern' matchers must be wrapped in an allOf
+    # * 'pattern' matchers must give a 'description' which will be used as the error message
     def validate_schema
       @validate_schema ||= {}.tap do |payload|
         payload['default'] = default if default
@@ -76,8 +84,19 @@ module FlightJob
           # The not-blank is enforced via a pattern, this can create a conflict if a pattern
           # is already specified. Hence the pattern matchers are stored within an allOf
           payload['allOf'] = [].tap do |allOf|
-            allOf << { 'pattern' => '^.+$', 'title' => 'Not Blank' } unless required?
-            allOf << { 'pattern' => validate['pattern'] } if validate['pattern']
+            unless required?
+              allOf << {
+                'pattern' => '^.+$',
+                'title' => 'Not Blank',
+                'description' => 'Must not be empty string'
+              }
+            end
+            if validate['pattern']
+              allOf << {
+                'pattern' => validate['pattern'],
+                'description' => validate.fetch('pattern_error', 'Failed the syntax check')
+              }
+            end
           end
         when 'number'
           payload['type'] = ['number']
