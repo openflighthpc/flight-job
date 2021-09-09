@@ -89,7 +89,11 @@ module FlightJob
                         .map { |e, _| error_index(e) }
                         .uniq
                         .sort
-        index = (0..(indices.last + 1)).find { |i| indices[i] != i }
+        if indices.empty?
+          index = nil
+        else
+          index = (0..(indices.last + 1)).find { |i| indices[i] != i }
+        end
         [key, index]
       end.to_h
     end
