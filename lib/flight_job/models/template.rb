@@ -113,7 +113,7 @@ module FlightJob
       "properties" => {
         # The following are field called "type" and "options" not settings within "properties"
         'type' => { "type" => "string" , "enum" => [
-          "text", "time", "select", "multiselect", 'multiline_text'
+          "text", "time", "select", "multiselect", 'multiline_text', 'number'
         ] },
         'options' => {
           "type" => "array",

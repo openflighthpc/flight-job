@@ -304,7 +304,7 @@ module FlightJob
 
         def prompt_question(question)
           default = answers.key?(question.id) ? answers[question.id] : question.default
-          answers[question.id] = case question.format['type']
+          value = case question.format['type']
           when 'text'
             prompt.ask(question.text, default: default)
           when 'multiline_text'
@@ -331,8 +331,23 @@ module FlightJob
               q.default default
               q.validate(/\A24:00|([0-1]\d|2[0-3]):[0-5]\d\Z/, "Times must be in HH:MM format")
             end
+          when 'number'
+            # NOTE: The 'number' input has parity with HTML <input type="number"/>
+            # By default, this only allows integers. This behaviour has been replicated here
+            #
+            # Consider refactoring to allow floating points
+            prompt.ask(question.text, convert: :integer)
           else
             raise InternalError, "Unexpectedly reached question type: #{question.format['type']}"
+          end
+
+          # Validate the response
+          errors = question.validate_value(value)
+          if errors.empty?
+            answers[question.id] = value
+          else
+            $stderr.puts "The given value is invalid, please try again"
+            prompt_question(question)
           end
         end
 

@@ -38,6 +38,11 @@ module FlightJob
       validate['required']
     end
 
+    def validate_value(value)
+      @validate_value ||= JSONSchemer.schema(validate_schema)
+      @validate_value.validate(value).to_a
+    end
+
     # Takes the 'validate' key and converts it to the JSON:Schmea
     def validate_schema
       @validate_schema ||= {}.tap do |payload|
