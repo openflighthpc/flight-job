@@ -68,7 +68,7 @@ module FlightJob
           FlightJob.logger.error("Could not humanize the following error") do
             JSON.pretty_generate error.tap { |e| e.delete('root_schema') }
           end
-          [:unknown, "Could not process error, please check logs"]
+          [:unknown, "Could not process error, please check the logs"]
         end
       end
     end
