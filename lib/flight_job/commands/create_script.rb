@@ -345,6 +345,21 @@ module FlightJob
           errors = question.validate_value(value)
           if errors.empty?
             answers[question.id] = value
+
+          elsif msg = errors.find { |t, _| t == :type }
+            FlightJob.logger.error <<~ERROR.chomp
+              Recieved the following unexpected error when asking question '#{question.id}':
+               * #{msg.last}
+            ERROR
+            FlightJob.logger.error <<~ERROR.squish
+              This is most likely because of a mismatch between the 'format'/'options'
+              keys and the 'validate' specification. The template needs updating to be
+              consistent.
+            ERROR
+            raise InternalError, <<~ERROR.chomp
+              Failed to coerce the anwer to '#{question.id}'!
+              Pleasse contact your system administrator for further assistance.
+            ERROR
           else
             $stderr.puts pastel.red.bold "The given value is invalid as it:"
             errors.each do |_, msg|
