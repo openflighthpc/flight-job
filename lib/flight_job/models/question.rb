@@ -62,6 +62,8 @@ module FlightJob
           [:minmax, "Must be less than or equal to #{error['schema']['maximum']}"]
         when 'exclusiveMaximum'
           [:minmax, "Must be less than #{error['schema']['exclusiveMaximum']}"]
+        when 'enum'
+          [:enum, "Must be one of the following values: #{error['schema']['enum'].join(',')}"]
         else
           FlightJob.logger.error("Could not humanize the following error") do
             JSON.pretty_generate error.tap { |e| e.delete('root_schema') }

@@ -303,6 +303,10 @@ module FlightJob
         end
 
         def prompt_question(question)
+          # Flags if a select was used
+          # Enum errors are un-recoverable on select
+          error_on_enum_select = false
+
           default = answers.key?(question.id) ? answers[question.id] : question.default
           value = case question.format['type']
           when 'text'
@@ -313,6 +317,7 @@ module FlightJob
             lines = prompt.multiline(question.text)
             lines.empty? ? answers[question.id] : lines.join('')
           when 'select'
+            error_on_enum_select = true
             opts = { show_help: :always }
             choices = question.format['options'].each_with_index.map do |opt, idx|
               opts[:default] = idx + 1 if opt['value'] == default
@@ -341,20 +346,26 @@ module FlightJob
             raise InternalError, "Unexpectedly reached question type: #{question.format['type']}"
           end
 
-          # Validate the response
+          # Returns if the validation passed
           errors = question.validate_value(value)
           if errors.empty?
             answers[question.id] = value
+            return value
+          end
 
-          elsif msg = errors.find { |t, _| t == :type }
-            # NOTE: There are a couple of ways this edge condition can be triggered
-            # Ideally the template validation would prevent them, however this introduces
-            # complexity to the validation.
-            #
-            # Consider implementing full validation
+          # Checks for an unrecoverable error
+          unexpected_errors = []
+          unexpected_errors << errors.select { |t, _| t == :type }.map(&:last)
+          if error_on_enum_select
+            unexpected_errors <<  errors.select { |t, _| t == :enum }.map(&:last)
+          end
+          unexpected_errors.flatten!
+
+          # Raise the unrecoverable if applicable
+          unless unexpected_errors.empty?
             FlightJob.logger.error <<~ERROR.chomp
               Recieved the following unexpected error when asking question '#{question.id}':
-               * #{msg.last}
+              #{unexpected_errors.map { |msg| " * #{msg}" }.join("\n")}
             ERROR
             FlightJob.logger.error <<~ERROR.squish
               This is most likely because of a mismatch between the 'format'/'options'
@@ -365,16 +376,17 @@ module FlightJob
               Failed to coerce the anwer to '#{question.id}'!
               Pleasse contact your system administrator for further assistance.
             ERROR
-          else
-            $stderr.puts pastel.red.bold "The given value is invalid as it:"
-            errors.each do |_, msg|
-              first, rest = msg.split("\n", 2)
-              lines = rest.to_s.chomp.split("\n").map { |l| "   #{l}" }.join("\n")
-              $stderr.puts pastel.red " * #{first}#{ "\n" + lines unless lines.empty? }"
-            end
-            $stderr.puts pastel.yellow "Please try again..."
-            prompt_question(question)
           end
+
+          # Generate the warnings and prompt again
+          $stderr.puts pastel.red.bold "The given value is invalid as it:"
+          errors.each do |_, msg|
+            first, rest = msg.split("\n", 2)
+            lines = rest.to_s.chomp.split("\n").map { |l| "   #{l}" }.join("\n")
+            $stderr.puts pastel.red " * #{first}#{ "\n" + lines unless lines.empty? }"
+          end
+          $stderr.puts pastel.yellow "Please try again..."
+          prompt_question(question)
         end
 
         # Checks if any of the questions have dependencies
