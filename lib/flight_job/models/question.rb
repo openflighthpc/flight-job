@@ -39,93 +39,98 @@ module FlightJob
     end
 
     def validate_value(value)
-      @validate_value ||= JSONSchemer.schema(validate_schema, insert_property_defaults: true)
+      @validate_value ||= JSONSchemer.schema(validate_schema)
       @validate_value.validate(value).map do |error|
         FlightJob.logger.debug("Validation Error '#{id}'") do
           JSON.pretty_generate(error.tap { |e| e.delete('root_schema') })
         end
-        case error['type']
-        when 'type'
-          type = error['schema']['type'].first
-          if required? && value == nil
-            [:required, "Must not be null"]
-          else
-            [:type, "Must be a #{type}#{ " or omitted" unless required? }"]
-          end
-        when 'pattern'
-          [:pattern, error['schema']['description']]
-        when 'minimum'
-          [:minmax, "Must be greater than or equal to #{error['schema']['minimum']}"]
-        when 'exclusiveMinimum'
-          [:minmax, "Must be greater than #{error['schema']['exclusiveMinimum']}"]
-        when 'maximum'
-          [:minmax, "Must be less than or equal to #{error['schema']['maximum']}"]
-        when 'exclusiveMaximum'
-          [:minmax, "Must be less than #{error['schema']['exclusiveMaximum']}"]
-        when 'enum'
-          [:enum, "Must be one of the following values: #{error['schema']['enum'].join(',')}"]
-        else
-          FlightJob.logger.error("Could not humanize the following error") do
-            JSON.pretty_generate error.tap { |e| e.delete('root_schema') }
-          end
-          [:unknown, "Could not process error, please check the logs"]
-        end
+        [error['schema']['title'].to_sym, error['schema']['description']]
       end
     end
 
     # Takes the 'validate' key and converts it to the JSON:Schmea
     #
     # NOTE: The schemas must conform to the following conventions:
-    # * 'type' must be an array of one or two elements
-    # * 'type' must have the primary type in the 0th position
-    # * 'type' must contain 'null' in the 1st position unless required
-    #
-    # * 'pattern' matchers must be wrapped in an allOf
-    # * 'pattern' matchers must give a 'description' which will be used as the error message
+    # * A 'title' which is used as a generic key to identify the "type" of validation,
+    # * A 'description' stores the error message if the validation fails
     def validate_schema
-      @validate_schema ||= {}.tap do |payload|
+      @validate_schema ||= { 'allOf' => []}.tap do |top_level|
         next unless validate
-        case validate['type']
-        when 'string'
-          payload['type'] = ['string']
-          payload['type'] << 'null' unless required?
-          payload['enum'] = validate['enum'] if validate['enum']
-          # The not-blank is enforced via a pattern, this can create a conflict if a pattern
-          # is already specified. Hence the pattern matchers are stored within an allOf
-          payload['allOf'] = [].tap do |allOf|
-            if required?
-              allOf << {
-                'pattern' => '^.+$',
-                'title' => 'Not Blank',
-                'description' => 'Must not be empty string'
-              }
-            end
-            if validate['pattern']
-              allOf << {
-                'pattern' => validate['pattern'],
-                'description' => validate.fetch('pattern_error', 'Failed the syntax check')
-              }
-            end
+        allOf = top_level['allOf']
+
+        # Applies the generic type validators
+        aOrAn = ['a','e','i','o','u'].include?(validate['type'][0]) ? 'an' : 'a'
+        allOf << {
+          "type" => [validate['type'], 'null'],
+          "title" => "type",
+          "description" => "Must be #{aOrAn} #{validate['type']}#{ " or omitted" unless required? }"
+        }
+        if required?
+          allOf << {
+            "if" => { "type" => "null" },
+            "then" => {
+              "type" => validate["type"],
+              "title" => "required",
+              "description" => "Must not be null"
+            }
+          }
+
+          # Apply the not empty string validator
+          if validate['type'] == 'string'
+            allOf << {
+              'pattern' => '^.+$',
+              'title' => "required",
+              'description' => 'Must not be an empty string'
+            }
           end
-        when 'number'
-          payload['type'] = ['number']
-          payload['type'] << 'null' unless required?
-          payload['enum'] = validate['enum'] if validate['enum']
-          payload['maximum'] = validate['maximum'] if validate['maximum']
-          payload['exclusiveMaximum'] = validate['exclusive_maximum'] if validate['exclusive_maximum']
-          payload['minimum'] = validate['minimum'] if validate['minimum']
-          payload['exclusiveMinimum'] = validate['exclusive_minimum'] if validate['exclusive_minimum']
-        when 'integer'
-          payload['type'] = ['integer']
-          payload['type'] << 'null' unless required?
-          payload['enum'] = validate['enum'] if validate['enum']
-          payload['maximum'] = validate['maximum'] if validate['maximum']
-          payload['exclusiveMaximum'] = validate['exclusive_maximum'] if validate['exclusive_maximum']
-          payload['minimum'] = validate['minimum'] if validate['minimum']
-          payload['exclusiveMinimum'] = validate['exclusive_minimum'] if validate['exclusive_minimum']
-        when 'boolean'
-          payload['type'] = ['boolean']
-          payload['type'] << 'null' unless required?
+        end
+
+        # Apply the enum validator
+        if validate['enum']
+          allOf << {
+            "enum" => validate["enum"],
+            "title" => "enum",
+            "description" => "Must be one of the following values: #{validate['enum'].join(',')}"
+          }
+        end
+
+        # Apply the pattern validator
+        if validate['pattern']
+          allOf << {
+            'pattern' => validate['pattern'],
+            "title" => "syntax",
+            'description' => validate.fetch('pattern_error', 'Failed the syntax check')
+          }
+        end
+
+        # Apply the maximum/minimum
+        if validate['minimum']
+          allOf << {
+            "minimum" => validate["minimum"],
+            "title" => "minmax",
+            "description" => "Must be greater than or equal to #{validate['minimum']}"
+          }
+        end
+        if validate['maximum']
+          allOf << {
+            "maximum" => validate["maximum"],
+            "title" => "minmax",
+            "description" => "Must be less than or equal to #{validate['maximum']}"
+          }
+        end
+        if validate['exclusive_minimum']
+          allOf << {
+            "exclusiveMinimum" => validate["exclusive_minimum"],
+            "title" => "minmax",
+            "description" => "Must be greater than #{validate['exclusive_minimum']}"
+          }
+        end
+        if validate['exclusive_maximum']
+          allOf << {
+            "exclusiveMaximum" => validate["exclusive_maximum"],
+            "title" => "minmax",
+            "description" => "Must be less than #{validate['exclusive_maximum']}"
+          }
         end
       end
     end
