@@ -40,10 +40,30 @@ module FlightJob
 
     def validate_value(value)
       @validate_value ||= JSONSchemer.schema(validate_schema)
-      @validate_value.validate(value).to_a
+      @validate_value.validate(value).map do |error|
+        FlightJob.logger.debug("Validation Error '#{id}'") { JSON.pretty_generate(error) }
+        if error['type'] == 'type'
+          type = error['schema']['type'].first
+          if required? && value == nil
+            [:required, "Is a required"]
+          else
+            [:type, "Must be a #{type}#{ " or omitted" unless required? }"]
+          end
+        else
+          FlightJob.logger.error("Could not humanize the following error") do
+            JSON.pretty_generate error.tap { |e| e.delete('root_schema') }
+          end
+          [:unknown, "Could not process error, please check logs"]
+        end
+      end
     end
 
     # Takes the 'validate' key and converts it to the JSON:Schmea
+    #
+    # NOTE: The schemas must conform to the following conventions:
+    # * 'type' must be an array of one or two elements
+    # * 'type' must have the primary type in the 0th position
+    # * 'type' must contain 'null' in the 1st position unless required
     def validate_schema
       @validate_schema ||= {}.tap do |payload|
         payload['default'] = default if default

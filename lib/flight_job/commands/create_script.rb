@@ -346,7 +346,11 @@ module FlightJob
           if errors.empty?
             answers[question.id] = value
           else
-            $stderr.puts "The given value is invalid, please try again"
+            $stderr.puts pastel.red.bold "The given value is invalid as it:"
+            errors.each do |_, msg|
+              $stderr.puts pastel.red " * #{msg}"
+            end
+            $stderr.puts pastel.yellow "Please try again..."
             prompt_question(question)
           end
         end
