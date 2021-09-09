@@ -180,10 +180,10 @@ generation_questions:
       for 1 gigabyte.
     default: '1024'
     format:
-      type: text
+      type: number
     validate:
-      type: 'string'
-      pattern: '^\d+$'
+      type: integer
+      minimum: 1
 
   - id: workload
     text: "Who, or what, should we greet"

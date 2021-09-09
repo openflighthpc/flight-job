@@ -336,7 +336,7 @@ module FlightJob
             # By default, this only allows integers. This behaviour has been replicated here
             #
             # Consider refactoring to allow floating points
-            prompt.ask(question.text, convert: :integer)
+            prompt.ask(question.text, convert: :integer, default: default)
           else
             raise InternalError, "Unexpectedly reached question type: #{question.format['type']}"
           end
@@ -347,6 +347,11 @@ module FlightJob
             answers[question.id] = value
 
           elsif msg = errors.find { |t, _| t == :type }
+            # NOTE: There are a couple of ways this edge condition can be triggered
+            # Ideally the template validation would prevent them, however this introduces
+            # complexity to the validation.
+            #
+            # Consider implementing full validation
             FlightJob.logger.error <<~ERROR.chomp
               Recieved the following unexpected error when asking question '#{question.id}':
                * #{msg.last}
