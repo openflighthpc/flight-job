@@ -39,12 +39,19 @@ module FlightJob
     end
 
     def validate_value(value)
-      @validate_value ||= JSONSchemer.schema(validate_schema)
+      @validate_value ||= JSONSchemer.schema(validate_schema )
       @validate_value.validate(value).map do |error|
         FlightJob.logger.debug("Validation Error '#{id}'") do
           JSON.pretty_generate(error.tap { |e| e.delete('root_schema') })
         end
-        [error['schema']['title'].to_sym, error['schema']['description']]
+        # Generate array error messages
+        if /\A\/items/.match? error["schema_pointer"]
+          [error["schema"]["title"].to_sym, "Value: #{error["data"]} - #{error["schema"]["description"]}"]
+
+        # Generate regular error messages
+        else
+          [error['schema']['title'].to_sym, error['schema']['description']]
+        end
       end
     end
 
@@ -54,84 +61,109 @@ module FlightJob
     # * A 'title' which is used as a generic key to identify the "type" of validation,
     # * A 'description' stores the error message if the validation fails
     def validate_schema
-      @validate_schema ||= { 'allOf' => []}.tap do |top_level|
+      @validate_schema ||= { "allOf" => [] }.tap do |top_level|
         next unless validate
         allOf = top_level['allOf']
 
-        # Applies the generic type validators
-        aOrAn = ['a','e','i','o','u'].include?(validate['type'][0]) ? 'an' : 'a'
+        # Apply non-array validations
+        if validate['items'].nil?
+          apply_validations(allOf, validate)
+
+        # Apply array validations
+        else
+          apply_type_validations(allOf, validate)
+          top_level["items"] = { "allOf" => [] }
+
+          # The 'required' key doesn't really make sense for array items,
+          # It is force set to true so the correct error message is generated
+          specs = validate["items"].dup
+          specs['required'] = true
+
+          apply_validations(top_level["items"]["allOf"], specs)
+        end
+      end
+    end
+
+    private
+
+    def apply_type_validations(allOf, specs)
+      required = specs['required']
+      aOrAn = ['a','e','i','o','u'].include?(specs['type'][0]) ? 'an' : 'a'
+      allOf << {
+        "type" => [specs['type'], 'null'],
+        "title" => "type",
+        "description" => "Must be #{aOrAn} #{specs['type']}#{ " or omitted" unless required }"
+      }
+      if required
         allOf << {
-          "type" => [validate['type'], 'null'],
-          "title" => "type",
-          "description" => "Must be #{aOrAn} #{validate['type']}#{ " or omitted" unless required? }"
+          "if" => { "type" => "null" },
+          "then" => {
+            "type" => specs["type"],
+            "title" => "required",
+            "description" => "Must not be null"
+          }
         }
-        if required?
-          allOf << {
-            "if" => { "type" => "null" },
-            "then" => {
-              "type" => validate["type"],
-              "title" => "required",
-              "description" => "Must not be null"
-            }
-          }
 
-          # Apply the not empty string validator
-          if validate['type'] == 'string'
-            allOf << {
-              'pattern' => '^.+$',
-              'title' => "required",
-              'description' => 'Must not be an empty string'
-            }
-          end
+        # Apply the not empty string validator
+        if specs['type'] == 'string'
+          allOf << {
+            'pattern' => '^.+$',
+            'title' => "required",
+            'description' => 'Must not be an empty string'
+          }
         end
+      end
+    end
 
-        # Apply the enum validator
-        if validate['enum']
-          allOf << {
-            "enum" => validate["enum"],
-            "title" => "enum",
-            "description" => "Must be one of the following values: #{validate['enum'].join(',')}"
-          }
-        end
+    def apply_validations(allOf, specs)
+      apply_type_validations(allOf, specs)
 
-        # Apply the pattern validator
-        if validate['pattern']
-          allOf << {
-            'pattern' => validate['pattern'],
-            "title" => "syntax",
-            'description' => validate.fetch('pattern_error', 'Failed the syntax check')
-          }
-        end
+      # Apply the enum validator
+      if specs['enum']
+        allOf << {
+          "enum" => specs["enum"],
+          "title" => "enum",
+          "description" => "Must be one of the following values: #{specs['enum'].join(',')}"
+        }
+      end
 
-        # Apply the maximum/minimum
-        if validate['minimum']
-          allOf << {
-            "minimum" => validate["minimum"],
-            "title" => "minmax",
-            "description" => "Must be greater than or equal to #{validate['minimum']}"
-          }
-        end
-        if validate['maximum']
-          allOf << {
-            "maximum" => validate["maximum"],
-            "title" => "minmax",
-            "description" => "Must be less than or equal to #{validate['maximum']}"
-          }
-        end
-        if validate['exclusive_minimum']
-          allOf << {
-            "exclusiveMinimum" => validate["exclusive_minimum"],
-            "title" => "minmax",
-            "description" => "Must be greater than #{validate['exclusive_minimum']}"
-          }
-        end
-        if validate['exclusive_maximum']
-          allOf << {
-            "exclusiveMaximum" => validate["exclusive_maximum"],
-            "title" => "minmax",
-            "description" => "Must be less than #{validate['exclusive_maximum']}"
-          }
-        end
+      # Apply the pattern validator
+      if specs['pattern']
+        allOf << {
+          'pattern' => specs['pattern'],
+          "title" => "syntax",
+          'description' => specs.fetch('pattern_error', 'Failed the syntax check')
+        }
+      end
+
+      # Apply the maximum/minimum
+      if specs['minimum']
+        allOf << {
+          "minimum" => specs["minimum"],
+          "title" => "minmax",
+          "description" => "Must be greater than or equal to #{specs['minimum']}"
+        }
+      end
+      if specs['maximum']
+        allOf << {
+          "maximum" => specs["maximum"],
+          "title" => "minmax",
+          "description" => "Must be less than or equal to #{specs['maximum']}"
+        }
+      end
+      if specs['exclusive_minimum']
+        allOf << {
+          "exclusiveMinimum" => specs["exclusive_minimum"],
+          "title" => "minmax",
+          "description" => "Must be greater than #{specs['exclusive_minimum']}"
+        }
+      end
+      if specs['exclusive_maximum']
+        allOf << {
+          "exclusiveMaximum" => specs["exclusive_maximum"],
+          "title" => "minmax",
+          "description" => "Must be less than #{specs['exclusive_maximum']}"
+        }
       end
     end
   end
