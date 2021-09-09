@@ -348,7 +348,9 @@ module FlightJob
           else
             $stderr.puts pastel.red.bold "The given value is invalid as it:"
             errors.each do |_, msg|
-              $stderr.puts pastel.red " * #{msg}"
+              first, rest = msg.split("\n", 2)
+              lines = rest.to_s.chomp.split("\n").map { |l| "   #{l}" }.join("\n")
+              $stderr.puts pastel.red " * #{first}#{ "\n" + lines unless lines.empty? }"
             end
             $stderr.puts pastel.yellow "Please try again..."
             prompt_question(question)

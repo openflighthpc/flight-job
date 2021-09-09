@@ -51,6 +51,7 @@ module FlightJob
               "type" => { "const" => "string" },
               "required" => { "type" => "boolean" },
               "pattern" => { "type" => "string", "format" => "regex" },
+              "pattern_error" => { "type" => "string" },
               "enum" => { "type" => "array", "items" => { "type" => "string" } }
             },
           },
