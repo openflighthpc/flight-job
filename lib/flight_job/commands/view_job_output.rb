@@ -31,7 +31,7 @@ module FlightJob
       def run
         assert_output_type_valid
         assert_stderr_not_merged if viewing_stderr?
-        unless page_file(file_path)
+        unless pager.page(path: file_path)
           raise_file_missing(file_path)
         end
       end

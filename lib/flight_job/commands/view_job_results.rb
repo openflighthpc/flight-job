@@ -32,7 +32,7 @@ module FlightJob
         job = load_job(args.first)
         assert_results_dir_exists(job)
         file_path = File.join(job.results_dir, args[1])
-        unless page_file(file_path)
+        unless pager.page(path: file_path)
           raise_file_missing(file_path)
         end
       end

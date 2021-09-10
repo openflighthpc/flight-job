@@ -38,7 +38,6 @@ gem 'tty-markdown'
 gem 'tty-editor'
 gem 'tty-table', github: 'openflighthpc/tty-table', branch: '9b326fcbe04968463da58c000fbb1dd5ce178243'
 gem 'tty-prompt'
-gem 'tty-pager'
 gem 'word_wrap'
 
 group :development do

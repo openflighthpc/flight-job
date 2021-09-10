@@ -31,6 +31,7 @@ require 'tty-editor'
 require 'tty-pager'
 
 require 'open3'
+require 'stringio'
 
 module FlightJob
   class Command
@@ -75,42 +76,59 @@ module FlightJob
       @pastel ||= Pastel.new
     end
 
-    def pager
-      return @pager if @pager
-      pager = ENV.fetch('PAGER', 'less')
-      pager = "#{pager} #{ENV.fetch('LESS', '-SFRX -Ps"Press h for help or q to quit"')}" if pager == 'less'
-      @pager = TTY::Pager.new(command: pager)
+    Pager = Struct.new(:retry_file, :follow) do
+      def page(arg)
+        path = arg.is_a?(Hash) ? arg[:path] : arg.to_s
+        if path
+          open_path(path) { |io| page_io(io) }
+        else
+          io = StringIO.new(str)
+          page_io(io)
+          true
+        end
+      end
+
+      private
+
+      def open_path(path)
+        # Wait for the file to become available with --retry
+        if retry_file && !File.exists?(path)
+          $stderr.puts pastel.yellow("Waiting for: #{path}")
+          sleep 1 until File.exists?(path)
+        elsif !File.exists?(path)
+          return false
+        end
+
+        File.open(path) do |io|
+          yield io if block_given?
+        end
+
+        return true
+      end
+
+      def page_io(io)
+        # Determines the command
+        cmd = if follow
+                'less -SFX +F -Ps"Press h for help or q to quit"'
+              elsif ['less', nil].include?(ENV['PAGER'])
+                'less -SFRX -Ps"Press h for help or q to quit"'
+              else
+                ENV['PAGER']
+              end
+
+        # Manually pages the file to allow following
+        # Disable interrupt!
+        # The process is now controlled by the pager
+        trap('SIGINT', 'IGNORE')
+        pid = Kernel.spawn(cmd, in: io, out: $stdout)
+        Process.wait pid
+      ensure
+        trap('SIGINT', 'DEFAULT')
+      end
     end
 
-    def page_file(path)
-      # Wait for the file to become available with --retry
-      if (opts.F || opts.retry) && !File.exists?(path)
-        $stderr.puts pastel.yellow("Waiting for: #{path}")
-        sleep 1 until File.exists?(path)
-      elsif !File.exists?(path)
-        return false
-      end
-
-      # Determines the command
-      if opts.F || opts.follow
-        # Manually pages the file to allow following
-        File.open(path) do |io|
-          # Disable interrupt!
-          # The process is now controlled by the pager
-          trap('SIGINT', 'IGNORE')
-          pid = Kernel.spawn('less -SFX +F -Ps"Press h for help or q to quit"', in: io, out: $stdout)
-          Process.wait pid
-        end
-      else
-        pager.page(path: path)
-      end
-
-      return true
-    rescue EOFError, TTY::Pager::PagerClosed
-      # NOOP
-    ensure
-      trap('SIGINT', 'DEFAULT')
-      pager.close
+    def pager
+      @pager ||= Pager.new(opts.F || opts.retry, opts.F || opts.follow)
     end
 
     # Check if the given option flag denotes STDIN
