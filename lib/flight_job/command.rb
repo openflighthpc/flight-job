@@ -85,9 +85,10 @@ module FlightJob
     def page_file(path)
       # Wait for the file to become available with --retry
       if (opts.F || opts.retry) && !File.exists?(path)
+        $stderr.puts pastel.yellow("Waiting for: #{path}")
         sleep 1 until File.exists?(path)
       elsif !File.exists?(path)
-        return
+        return false
       end
 
       # Determines the command
@@ -103,6 +104,8 @@ module FlightJob
       else
         pager.page(path: path)
       end
+
+      return true
     rescue EOFError, TTY::Pager::PagerClosed
       # NOOP
     ensure

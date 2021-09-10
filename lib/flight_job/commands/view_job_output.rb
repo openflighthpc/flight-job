@@ -31,8 +31,9 @@ module FlightJob
       def run
         assert_output_type_valid
         assert_stderr_not_merged if viewing_stderr?
-        assert_file_exists
-        page_file(file_path)
+        unless page_file(file_path)
+          raise_file_missing(file_path)
+        end
       end
 
       private
@@ -55,14 +56,12 @@ module FlightJob
         end
       end
 
-      def assert_file_exists
-        unless File.exists?(file_path)
-          output_type = viewing_stderr? ? 'error' : 'output'
-          object_name = viewing_job? ? 'job' : 'task'
-          raise MissingError, "The #{object_name}'s standard " \
-            "#{output_type} file does not exists: "\
-            "#{pastel.yellow(file_path)}"
-        end
+      def raise_file_missing(path)
+        output_type = viewing_stderr? ? 'error' : 'output'
+        object_name = viewing_job? ? 'job' : 'task'
+        raise MissingError, "The #{object_name}'s standard " \
+          "#{output_type} file does not exists: "\
+          "#{pastel.yellow(path)}"
       end
 
       def file_path
