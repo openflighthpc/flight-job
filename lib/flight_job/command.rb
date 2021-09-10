@@ -30,6 +30,8 @@ require 'pastel'
 require 'tty-editor'
 require 'tty-pager'
 
+require 'open3'
+
 module FlightJob
   class Command
     attr_accessor :args, :opts
@@ -74,9 +76,38 @@ module FlightJob
     end
 
     def pager
+      return @pager if @pager
       pager = ENV.fetch('PAGER', 'less')
       pager = "#{pager} #{ENV.fetch('LESS', '-SFRX -Ps"Press h for help or q to quit"')}" if pager == 'less'
-      @pager ||= TTY::Pager.new(command: pager)
+      @pager = TTY::Pager.new(command: pager)
+    end
+
+    def page_file(path)
+      # Wait for the file to become available with --retry
+      if (opts.F || opts.retry) && !File.exists?(path)
+        sleep 1 until File.exists?(path)
+      elsif !File.exists?(path)
+        return
+      end
+
+      # Determines the command
+      if opts.F || opts.follow
+        # Manually pages the file to allow following
+        File.open(path) do |io|
+          # Disable interrupt!
+          # The process is now controlled by the pager
+          trap('SIGINT', 'IGNORE')
+          pid = Kernel.spawn('less -SFX +F -Ps"Press h for help or q to quit"', in: io, out: $stdout)
+          Process.wait pid
+        end
+      else
+        pager.page(path: path)
+      end
+    rescue EOFError, TTY::Pager::PagerClosed
+      # NOOP
+    ensure
+      trap('SIGINT', 'DEFAULT')
+      pager.close
     end
 
     # Check if the given option flag denotes STDIN

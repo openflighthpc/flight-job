@@ -32,8 +32,7 @@ module FlightJob
         assert_output_type_valid
         assert_stderr_not_merged if viewing_stderr?
         assert_file_exists
-
-        pager.page(File.read(file_path))
+        page_file(file_path)
       end
 
       private

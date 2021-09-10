@@ -33,7 +33,7 @@ module FlightJob
         assert_results_dir_exists(job)
         file_path = File.join(job.results_dir, args[1])
         assert_file_exists(file_path)
-        pager.page(File.read(file_path))
+        page_file(file_path)
       end
 
       private

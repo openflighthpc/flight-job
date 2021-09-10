@@ -184,12 +184,25 @@ module FlightJob
       c.summary = 'Display details about a submitted job'
     end
 
+    apply_follow_opts = ->(c) do
+      c.slop.bool '-f','--follow', <<~DESC.chomp
+        Append data to the pager as the file grows.
+        This option ignores the PAGER env var and will use less.
+      DESC
+      c.slop.bool '-r', '--retry', <<~DESC.chomp
+        Keep trying to open the file until it becomes available.
+      DESC
+      c.slop.bool '-F', 'Equivalent to: --follow --retry'
+    end
+
     create_command 'view-job-results', 'JOB_ID FILENAME' do |c|
       c.summary = "View a file within the job's results directory"
+      apply_follow_opts.call(c)
     end
 
     create_command 'view-job-stdout', 'JOB_ID' do |c|
       c.summary = "View the job's standard output"
+      apply_follow_opts.call(c)
       c.action do |args, opts|
         require_relative '../flight_job'
         opts.type = :job_stdout
@@ -199,6 +212,7 @@ module FlightJob
 
     create_command 'view-job-stderr', 'JOB_ID' do |c|
       c.summary = "View the job's standard error"
+      apply_follow_opts.call(c)
       c.action do |args, opts|
         require_relative '../flight_job'
         opts.type = :job_stderr
