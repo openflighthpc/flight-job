@@ -359,7 +359,7 @@ module FlightJob
       def run
         # Stashes the preliminary version of the name
         # NOTE: It is validated latter
-        name = args.length > 1 ? args[1] : nil
+        name = args.length > 1 ? args[1] : default_id
 
         # Attempt to get the answers/notes from the input flags
         answers = answers_input
@@ -505,22 +505,50 @@ module FlightJob
         file.unlink
       end
 
+      def default_id
+        base = template.id
+        candidate = if Script.new(id: base).exists?
+          ids = Dir.glob(Script.new(id: "#{base}-*").metadata_path)
+            .map { |p| File.basename(File.dirname(p)) }
+            .select { |n| /\A#{base}-\d+\Z/ }
+            .map { |n| n.split('-').last.to_i }
+            .reject { |id| id == 0 }
+            .sort
+          id = (1..(ids.length + 1)).find { |i| ids[i - 1] != i }
+          "#{base}-#{id}"
+        else
+          base
+        end
+        if verify_id(candidate, raise_on_error: false)
+          candidate
+        else
+          FlightJob.logger.warn <<~WARN
+            Script ID '#{candidate}' unexpectedly failed validation!
+            Failing back on a randomised value.
+          WARN
+          nil
+        end
+      end
+
       # Checks if the script's ID is valid
-      def verify_id(id)
+      def verify_id(id, raise_on_error: true)
+        # Run the verification
         script = Script.new(id: id)
-        return if script.valid?(:id_check)
+        return true if script.valid?(:id_check)
+
+        # Log the errors
+        FlightJob.logger.error("The script ID is invalid:\n") do
+          script.errors.full_messages.join("\n")
+        end
+
+        # Exit fast unless erroring
+        return false unless raise_on_error
 
         # Find the first error related to the ID
         # NOTE: There maybe more than one error, but the first one determines the
         #       exit code. The error log will contain the full list
         error = script.errors.find { |e| e.attribute == :id }
-        return unless error
-        FlightJob.logger.error("The script is invalid:\n") do
-          script.errors.full_messages.join("\n")
-        end
-
-        # Determine the exit code from the cause
-        if error.type == :already_exists
+        if error&.type == :already_exists
           script.raise_duplicate_id_error
         else
           raise InputError, "The ID #{error.message}!"

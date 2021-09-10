@@ -138,6 +138,8 @@ module FlightJob
         @id = id
       else
         # Implicitly generate an ID
+        # NOTE: In general, the calling method should provide a friendly ID.
+        # However the randomised implicit fallback is being maintained
         @id ||= begin
           candidate = false
           until candidate do
