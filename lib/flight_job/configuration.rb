@@ -94,7 +94,7 @@ module FlightJob
     validates :minimum_terminal_width, numericality: { only_integers: true }
 
     attribute :max_id_length, default: 16
-    validates :max_id_length, numericality: { only_integers: true }
+    validates :max_id_length, numericality: { only_integers: true, greater_than: 5 }
 
     attribute :max_ids, default: 1000000
     validates :max_ids, numericality: { only_integers: true }

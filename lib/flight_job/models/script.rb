@@ -99,12 +99,18 @@ module FlightJob
 
       # Ensures the script file exists
       unless File.exists? script_path
-        legacy_path = File.join(Flight.config.scripts_dir, id, script_name)
-        if File.exists?(legacy_path)
-          # Migrate legacy scripts to the script_path
-          FileUtils.ln_s script_name, script_path
-        else
-          # Error as it is missing
+        begin
+          legacy_path = File.join(Flight.config.scripts_dir, id, script_name)
+          if File.exists?(legacy_path)
+            # Migrate legacy scripts to the script_path
+            FileUtils.ln_s script_name, script_path
+          else
+            # Error as it is missing
+            @errors.add(:script_path, 'does not exist')
+          end
+        rescue
+          FlightJob.logger.error "Could not determine the legacy script path"
+          FlightJob.logger.debug $!
           @errors.add(:script_path, 'does not exist')
         end
       end
@@ -344,11 +350,13 @@ module FlightJob
       else
         { 'version' => 0, 'created_at' => DateTime.now.rfc3339 }
       end.tap do |hash|
-        if @provisional_metadata
-          hash.merge!(@provisional_metadata)
-          @provisional_metadata = nil
+        if hash.is_a? Hash
+          if @provisional_metadata
+            hash.merge!(@provisional_metadata)
+            @provisional_metadata = nil
+          end
+          hash['answers'] ||= {}
         end
-        hash['answers'] ||= {}
       end
     end
   end
