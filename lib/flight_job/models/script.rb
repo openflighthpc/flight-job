@@ -280,7 +280,45 @@ module FlightJob
       if id.nil? || id.nil?
         0 # This case SHOULD NOT be reached in practice, so further sorting isn't required
       else
-        id <=> other.id
+        # Due to the naming algorithm, most scripts will have an alphanumeric leader and
+        # numeric suffix:
+        # <leader>-<suffix>
+        #
+        # The templates should be sorted numerically by suffix if one leader is a
+        # sub-string of the other. Otherwise sort alphanumerically
+        regex = /.*-\d+\Z/
+        if regex.match?(id) && regex.match?(other.id)
+          # Extract the details about the id
+          parts = id.split('-')
+          suffix = parts.pop.to_i
+          leader = parts.join('-')
+
+          # Extract the details about the other id
+          other_parts = other.id.split('-')
+          other_suffix = other_parts.pop.to_i
+          other_leader = other_parts.join('-')
+
+          # Run the sub-string matching algorithm
+          min_length = [leader.length, other_leader.length].min
+          if leader[0...min_length] == other_leader[0...min_length]
+            # If the suffix matches, sort on leader
+            if suffix == other_suffix
+              leader.length <=> other_leader.length
+
+            # Sort based on the suffix
+            else
+              suffix <=> other_suffix
+            end
+
+          # Fallback: Sort alphanumerically
+          else
+            id <=> other.id
+          end
+
+        # Fallback: Sort alphanumerically
+        else
+          id <=> other.id
+        end
       end
     end
 

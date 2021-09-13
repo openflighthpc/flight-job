@@ -39,8 +39,8 @@ module FlightJob
 
     # Returns the base name if it is available AND short enough
     def base_name
-      if Dir.exists? dir(base)
-        Flight.logger.debug("The basse name '#{base}' has already been taken")
+      if File.exists? metadata_path(base)
+        Flight.logger.debug("The base name '#{base}' has already been taken")
         nil
       elsif base.length > FlightJob.config.max_id_length
         Flight.logger.warn("Reject base name '#{base}' as it is too long")
@@ -101,7 +101,7 @@ module FlightJob
       Flight.logger.warn "Falling back on random name generation"
       (1..FlightJob.config.max_ids).each do
         candidate = SecureRandom.urlsafe_base64(6)
-        return candidate unless Dir.exists? dir(candidate)
+        return candidate unless File.exists? metadata_path(candidate)
       end
       raise InternalError, "Failed to generate a random name"
     end
@@ -137,16 +137,16 @@ module FlightJob
     end
 
     def indices
-      Dir.glob(dir("#{base}-*"))
-        .map { |p| File.basename(p) }
+      Dir.glob(metadata_path("#{base}-*"))
+        .map { |p| File.basename(File.dirname(p)) }
         .select { |n| /-\d+\Z/.match?(n) }
         .map { |n| n.split('-').last.to_i }
         .sort
         .uniq
     end
 
-    def dir(id)
-      File.join(root_dir, id)
+    def metadata_path(id)
+      File.join(root_dir, id, 'metadata.yaml')
     end
 
     # Preserves the minimum index upon recursion
