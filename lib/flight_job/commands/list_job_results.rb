@@ -59,21 +59,8 @@ module FlightJob
           status.success?
         end
 
-        unless status
-          # Assume the directory does not exist, and give an error message according
-          # to the state
-          case job.state
-          when *Job::RUNNING_STATES
-            raise InputError, HARD_ERROR if hard_wrap?
-            raise InputError, 'Your job is currently running, please try again later...'
-          when *Job::TERMINAL_STATES
-            raise MissingError, HARD_ERROR if hard_wrap?
-            raise MissingError, 'Your job did not create the results directory!'
-          else
-            raise InputError, HARD_ERROR if hard_wrap?
-            raise InputError, 'Your job has not started yet, please try again later...'
-          end
-        end
+        # Handle errors
+        raise InternalError, HARD_ERROR unless status
       end
 
       private
