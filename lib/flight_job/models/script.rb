@@ -69,7 +69,7 @@ module FlightJob
       end.reject(&:nil?).sort
     end
 
-    attr_reader :id
+    attr_accessor :id
     attr_writer :notes
 
     validates :id, presence: true, length: { maximum: FlightJob.config.max_id_length },
@@ -131,43 +131,6 @@ module FlightJob
       end
     end
 
-    def initialize(**original)
-      opts = original.dup
-      if id = opts.delete(:id)
-        # Set the provided ID
-        @id = id
-      else
-        # Implicitly generate an ID
-        # NOTE: In general, the calling method should provide a friendly ID.
-        # However the randomised implicit fallback is being maintained
-        @id ||= begin
-          candidate = false
-          until candidate do
-            # Generate a 8 byte base64 string
-            # NOTE: 6 bytes of randomness becomes 8 base64-chars
-            candidate = SecureRandom.urlsafe_base64(6)
-
-            # Ensure the candidate start with an alphanumeric character
-            unless /[[:alnum:]]/ =~ candidate[0]
-              candidate = false
-              next
-            end
-
-            # Check the candidate has not been taken
-            # NOTE: This does not reserve the candidate, it needs to be checked
-            #       again just before the script is rendered
-            if Dir.exists? File.expand_path(candidate, FlightJob.config.scripts_dir)
-              candidate = false
-              next
-            end
-          end
-          candidate
-        end
-      end
-
-      super(**opts)
-    end
-
     # NOTE: Only used for a shorthand existence check, full validation is required in
     # before it can be used
     def exists?
@@ -203,7 +166,7 @@ module FlightJob
     end
 
     def tags=(tags)
-      metadata['tags'] = tags
+      metadata_setter('tags', tags)
     end
 
     def template_id
@@ -211,7 +174,7 @@ module FlightJob
     end
 
     def template_id=(id)
-      metadata['template_id'] = id
+      metadata_setter('template_id', id)
     end
 
     def script_name
@@ -219,17 +182,17 @@ module FlightJob
     end
 
     def script_name=(name)
-      metadata['script_name'] = name
+      metadata_setter('script_name', name)
     end
 
     # NOTE: For backwards compatibility, the 'answers' are not strictly required
     # This may change in a few release
     def answers
-      metadata['answers'] ||= {}
+      metadata['answers']
     end
 
     def answers=(object)
-      metadata['answers'] = object
+      metadata_setter('answers', object)
     end
 
     def load_template
@@ -323,15 +286,32 @@ module FlightJob
 
     private
 
+    # Allows keys to be set within the metadata without loading the file
+    # This allows the 'id' to remain unset during the 'initialize' method
+    def metadata_setter(key, value)
+      if @metadata
+        @metadata[key] = value
+      else
+        @provisional_metadata ||= {}
+        @provisional_metadata[key] = value
+      end
+    end
+
     # NOTE: The raw metadata is exposed through the CLI with the --json flag.
     # This allows it to be directly passed to the API layer.
     # Consider refactoring when introducing a non-backwards compatible change
     def metadata
       @metadata ||= if File.exists?(metadata_path)
-                      YAML.load File.read(metadata_path)
-                    else
-                      { 'version' => 0, 'created_at' => DateTime.now.rfc3339 }
-                    end
+        YAML.load File.read(metadata_path)
+      else
+        { 'version' => 0, 'created_at' => DateTime.now.rfc3339 }
+      end.tap do |hash|
+        if @provisional_metadata
+          hash.merge!(@provisional_metadata)
+          @provisional_metadata = nil
+        end
+        hash['answers'] ||= {}
+      end
     end
   end
 end

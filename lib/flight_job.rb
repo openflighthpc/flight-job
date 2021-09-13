@@ -41,6 +41,8 @@ module FlightJob
     sym.to_s.dup.split(/[-_]/).each { |c| c[0] = c[0].upcase }.join
   end
 
+  autoload 'NameGenerator', File.expand_path('flight_job/name_generator', __dir__)
+
   # Setup the autoloads for the commands
   module Commands
     Dir.glob(File.expand_path('flight_job/commands/*.rb', __dir__)).each do |path|

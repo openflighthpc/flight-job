@@ -54,14 +54,7 @@ module FlightJob
       private
 
       def job_id
-        glob_dir = File.dirname Job.new(id: "#{script.id}-*").metadata_path
-        index = Dir.glob(glob_dir)
-                   .map { |p| File.basename(p).split('-').last }
-                   .select { |n| /\A\d+\Z/ }
-                   .map(&:to_i)
-                   .sort
-                   .last
-        "#{script.id}-#{(index || 0) + 1}"
+        NameGenerator.new_job(script.id).next_name
       end
     end
   end

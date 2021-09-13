@@ -506,28 +506,8 @@ module FlightJob
       end
 
       def default_id
-        base = template.id
-        candidate = if Script.new(id: base).exists?
-          ids = Dir.glob(Script.new(id: "#{base}-*").metadata_path)
-            .map { |p| File.basename(File.dirname(p)) }
-            .select { |n| /\A#{base}-\d+\Z/ }
-            .map { |n| n.split('-').last.to_i }
-            .reject { |id| id == 0 }
-            .sort
-          id = (1..(ids.length + 1)).find { |i| ids[i - 1] != i }
-          "#{base}-#{id}"
-        else
-          base
-        end
-        if verify_id(candidate, raise_on_error: false)
-          candidate
-        else
-          FlightJob.logger.warn <<~WARN
-            Script ID '#{candidate}' unexpectedly failed validation!
-            Failing back on a randomised value.
-          WARN
-          nil
-        end
+        generator = NameGenerator.new_script(template.id)
+        generator.base_name || generator.backfill_name
       end
 
       # Checks if the script's ID is valid
