@@ -39,6 +39,8 @@ module Flight
       return @config if @config
       @config = FlightJob::Configuration.build
       @config.tap do |c|
+        logger.info("Flight.env set to #{env.inspect}")
+        logger.info("Flight.root set to #{root.inspect}")
         c.__logs__.log_with(logger)
         raise FlightJob::ConfigError, c.rich_error_message unless c.valid?
       end
@@ -47,16 +49,19 @@ module Flight
 
     def env
       @env ||= ActiveSupport::StringInquirer.new(
-        ENV["flight_ENVIRONMENT"].presence || "production"
+        ENV["flight_ENVIRONMENT"].presence || "standalone"
       )
     end
 
     def root
-      @root ||= if env.production? && ENV["flight_ROOT"].present?
-        File.expand_path(ENV["flight_ROOT"])
-      else
-        File.expand_path('..', __dir__)
-      end
+      @root ||=
+        if env.production? && ENV["flight_ROOT"].present?
+          File.expand_path(ENV["flight_ROOT"])
+        elsif env.integrated? && !ENV["flight_ROOT"].present?
+          raise GeneralError, "flight_ROOT not set for integrated environment"
+        else
+          File.expand_path('..', __dir__)
+        end
     end
 
     def logger
