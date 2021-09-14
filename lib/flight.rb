@@ -55,7 +55,7 @@ module Flight
 
     def root
       @root ||=
-        if env.production? && ENV["flight_ROOT"].present?
+        if env.integrated? && ENV["flight_ROOT"].present?
           File.expand_path(ENV["flight_ROOT"])
         elsif env.integrated? && !ENV["flight_ROOT"].present?
           raise GeneralError, "flight_ROOT not set for integrated environment"
