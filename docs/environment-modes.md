@@ -28,17 +28,22 @@ configuration file would be loaded from `/opt/flight-job/etc/job.yaml` and,
 the relative path for the `templates_dir` (`usr/share/job/templates`) would be
 expanded to `/opt/flight-job/usr/share/job/templates`.
 
-There are two mechanisms by which standalone mode can be activated, either
+There are three mechanisms by which standalone mode can be activated, any
 of which is sufficient.
 
-* Create the file `.env.development.local` containing the line
+* Create the file `.flight-environment` containing the line
   `flight_ENVIRONMENT=standalone`.
   ```
-  echo flight_ENVIRONMENT=standalone > .env.development.local
+  echo flight_ENVIRONMENT=standalone > .flight-environment
   ```
 * Export the environment variable `flight_ENVIRONMENT` set to `standalone`.
   ```
   export flight_ENVIRONMENT=standalone
+  ```
+* Ensure that the `.flight-environment` file doesn't exist and that the
+  `flight_ENVIRONMENT` variable isn't set.
+  ```
+  rm .flight-environment
   ```
 
 ### Development environment mode
@@ -53,4 +58,15 @@ file would be loaded from `/opt/flight-job/etc/job.yaml` and any relative
 paths expanded from `/opt/flight-job`.  E.g., by default the templates would
 be loaded from `/opt/flight-job/usr/share/job/templates`.
 
-This is the default environment mode for a manual installation.
+There are two mechanisms by which standalone mode can be activated, either
+of which is sufficient.
+
+* Create the file `.flight-envionment` containing the line
+  `flight_ENVIRONMENT=development`.
+  ```
+  echo flight_ENVIRONMENT=development > .flight-environment
+  ```
+* Export the environment variable `flight_ENVIRONMENT` set to `development`.
+  ```
+  export flight_ENVIRONMENT=development
+  ```
