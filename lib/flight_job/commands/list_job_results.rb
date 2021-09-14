@@ -37,7 +37,13 @@ module FlightJob
 
       def run
         job = load_job(args.first)
-        assert_results_dir_exists(job)
+
+        # Skip the assertion check when hard wrapping and the directory exists
+        # This causes to command to run on empty directories
+        if hard_wrap? && Dir.exists?(job.results_dir)
+          assert_results_dir_exists(job)
+        end
+
         FlightJob.logger.debug "Running: ls #{job.results_dir} #{ls_options.join(" ")}"
         cmd = ['ls', job.results_dir, *ls_options]
 
