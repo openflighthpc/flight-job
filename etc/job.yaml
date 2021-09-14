@@ -29,7 +29,8 @@
 # Templates Directory
 # Specify the directory containing the templates.
 #
-# Relative paths are expanded from flight_ROOT. **
+# Relative paths are expanded according to the "Relative path expansion" rules
+# described below.
 #
 # This value can be set in a user's config file.
 # The environment variable flight_JOB_templates_dir takes precedence.
@@ -40,7 +41,8 @@
 # Scripts Directory
 # Specify where the scripts will be stored.
 #
-# Relative paths are expanded from flight_ROOT. **
+# Relative paths are expanded according to the "Relative path expansion" rules
+# described below.
 #
 # This value can be set in a user's config file.
 # The environment variable flight_JOB_scripts_dir takes precedence.
@@ -51,7 +53,8 @@
 # Jobs Directory
 # Specify where the scripts will be stored.
 #
-# Relative paths are expanded from flight_ROOT. **
+# Relative paths are expanded according to the "Relative path expansion" rules
+# described below.
 #
 # This value can be set in a user's config file.
 # The environment variable flight_JOB_jobs_dir takes precedence.
@@ -75,7 +78,8 @@
 # The default value will automatically use the 'scheduler' config. This feature
 # is not supported when overridden.
 #
-# Relative paths are expanded from flight_ROOT. **
+# Relative paths are expanded according to the "Relative path expansion" rules
+# described below.
 #
 # The environment variable flight_JOB_submit_script_path takes precedence.
 # ==============================================================================
@@ -88,7 +92,8 @@
 # The default value will automatically use the 'scheduler' config. This feature
 # is not supported when overridden.
 #
-# Relative paths are expanded from flight_ROOT. **
+# Relative paths are expanded according to the "Relative path expansion" rules
+# described below.
 #
 # The environment variable flight_JOB_monitor_script_path takes precedence.
 # ==============================================================================
@@ -109,7 +114,8 @@
 # The default value will automatically use the 'scheduler' config. This feature
 # is not supported when overridden.
 #
-# Relative paths are expanded from flight_ROOT. **
+# Relative paths are expanded according to the "Relative path expansion" rules
+# described below.
 #
 # The environment variable flight_JOB_adapter_script_path takes precedence.
 # ==============================================================================
@@ -123,7 +129,8 @@
 # The default value will automatically use the 'scheduler' config. This feature
 # is not supported when overridden.
 #
-# Relative paths are expanded from flight_ROOT. **
+# Relative paths are expanded according to the "Relative path expansion" rules
+# described below.
 #
 # WARNING: Unrecognized flight-job states may prevent the job from being updated.
 # Ensure all flight-job states are valid (see: lib/flight_job/models/script.rb)
@@ -174,7 +181,8 @@
 # The file the logger will write to. It will write to standard error if
 # omitted.
 #
-# Relative paths are expanded from flight_ROOT. **
+# Relative paths are expanded according to the "Relative path expansion" rules
+# described below.
 #
 # This value can be set in a user's config file.
 # The environment variable flight_JOB_log_path takes precedence.
@@ -192,9 +200,16 @@
 # log_level: warn
 
 # ==============================================================================
-# ** Relative Paths to flight_ROOT
+# Relative path expansion rules
 #
-# NOTES:
-# 1. This only applies in production and if flight_ROOT is set, otherwise
-# 2. It will default to the installation directory.
+# Relative paths, where supported, are expanded in one of two ways:
+#
+# 1. If Flight Job Script API was installed from the OpenFlight package repos,
+#    they will be expanded from the value of the `flight_ROOT` environment
+#    variable.
+# 2. Otherwise they will be expanded from the Flight Job Script API
+#    installation directory.
+#
+# More details can be found at
+# https://github.com/openflighthpc/flight-job/blob/master/docs/environment-modes.md
 # ==============================================================================
