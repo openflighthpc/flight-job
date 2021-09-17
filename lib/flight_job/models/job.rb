@@ -44,6 +44,7 @@ module FlightJob
                       .merge(TERMINAL_STATES.map { |s| [s, :terminal] }.to_h)
 
     SCHEMA = JSONSchemer.schema({
+      "$comment" => "strip-schema",
       "type" => "object",
       "additionalProperties" => false,
       "required" => ["created_at", "script_id", "state", "submit_status", "submit_stdout", "submit_stderr"],
@@ -89,6 +90,7 @@ module FlightJob
     })
 
     SUBMIT_RESPONSE_SCHEMA = JSONSchemer.schema({
+      "$comment" => "strip-schema",
       "type" => "object",
       "additionalProperties" => false,
       "required" => ["id", "results_dir"],
@@ -101,6 +103,7 @@ module FlightJob
     })
 
     MONITOR_RESPONSE_SCHEMA = JSONSchemer.schema({
+      "$comment" => "strip-schema",
       "type" => "object",
       "additionalProperties" => false,
       "required" => ["state"],
@@ -140,9 +143,8 @@ module FlightJob
       end
 
       unless (schema_errors = SCHEMA.validate(metadata).to_a).empty?
-        FlightJob.logger.debug("The following metadata file is invalid: #{metadata_path}\n") do
-          JSON.pretty_generate(schema_errors)
-        end
+        Flight.logger.info "Job '#{id.to_s}' metadata is invalid"
+        LogJSONSchemaErrors.new(schema_errors, :info).log
         errors.add(:metadata, 'is invalid')
       end
     end
@@ -509,11 +511,12 @@ module FlightJob
             yield(data) if block_given?
           else
             FlightJob.logger.error("Invalid #{type} response for job: #{id}")
-            FlightJob.logger.debug(JSON.pretty_generate(errors))
+            LogJSONSchemaErrors.new(errors, :warn).log
             raise_command_error
           end
         rescue JSON::ParserError
           FlightJob.logger.error("Failed to parse #{type} JSON for job: #{id}")
+          FlightJob.logger.warn(string)
           FlightJob.logger.debug($!.message)
           raise_command_error
         end

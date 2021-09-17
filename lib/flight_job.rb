@@ -41,6 +41,7 @@ module FlightJob
   end
 
   autoload 'OneOfParser', File.expand_path('flight_job/one_of_parser.rb', __dir__)
+  autoload 'LogJSONSchemaErrors', File.expand_path('flight_job/log_json_schema_errors.rb', __dir__)
 
   # Setup the autoloads for the commands
   module Commands
