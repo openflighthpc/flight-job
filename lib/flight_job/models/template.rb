@@ -115,30 +115,6 @@ module FlightJob
     VALIDATOR_DEF["array_validator_def"]["properties"]["type"]["enum"].delete("array")
     VALIDATOR_DEF["array_validator_def"]["oneOf"].delete_if { |s| s["properties"]["type"]["const"] == "array" }
 
-    FORMAT_SPEC = {
-      "type" => "object",
-      "additionalProperties" => false,
-      "required" => ['type'],
-      "properties" => {
-        # The following are field called "type" and "options" not settings within "properties"
-        'type' => { "type" => "string" , "enum" => [
-          "text", "time", "select", "multiselect", 'multiline_text', 'number'
-        ] },
-        'options' => {
-          "type" => "array",
-          "items" => {
-            "type" => "object",
-            "additionalProperties" => false,
-            "required" => ['text', 'value'],
-            "properties" => {
-              'text' => { "type" => "string" },
-              'value' => { "type" => "string" },
-            }
-          }
-        }
-      }
-    }
-
     ASK_WHEN_SPEC = {
       "type" => "object",
       "additionalProperties" => false,
@@ -151,37 +127,171 @@ module FlightJob
       }
     }
 
-    QUESTIONS_SPEC = {
-      "type" => "array",
-      "items" => {
+    QUESTION_PROPS_STUB = {
+      "id" => {}, "text" => {}, "description" => {},
+      "validate" => {}, "ask_when" => {}
+    }
+    QUESTION_DEF = {
+      "question_def" => {
+        # Generic top level definition of each format
+        "$comment" => "strip-schema",
         "type" => "object",
-        "additionalProperties" => false,
-        "required" => ['id', 'text'],
+        "additionalProperties" => true,
+        "required" => ["id", "text", "format"],
         "properties" => {
           'id' => { 'type' => 'string' },
           'text' => { 'type' => 'string' },
-          'description' => { 'type' => 'string' },
-          # NOTE' => Forcing the default to be a string is a stop-gap measure
-          # It keeps the initial implementation simple as everything is a strings
-          # Eventually multiple formats will be supported
-          'default' => {},
-          'format' => FORMAT_SPEC,
+          "description" => { "type" => "string" },
           'validate' => { "$ref" => "#/$defs/validator_def" },
-          'ask_when' => ASK_WHEN_SPEC
-        },
-        "if" => { "properties" => { "format" => {
-          "type" => "object",
-          # NOTE: The following "type" is the name of the property NOT a declaration
-          "properties" => { "type" => { "const" => "multiselect" } }
-        } } },
-        "then" => { "properties" => {
-          "default" => {
-            "type" => "array", "items" => { "type" => ["string", "integer", "number", "boolean"] }
+          'ask_when' => ASK_WHEN_SPEC,
+          "format" => {
+            "type" => "object",
+            "required" => ["type"],
+            "additionalProperties" => true,
+            "properties" => {
+              'type' => {
+                "enum" => [
+                  "text", "time", "select", "multiselect", 'multiline_text', 'number'
+                ]
+              }
+            }
           }
-        } },
-        "else" => { "properties" => {
-          "default" => { "type" => ["string", "integer", "number", "boolean"] }
-        } }
+        },
+
+        "oneOf" => [
+          # (Multi) Text format questions
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => {
+              **QUESTION_PROPS_STUB,
+              "default" => { "type" => "string" },
+              "format" => {
+                "type" => "object",
+                "additionalProperties" => false,
+                "properties" => {
+                  "type" => { "const" => "text" }
+                }
+              }
+            }
+          },
+
+          # Multi Text format questions
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => {
+              **QUESTION_PROPS_STUB,
+              "default" => { "type" => "string" },
+              "format" => {
+                "type" => "object",
+                "additionalProperties" => false,
+                "properties" => {
+                  "type" => { "const" => "multiline_text" }
+                }
+              }
+            }
+          },
+
+          # Time format questions
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => {
+              **QUESTION_PROPS_STUB,
+              # XXX: The default needs to be hardened for this
+              "default" => {},
+              "format" => {
+                "type" => "object",
+                "additionalProperties" => false,
+                "properties" => {
+                  "type" => { "const" => "time" }
+                }
+              }
+            }
+          },
+
+          # Number format questions
+          # NOTE: By default, HTML <number> only supports integers
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => {
+              **QUESTION_PROPS_STUB,
+              "default" => { "type" => "integer" },
+              "format" => {
+                "type" => "object",
+                "additionalProperties" => false,
+                "properties" => {
+                  "type" => { "const" => "number" }
+                }
+              }
+            }
+          },
+
+          # Select format questions
+          # NOTE: Consider allowing integer/boolean defaults
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => {
+              **QUESTION_PROPS_STUB,
+              "default" => { "type" => "string" },
+              "format" => {
+                "type" => "object",
+                "additionalProperties" => false,
+                "properties" => {
+                  "type" => { "const" => "select" },
+                  "options" => {
+                    "type" => "array",
+                    "items" => {
+                      "type" => "object",
+                      "additionalProperties" => false,
+                      "required" => ["text", "value"],
+                      "properties" => {
+                        "text" => { "type" => "string" },
+                        "value" => { "type" => "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+
+          # Multi-select format questions
+          # NOTE: Consider allowing integer/boolean defaults
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => {
+              **QUESTION_PROPS_STUB,
+              "default" => {
+                "type" => "array",
+                "items" => { "type" => "string" }
+              },
+              "format" => {
+                "type" => "object",
+                "additionalProperties" => false,
+                "properties" => {
+                  "type" => { "const" => "multiselect" },
+                  "options" => {
+                    "type" => "array",
+                    "items" => {
+                      "type" => "object",
+                      "additionalProperties" => false,
+                      "required" => ["text", "value"],
+                      "properties" => {
+                        "text" => { "type" => "string" },
+                        "value" => { "type" => "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
       }
     }
 
@@ -193,7 +303,10 @@ module FlightJob
       "properties" => {
         'copyright' => { "type" => "string" },
         'description' => { "type" => 'string' },
-        'generation_questions' => QUESTIONS_SPEC,
+        'generation_questions' => {
+          "type" => "array",
+          "items" => { "$ref" => "#/$defs/question_def" }
+        },
         'license' => { "type" => "string" },
         'name' => { "type" => 'string' },
         'priority' => { "type" => 'integer' },
@@ -204,6 +317,7 @@ module FlightJob
         '__meta__' => {}
       },
       "$defs" => {}.merge!(VALIDATOR_DEF)
+                   .merge!(QUESTION_DEF)
     })
 
     def self.load_all(validate: true)
@@ -240,18 +354,33 @@ module FlightJob
     validate do
       if metadata
         unless (schema_errors = SCHEMA.validate(metadata).to_a).empty?
-          # Parsers the errors for those with the correct oneOf match
-          top_flags = OneOfParser.new('validator_def', 'properties/type', schema_errors).flags
+          # # Parsers the errors for those with the correct oneOf match
+          top_flags = OneOfParser.new(
+            'validator_def', 'properties/type',
+            /\A\/generation_questions\/\d+\/validate/,
+            schema_errors
+          ).flags
 
-          # Re-run the parser for the array validators
-          array_flags = OneOfParser.new('array_validator_def', 'properties/type', schema_errors).flags
+          # # Re-run the parser for the array validators
+          array_flags = OneOfParser.new(
+            'array_validator_def', 'properties/type',
+            /\A\/generation_questions\/\d+\/validate\/items/,
+            schema_errors
+          ).flags
+
+          # Re-run the parser for the question format validators
+          format_flags = OneOfParser.new(
+            'question_def', 'properties/format/properties/type',
+            /\A\/generation_questions\/\d+/,
+            schema_errors
+          ).flags
 
           # Generate the log levels from the flags:
           # * warn: Errors unrelated to a oneOf
           # * warn: Errors which match a oneOf with the correct type
           # * debug: Errors which failed a oneOf on the wrong type
           levels = top_flags.each_with_index.map do |_, idx|
-            flags = [top_flags[idx], array_flags[idx]]
+            flags = [top_flags[idx], array_flags[idx], format_flags[idx]]
             flags.include?(false) ? :debug : :warn
           end
 

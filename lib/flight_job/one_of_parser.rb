@@ -57,9 +57,10 @@ module FlightJob
   # * false - The error failed on the 'oneOf' match but for the incorrect 'const-key'
   # * true -  The error failed on the 'oneOf' with the correct 'const-key'
 
-  OneOfParser = Struct.new(:def_key, :const_key, :errors_array) do
+  OneOfParser = Struct.new(:def_key, :const_key, :data_regex, :errors_array) do
     def flags
       @flags ||= errors_array.map do |error|
+        next nil unless def_regex.match?(error["schema_pointer"])
         key = error_key(error)
         next nil unless key
         const_indices[key] == error_index(error)
@@ -68,8 +69,7 @@ module FlightJob
 
     private
 
-    # Groups the errors according to the data_pointer's "directory"/"parent",
-    # if schema_pointer matches the def_regex
+    # Groups the errors which share a key according the schema pointer
     def partitioned_errors
       @partitioned_errors = errors_array.each_with_object({}) do |error, memo|
         next unless def_regex.match?(error["schema_pointer"])
@@ -109,7 +109,7 @@ module FlightJob
     end
 
     def error_key(error)
-      match = def_regex.match(error['schema_pointer'])
+      match = data_regex.match(error['data_pointer'])
       match ? match.to_s : nil
     end
 
