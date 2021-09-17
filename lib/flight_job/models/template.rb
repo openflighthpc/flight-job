@@ -248,13 +248,10 @@ module FlightJob
           FlightJob.logger.debug("\n-------------------------------------------------")
 
           # Parsers the errors for those with the correct oneOf match
-          # NOTE: The regex is used to group errors which share a oneOf validation
-          regex = /\A\/generation_questions\/\d+\/validate/
-          top_flags = OneOfParser.new('validator_def', 'type', regex, schema_errors).flags
+          top_flags = OneOfParser.new('validator_def', 'properties/type', schema_errors).flags
 
           # Re-run the parser for the array validators
-          array_regex = /\A\/generation_questions\/\d+\/validate\/items/
-          array_flags = OneOfParser.new('array_validator_def', 'type', array_regex, schema_errors).flags
+          array_flags = OneOfParser.new('array_validator_def', 'properties/type', schema_errors).flags
 
           # Generate the errors
           schema_errors.each_with_index.map do |error, index|

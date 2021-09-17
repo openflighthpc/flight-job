@@ -57,10 +57,9 @@ module FlightJob
   # * false - The error failed on the 'oneOf' match but for the incorrect 'const-key'
   # * true -  The error failed on the 'oneOf' with the correct 'const-key'
 
-  OneOfParser = Struct.new(:def_key, :const_key, :grouping_regex, :errors_array) do
+  OneOfParser = Struct.new(:def_key, :const_key, :errors_array) do
     def flags
       @flags ||= errors_array.map do |error|
-        next nil unless def_regex.match?(error["schema_pointer"])
         key = error_key(error)
         next nil unless key
         const_indices[key] == error_index(error)
@@ -84,13 +83,12 @@ module FlightJob
     # Determines the first missing index
     def const_indices
       @const_indices ||= partitioned_errors.map do |key, errors|
-        indices = errors.map { |e| e["schema"].is_a?(Hash) ? [e, e["schema"]["const"]] : [nil, nil] }
-                        .select { |_, t| t }
-                        .map { |e, _| error_index(e) }
+        indices = errors.select { |e| const_regex.match? e['schema_pointer'] }
+                        .map { |e| error_index(e) }
                         .uniq
                         .sort
         if indices.empty?
-          index = nil
+          index = 0
         else
           index = (0..(indices.last + 1)).find { |i| indices[i] != i }
         end
@@ -99,11 +97,19 @@ module FlightJob
     end
 
     def def_regex
-      @def_regex ||= Regexp.new(File.join('\A/\$defs', def_key, 'oneOf/(?<index>\d+)'))
+      @def_regex ||= Regexp.new(
+        File.join('\A/\$defs', def_key, 'oneOf/(?<index>\d+)')
+      )
+    end
+
+    def const_regex
+      @const_regex ||= Regexp.new(
+        File.join('\A/\$defs', def_key, 'oneOf/(?<index>\d+)', const_key + '\Z')
+      )
     end
 
     def error_key(error)
-      match = grouping_regex.match(error['data_pointer'])
+      match = def_regex.match(error['schema_pointer'])
       match ? match.to_s : nil
     end
 
