@@ -240,39 +240,23 @@ module FlightJob
     validate do
       if metadata
         unless (schema_errors = SCHEMA.validate(metadata).to_a).empty?
-          FlightJob.logger.error("The following metadata file is invalid: #{metadata_path}")
-          FlightJob.logger.debug ("Schema:\n") do
-            JSON.pretty_generate schema_errors.first["root_schema"]
-          end
-          # Visually separates the root schema from the errors within the logs
-          FlightJob.logger.debug("\n-------------------------------------------------")
-
           # Parsers the errors for those with the correct oneOf match
           top_flags = OneOfParser.new('validator_def', 'properties/type', schema_errors).flags
 
           # Re-run the parser for the array validators
           array_flags = OneOfParser.new('array_validator_def', 'properties/type', schema_errors).flags
 
-          # Generate the errors
-          schema_errors.each_with_index.map do |error, index|
-            flags = [top_flags[index], array_flags[index]]
-            if flags.include?(false)
-              # Suppress the error as it matches the oneOf validator with the wrong type
-              msg = "Error #{index + 1}: Skipping schema_pointer: #{error["schema_pointer"]}"
-              FlightJob.logger.debug msg
-            else
-              # Display the error as it either:
-              # * Does not match the 'oneOf' validator, or
-              # * Matches with the correct type
-              error.delete('root_schema')
-              if error['schema'].is_a? Hash
-                error.delete('schema') if error['schema']['$comment'] == 'strip-schema'
-              end
-              FlightJob.logger.warn "Error #{index + 1}" do
-                JSON.pretty_generate(error)
-              end
-            end
+          # Generate the log levels from the flags:
+          # * warn: Errors unrelated to a oneOf
+          # * warn: Errors which match a oneOf with the correct type
+          # * debug: Errors which failed a oneOf on the wrong type
+          levels = top_flags.each_with_index.map do |_, idx|
+            flags = [top_flags[idx], array_flags[idx]]
+            flags.include?(false) ? :debug : :warn
           end
+
+          FlightJob.logger.error("The following metadata file is invalid: #{metadata_path}")
+          LogJSONSchemaErrors.new(schema_errors, levels).log
           errors.add(:metadata, 'is not valid')
         end
       end
@@ -389,7 +373,7 @@ module FlightJob
         unless errors.empty?
           all_errors[:root] = []
           errors.each do |error|
-            FlightJob.logger.debug("Validation Error 'root-value'") do
+            FlightJob.logger.warn("Validation Error 'root-value'") do
               JSON.pretty_generate(error.tap { |e| e.delete('root_schema') })
             end
 
