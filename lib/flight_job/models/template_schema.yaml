@@ -1,0 +1,240 @@
+# Top Level Specification
+$comment: strip-schema
+type: object
+additionalProperties: false
+required: [
+  'synopsis', 'version', 'generation_questions', 'name', 'copyright', 'license'
+]
+properties:
+  name: { "type" : 'string' }
+  synopsis: { "type" : 'string' }
+  description: { "type" : 'string' }
+  priority: { "type" : 'integer' }
+  copyright: { "type" : "string" }
+  license: { "type" : "string" }
+  version: { "type" : 'integer', 'const' : 0 }
+
+  script_template: { "type" : 'string' }
+  tags: { "type" : 'array', 'items' : { 'type' : 'string' }}
+  __meta__: {}
+
+  generation_questions:
+    type: "array"
+    items: { "$ref" : "#/$defs/question_def" }
+
+$def:
+  # Ask When Definition
+  ask_when_def:
+    type: "object"
+    additionalProperties: false
+    required: ['value', 'eq']
+    properties:
+      # NOTE: The question asking mechanism is coupled to the pattern match
+      # bellow. They must be updated in tandem
+      value:
+        type: "string"
+        pattern: '^question\.[a-zA-Z_-]+\.answer$'
+      eq: { "type": "string" }
+
+  # Question Definition Shared Schema
+  question_def:
+    __meta__:
+      QUESTION_PROPS_STUB: &QUESTION_PROPS_STUB
+        id: {}
+        text: {}
+        description: {}
+        validate: {}
+        ask_when: {}
+    $comment: "strip-schema"
+    type: "object"
+    additionalProperties: true
+    required: ["id", "text", "format"]
+    properties:
+      id: { 'type' : 'string' }
+      text: { 'type' : 'string' }
+      description: { "type" : "string" }
+      validate: { "$ref" : "#/$defs/validator_def" }
+      ask_when: { "$ref" : "#/$defs/ask_when_def" }
+      format:
+        type: "object"
+        required: ["type"]
+        additionalProperties: true
+        properties:
+          type:
+            enum: [
+              "text", "time", "select", "multiselect", 'multiline_text', 'number'
+            ]
+    oneOf:
+      # Text Question Sub Schema
+      - type: "object"
+        additionalProperties: false,
+        properties:
+          <<: *QUESTION_PROPS_STUB
+          default: { "enum" : ["string", "multiline_text"] }
+          format:
+            type: "object"
+            additionalProperties: false
+            properties:
+              type: { "const" : "text" }
+
+      # Time Question Sub Schema
+      - type: "object"
+        additionalProperties: false,
+        properties:
+          <<: *QUESTION_PROPS_STUB
+          # NOTE: This default needs hardening
+          default: {}
+          format:
+            type: "object"
+            additionalProperties: false
+            properties:
+              type: { "const" : "time" }
+
+      # Number Question Sub Schema
+      - type: "object"
+        additionalProperties: false,
+        properties:
+          <<: *QUESTION_PROPS_STUB
+          default: { "type" : "integer" }
+          format:
+            type: "object"
+            additionalProperties: false
+            properties:
+              type: { "const" : "number" }
+
+      # Select Question Sub Schema
+      # NOTE: Consider allowing non-strings
+      - type: "object"
+        additionalProperties: false,
+        properties:
+          <<: *QUESTION_PROPS_STUB
+          default: { "type" : "string" }
+          format:
+            type: "object"
+            additionalProperties: false
+            properties:
+              type: { "const" : "select" }
+              options: &SELECT_QUESTION_OPTIONS
+                type: "array"
+                items:
+                  type: "object"
+                  additionalProperties: false
+                  required: ["text", "value"]
+                  properties:
+                    text: { "type" : "string" }
+                    value: { "type" : "string" }
+
+      # Multi-Select Question Sub Schema
+      # NOTE: Consider allowing non-strings
+      - type: "object"
+        additionalProperties: false
+        properties:
+          <<: *QUESTION_PROPS_STUB
+          default:
+            type: 'array'
+            items: { "type" : "string" }
+          format:
+            type: "object"
+            additionalProperties: false
+            properties:
+              type: { "const" : "select" }
+              options:
+                <<: *SELECT_QUESTION_OPTIONS
+
+  # Question Validator Specification
+  validator_def:
+    $comment: "strip-schema"
+    type: "object"
+    required: ["type"]
+    additionalProperties: true
+    properties:
+      type:
+        # NOTE: The array specification shadows this field
+        enum: [
+          "string", "number", "integer", "boolean", "array"
+        ]
+
+    # Shared oneOf matchers
+    __meta__:
+      STRING_VALIDATOR: &STRING_VALIDATOR
+        type: "object"
+        additionalProperties: false
+        properties:
+          type: { "const" : "string" }
+          required: { "type" : "boolean" }
+          pattern: { "type" : "string", "format" : "regex" }
+          pattern_error: { "type" : "string" }
+          enum:
+            type: "array"
+            items: { "type" : "string" }
+            minItemt: 1
+
+      NUMBER_VALIDATOR: &NUMBER_VALIDATOR
+        type: "object"
+        additionalProperties: false
+        properties:
+          type: { "const" : "number" }
+          required: { "type" : "boolean" }
+          enum:
+            type: "array"
+            items: { "type" : ["number", "integer"] }
+            minItems: 1
+          minimum: { "type" : ["number", "integer"] }
+          maximum: { "type" : ["number", "integer"] }
+          exclusive_minimum: { "type" : ["number", "integer"] }
+          exclusive_maximum: { "type" : ["number", "integer"] }
+
+      INTEGER_VALIDATOR: &INTEGER_VALIDATOR
+        type: "object"
+        additionalProperties: false
+        properties:
+          type: { "const" : "integer" }
+          required: { "type" : "boolean" }
+          enum:
+            type: "array"
+            items: { "type" : "integer" }
+            minItems: 1
+          minimum: { "type" : "integer" }
+          maximum: { "type" : "integer" }
+          exclusive_minimum: { "type" : "integer" }
+          exclusive_maximum: { "type" : "integer" }
+
+      BOOLEAN_VALIDATOR: &BOOLEAN_VALIDATOR
+        type: "object"
+        additionalProperties: false
+        properties:
+          type: { "const" : "boolean" }
+          required: { "type" : "boolean" }
+
+
+    # NOTE: The array specification shadows this field
+    oneOf:
+      - *STRING_VALIDATOR
+      - *NUMBER_VALIDATOR
+      - *INTEGER_VALIDATOR
+      - *BOOLEAN_VALIDATOR
+
+      # ARRAY VALIDATOR
+      - type: "object"
+        additionalProperties: false
+        properties:
+          type: { "const" : "array" }
+          required: { "type" : "boolean" }
+          items: { "$ref" : "#/$defs/array_validator_def" }
+
+  # Array Questions' Items Validator Specification
+  validator_def:
+    $comment: "strip-schema"
+    type: "object"
+    required: ["type"]
+    additionalProperties: true
+    properties:
+      type:
+        enum: [
+          "string", "number", "integer", "boolean"
+        ]
+    oneOf:
+      - *STRING_VALIDATOR
+      - *NUMBER_VALIDATOR
+      - *INTEGER_VALIDATOR
+      - *BOOLEAN_VALIDATOR
