@@ -34,49 +34,55 @@
 # script or clone the entire 'slurm' directory.
 #-------------------------------------------------------------------------------
 
+set -o pipefail
+# set -x
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+source "${DIR}/functions.sh"
 source "${DIR}/parser.sh"
 
-# Ensure jq is on the path
-set -e
-which "jq" >/dev/null
+submit_job() {
+    $DIR/sbatch-wrapper.sh "$1"
+}
 
-# Submit the job to the scheduler
-output=$($DIR/sbatch-wrapper.sh "$1")
-cat <<EOF >&2
-sbatch wrapper output:
-$output
-EOF
+parse_submission_id() {
+    assert_array_var PARSE_RESULT
+    PARSE_RESULT[submission_id]=$( cut -d' ' -f4)
+}
 
-if [[ $? -ne 0 ]]; then
-  exit $?
-fi
+run_scontrol() {
+    scontrol show job "${1}" --oneline | head -n1 | tr ' ' '\n'
+}
 
-# Determine the scheduler's ID
-id=$(echo "$output" | cut -d' ' -f4)
-if [[ $? -ne 0 ]]; then
-  exit $?
-fi
+parse_scontrol_output() {
+    assert_array_var PARSE_RESULT
+    local working
+    local name
+    local scontrol_output
+    local submission_id
 
-# Run scontrol
-scontrol_output=$(scontrol show job "$id" --oneline)
-exit_status=$?
-cat <<EOF >&2
-scontrol output:
-$(echo "$scontrol_output" | head -n 1 | tr ' ' '\n')
-EOF
-if [[ $exit_status -ne 0 ]]; then
-  exit $exit_status
-fi
+    submission_id="${PARSE_RESULT[submission_id]}"
+    scontrol_output="$(cat)"
+    PARSE_RESULT[job_type]=$(parse_scontrol_job_type <<< "${scontrol_output}")
+    PARSE_RESULT[scheduler_id]=$(parse_scontrol_scheduler_id <<< "${scontrol_output}")
+    PARSE_RESULT[results_dir]=$(parse_results_dir "${submission_id}" <<< "${scontrol_output}")
+}
 
-# Determine the results directory / Job Type
-working=$(parse_scontrol WorkDir <<< "${scontrol_output}")
-name=$(parse_scontrol JobName <<< "${scontrol_output}")
-results_dir="${working}/${name}-outputs/$id"
-job_type=$(parse_scontrol_job_type <<< "$scontrol_output")
+parse_results_dir() {
+    local working name scontrol_output submission_id
+    submission_id="$1"
 
-# Create the JSON template
-read -r -d '' template <<'TEMPLATE' || true
+    scontrol_output="$(cat)"
+    working=$(parse_scontrol WorkDir <<< "${scontrol_output}")
+    name=$(parse_scontrol JobName <<< "${scontrol_output}")
+    echo "${working}/${name}-outputs/${submission_id}"
+}
+
+# Print to stdout the JSON template to be returned to flight job.
+generate_template() {
+    local template
+
+    read -r -d '' template <<'TEMPLATE' || true
 {
   version: 1,
   job_type: ($job_type),
@@ -85,9 +91,37 @@ read -r -d '' template <<'TEMPLATE' || true
 }
 TEMPLATE
 
-# Render and return the JSON payload
-echo '{}' | jq  \
-  --arg id      "$(parse_scontrol_scheduler_id <<< "$scontrol_output")" \
-  --arg results_dir "$results_dir" \
-  --arg job_type "$job_type" \
-  "$template" | tr -d "\n"
+  echo '{}' | jq  \
+    --arg id          "${PARSE_RESULT[scheduler_id]}" \
+    --arg results_dir "${PARSE_RESULT[results_dir]}"  \
+    --arg job_type    "${PARSE_RESULT[job_type]}"     \
+    "$template"
+}
+
+main() {
+    declare -A PARSE_RESULT
+    local exit_status
+    local output
+
+    check_progs jq scontrol sbatch
+
+    output="$(submit_job "$1" | tee >(log_command "sbatch wrapper" 1>&2))"
+    exit_status=$?
+    if [[ $exit_status -ne 0 ]]; then
+        exit $exit_status
+    fi
+    parse_submission_id <<< "${output}"
+
+    output=$(run_scontrol "${PARSE_RESULT[submission_id]}" | tee >(log_command "scontrol" 1>&2))
+    exit_status=$?
+    if [[ $exit_status -ne 0 ]]; then
+        exit $exit_status
+    fi
+
+    parse_scontrol_output <<< "${output}"
+    declare -A | grep PARSE_RESULT >&2
+
+    generate_template | report_metadata
+}
+
+main "$@"

@@ -92,6 +92,7 @@ if [[ "$exit_status" -eq 0 ]]; then
   array_job_state="UNKNOWN"
 
   while IFS= read -r line; do
+    line=$(echo "$line" | tr ' ' '\n')
     index=$(parse_scontrol_task_index "$line")
     if echo "$index" | grep -P '^\d+$' >/dev/null; then
       # Generate and store the JSON for the task

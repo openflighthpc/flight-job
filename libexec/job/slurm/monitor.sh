@@ -78,21 +78,22 @@ TEMPLATE
 # Fetch the state of the job
 raw_control=$(scontrol show job "$1" --oneline 2>&1)
 exit_status="$?"
+control="$(echo "$raw_control" | head -n 1 | tr ' ' '\n')"
 cat <<EOF >&2
 scontrol:
 $raw_control
 EOF
 
 if [[ "$exit_status" -eq 0 ]]; then
-  state=$(                parse_scontrol_state  "$raw_control")
-  scheduler_state=$(      parse_scontrol_scheduler_state "$raw_control")
-  reason=$(               parse_scontrol_reason "$raw_control")
-  start_time=$(           parse_scontrol_start_time "$raw_control" "$state")
-  end_time=$(             parse_scontrol_end_time   "$raw_control" "$state")
-  estimated_start_time=$( parse_scontrol_estimated_start_time "$raw_control" "$state")
-  estimated_end_time=$(   parse_scontrol_estimated_end_time   "$raw_control" "$state")
-  stdout_path=$(          parse_scontrol_stdout "$raw_control")
-  stderr_path=$(          parse_scontrol_stderr "$raw_control")
+  state=$(                parse_scontrol_state  "$control")
+  scheduler_state=$(      parse_scontrol_scheduler_state "$control")
+  reason=$(               parse_scontrol_reason "$control")
+  start_time=$(           parse_scontrol_start_time "$control" "$state")
+  end_time=$(             parse_scontrol_end_time   "$control" "$state")
+  estimated_start_time=$( parse_scontrol_estimated_start_time "$control" "$state")
+  estimated_end_time=$(   parse_scontrol_estimated_end_time   "$control" "$state")
+  stdout_path=$(          parse_scontrol_stdout "$control")
+  stderr_path=$(          parse_scontrol_stderr "$control")
 elif [[ "$raw_control" == "slurm_load_jobs error: Invalid job id specified" ]]; then
   # Fallback to sacct if scontrol does not recognise the ID
   raw_acct=$(sacct --noheader --parsable --jobs "$1" --format State,Reason,START,END,AllocTRES)

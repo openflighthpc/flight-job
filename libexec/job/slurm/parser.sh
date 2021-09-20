@@ -88,13 +88,13 @@ function _parse_time {
 }
 
 function _parse_start_time {
-  if echo "RUNNING COMPLETED FAILED CANCELLED" | grep "$2" >/dev/null; then
+  if echo "RUNNING COMPLETED FAILED CANCELLED" | grep -q "$2"; then
     _parse_time "$1"
   fi
 }
 
 function _parse_end_time {
-  if echo "COMPLETED FAILED CANCELLED" | grep "$2" >/dev/null; then
+  if echo "COMPLETED FAILED CANCELLED" | grep -q "$2"; then
     _parse_time "$1"
   fi
 }
@@ -106,7 +106,7 @@ function _parse_estimated_start_time {
 }
 
 function _parse_estimated_end_time {
-  if echo "RUNNING PENDING" | grep "$2" >/dev/null; then
+  if echo "RUNNING PENDING" | grep -q "$2"; then
     _parse_time "$1"
   fi
 }
@@ -122,30 +122,45 @@ function _parse_state {
 # ==============================================================================
 # scontrol parsers
 #
-# NOTE:
-# * Unless otherwise stated, these parsers are designed for an individual job/task
-# * scontrol needs to be called with the --oneline flag
+# These parsers parse a variant of `scontrol` output.  The variant can be
+# achieved by running `scontrol` as:
+#
+# ```
+# scontrol show job <ID> --oneline | head -n 1 | tr ' ' '\n'
+# ```
 # ==============================================================================
 
 # Extracts the value for the given key and prints to stdout.
+#
+# The parse input is read from $1 or stdin.
 parse_scontrol() {
     local key_name
     key_name="$1"
-
-    cat | head -n 1 | tr ' ' '\n' | grep "^${key_name}=" | cut -d= -f2
+    shift
+    if (( $# == 0 )) ; then
+        cat       | grep "^${key_name}=" | cut -d= -f2
+    else
+        echo "$1" | grep "^${key_name}=" | cut -d= -f2
+    fi
 }
 
 # Returns 0 if the scontrol input contains the given key.  The value of the
 # key is ignored, so a blank value counts as the key being present.
+#
+# The parse input is read from $1 or stdin.
 _scontrol_contains_key() {
     local key_name
     key_name="$1"
-
-    cat | head -n 1 | tr ' ' '\n' | grep -q "^${key_name}="
+    shift
+    if (( $# == 0 )) ; then
+        cat       | grep -q "^${key_name}="
+    else
+        echo "$1" | grep -q "^${key_name}="
+    fi
 }
 
 # This function works on all scontrol outputs
-function parse_scontrol_job_type {
+parse_scontrol_job_type() {
     if _scontrol_contains_key "ArrayJobId" ; then
         printf "ARRAY"
     else
@@ -154,7 +169,7 @@ function parse_scontrol_job_type {
 }
 
 # This function works on all scontrol outputs
-function parse_scontrol_scheduler_id {
+parse_scontrol_scheduler_id() {
     local input
     input=$(cat)
     if [ "$(parse_scontrol_job_type <<< "${input}")" == "ARRAY" ] ; then
@@ -165,13 +180,11 @@ function parse_scontrol_scheduler_id {
 }
 
 parse_scontrol_job_id() {
-  local control=$(echo "$1" | head -n 1 | tr ' ' '\n')
-  echo "$control" | grep '^JobId=' | cut -d= -f2
+  echo "$1" | grep '^JobId=' | cut -d= -f2
 }
 
 function parse_scontrol_task_index {
-  local control=$(echo "$1" | head -n 1 | tr ' ' '\n')
-  echo "$control" | grep '^ArrayTaskId=' | cut -d= -f2
+  echo "$1" | grep '^ArrayTaskId=' | cut -d= -f2
 }
 
 function parse_scontrol_state {
@@ -180,62 +193,59 @@ function parse_scontrol_state {
 }
 
 function parse_scontrol_scheduler_state {
-  local control=$(echo "$1" | head -n 1 | tr ' ' '\n')
-  echo "$control" | grep '^JobState=' | cut -d= -f2
+  echo "$1" | grep '^JobState=' | cut -d= -f2
 }
 
 function parse_scontrol_reason {
-  local control=$(echo "$1" | head -n 1 | tr ' ' '\n')
-  local reason=$(echo "$control" | grep '^Reason='   | cut -d= -f2)
+  local reason=$(echo "$1" | grep '^Reason='   | cut -d= -f2)
   if [[ "$reason" != "None" ]]; then
     printf "$reason"
   fi
 }
 
 function parse_scontrol_stdout {
-  local control=$(echo "$1" | head -n 1 | tr ' ' '\n')
-  echo "$control" | grep '^StdOut=' | cut -d= -f2
+  echo "$1" | grep '^StdOut=' | cut -d= -f2
 }
 
 function parse_scontrol_stderr {
-  local control=$(echo "$1" | head -n 1 | tr ' ' '\n')
-  echo "$control" | grep '^StdErr=' | cut -d= -f2
+  echo "$1" | grep '^StdErr=' | cut -d= -f2
 }
 
-function parse_scontrol_start_time {
-  local state="$2"
-  local control=$(echo "$1" | head -n 1 | tr ' ' '\n')
+parse_scontrol_start_time() {
+    local state control time
+    state="$2"
+    control="$1"
 
-  # Check if CANCELLED jobs actually started
-  if [ "$state" == "CANCELLED" ]; then
-    if [[ "$(echo "$control" | grep "^NodeList=" | cut -d= -f2)" == "(null)" ]]; then
-      return 0
+    # Check if CANCELLED jobs actually started
+    if [ "$state" == "CANCELLED" ]; then
+        if [[ "$(parse_scontrol NodeList "$control")" == "(null)" ]] ; then
+            return 0
+        fi
     fi
-  fi
 
-  local time=$(echo "$control" | grep '^StartTime=' | cut -d= -f2)
-  _parse_start_time "$time" "$state"
+    time=$(parse_scontrol StartTime "$control")
+    _parse_start_time "$time" "$state"
 }
 
-function parse_scontrol_end_time {
-  local state="$2"
-  local control=$(echo "$1" | head -n 1 | tr ' ' '\n')
-  local time=$(echo "$control" | grep '^EndTime=' | cut -d= -f2)
-  _parse_end_time "$time" "$state"
+parse_scontrol_end_time() {
+    local state time
+    state="$2"
+    time=$(parse_scontrol EndTime "$1")
+    _parse_end_time "$time" "$state"
 }
 
-function parse_scontrol_estimated_start_time {
-  local state="$2"
-  local control=$(echo "$1" | head -n 1 | tr ' ' '\n')
-  local time=$(echo "$control" | grep '^StartTime=' | cut -d= -f2)
-  _parse_estimated_start_time "$time" "$state"
+parse_scontrol_estimated_start_time() {
+    local state time
+    state="$2"
+    time=$(parse_scontrol StartTime "$1")
+    _parse_estimated_start_time "$time" "$state"
 }
 
-function parse_scontrol_estimated_end_time {
-  local state="$2"
-  local control=$(echo "$1" | head -n 1 | tr ' ' '\n')
-  local time=$(echo "$control" | grep '^EndTime=' | cut -d= -f2)
-  _parse_estimated_end_time "$time" "$state"
+parse_scontrol_estimated_end_time() {
+    local state time
+    state="$2"
+    time=$(parse_scontrol EndTime "$1")
+    _parse_estimated_end_time "$time" "$state"
 }
 
 # ==============================================================================
