@@ -377,7 +377,6 @@ module FlightJob
       return false unless stdout_path
       return false unless File.exists? stdout_path
       File.stat(stdout_path).readable?
-    rer
     end
 
     def stderr_readable?
