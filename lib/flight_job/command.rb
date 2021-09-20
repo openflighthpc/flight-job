@@ -184,7 +184,7 @@ module FlightJob
 
     def load_job(id)
       Job.new(id: id).tap do |job|
-        unless job.submitted?
+        unless File.exists? job.metadata_path
           raise MissingJobError, "Could not locate job: #{id}"
         end
         unless job.valid?(:load)
@@ -193,7 +193,11 @@ module FlightJob
           end
           raise InternalError, "Unexpectedly failed to load job: #{id}"
         end
-      end.tap(&:monitor)
+        job.monitor
+        unless job.submitted?
+          raise MissingJobError, "Could not load initializing job: #{id}"
+        end
+      end
     end
 
     def assert_results_dir_exists(job)

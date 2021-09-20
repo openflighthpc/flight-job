@@ -40,6 +40,9 @@ module FlightJob
 
       def initialize(object)
         @object = object
+        if object.job_type == 'INITIALIZING'
+          raise InternalError, "Can not decorate an INITIALIZING job"
+        end
       end
 
       delegate :id, to: :object

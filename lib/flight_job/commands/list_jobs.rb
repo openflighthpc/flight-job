@@ -29,7 +29,6 @@ module FlightJob
   module Commands
     class ListJobs < Command
       def run
-        Job.transition_inactive
         if jobs.empty? && !opts.json
           $stderr.puts 'Nothing To Display'
         else

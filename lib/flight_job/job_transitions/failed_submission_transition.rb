@@ -25,28 +25,25 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require 'open3'
-
 module FlightJob
-  module Commands
-    class SubmitJob < Command
+  module JobTransitions
+    class FailedSubmissionTransition < SimpleDelegator
       def run
-        job = Job.submit(script)
-
-        # Patches the submit flag on to output_options
-        # NOTE: There is probably a better way to do this in general,
-        #       but this is a once off
-        show_submit = !job.submitted?
-        output_options.merge!(submit: show_submit)
-
-        puts render_output(Outputs::InfoJob, job.decorate)
-        unless job.submitted?
-          raise GeneralError, "The job submission failed!"
+        # Check if the maximum pending submission time has elapsed
+        start = DateTime.rfc3339(created_at).to_time.to_i
+        now = Time.now.to_i
+        if now - start > FlightJob.config.submission_period
+          FlightJob.logger.error <<~ERROR
+            The following job is being flaged as FAILED as it has not been submitted: #{id}
+          ERROR
+          metadata['job_type'] = "FAILED_SUBMISSION"
+          metadata['submit_status'] = 126
+          metadata['submit_stdout'] = ''
+          metadata['submit_stderr'] = 'Failed to run the submission command for an unknown reason'
+          save_metadata
+        else
+          FlightJob.logger.info "Ignoring the following job as it is pending submission: #{id}"
         end
-      end
-
-      def script
-        @script ||= load_script(args.first)
       end
     end
   end
