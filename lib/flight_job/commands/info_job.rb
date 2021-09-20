@@ -29,7 +29,7 @@ module FlightJob
   module Commands
     class InfoJob < Command
       def run
-        puts render_output(Outputs::InfoJob, job)
+        puts render_output(Outputs::InfoJob, job.decorate)
       end
 
       private

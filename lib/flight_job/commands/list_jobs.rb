@@ -33,7 +33,7 @@ module FlightJob
         if jobs.empty? && !opts.json
           $stderr.puts 'Nothing To Display'
         else
-          puts render_output(Outputs::ListJobs, jobs)
+          puts render_output(Outputs::ListJobs, jobs.map(&:decorate))
         end
       end
 

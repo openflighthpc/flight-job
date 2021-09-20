@@ -161,6 +161,14 @@ module FlightJob
       end
     end
 
+    def script_id
+      metadata['script_id']
+    end
+
+    def script_id=(input)
+      metadata['script_id'] = input
+    end
+
     def submitted?
       File.exists? metadata_path
     end
@@ -210,10 +218,10 @@ module FlightJob
           FlightJob.logger.error <<~ERROR
             The following job is being flaged as FAILED as it has not been submitted: #{id}
           ERROR
-          self.state = 'FAILED'
-          self.submit_status = 126
-          self.submit_stdout = ''
-          self.submit_stderr = 'Failed to run the submission command for an unknown reason'
+          metadata['state'] = 'FAILED'
+          metadata['submit_status'] = 126
+          metadata['submit_stdout'] = ''
+          metadata['submit_stderr'] = 'Failed to run the submission command for an unknown reason'
           FileUtils.mkdir_p File.dirname(metadata_path)
           File.write metadata_path, YAML.dump(metadata)
           FileUtils.rm_f initial_metadata_path
@@ -236,33 +244,24 @@ module FlightJob
       metadata['created_at']
     end
 
-    def actual_start_time
-      return nil if STATES_LOOKUP[state] == :pending
-      start_time
+    def state
+      metadata['state']
     end
 
-    def estimated_start_time
-      return nil unless STATES_LOOKUP[state] == :pending
-      start_time
+    def stdout_path
+      metadata['stdout_path']
     end
 
-    def actual_end_time
-      return nil unless STATES_LOOKUP[state] == :terminal
-      end_time
+    def stderr_path
+      metadata['stderr_path']
     end
 
-    def estimated_end_time
-      return nil if STATES_LOOKUP[state] == :terminal
-      end_time
+    def submitted?
+      metadata['submit_status'] == 0
     end
 
-    [
-      "submit_status", "submit_stdout", "submit_stderr", "script_id", "state",
-      "scheduler_id", "scheduler_state", "stdout_path", "stderr_path", "reason",
-      "start_time", "end_time", "results_dir"
-    ].each do |method|
-      define_method(method) { metadata[method] }
-      define_method("#{method}=") { |value| metadata[method] = value }
+    def scheduler_id
+      metadata['scheduler_id']
     end
 
     def stdout_readable?
@@ -282,40 +281,6 @@ module FlightJob
       stdout_path == stderr_path
     end
 
-    def serializable_hash(opts = nil)
-      opts ||= {}
-      {
-        "id" => id,
-        "actual_start_time" => actual_start_time,
-        "estimated_start_time" => estimated_start_time,
-        "actual_end_time" => actual_end_time,
-        "estimated_end_time" => estimated_end_time,
-        "controls" => controls_dir.serializable_hash,
-      }.merge(metadata).tap do |hash|
-        # NOTE: The API uses the 'size' attributes as a proxy check to exists/readability
-        #       as well as getting the size. Non-readable stdout/stderr would be
-        #       unusual, and can be ignored
-        hash["stdout_size"] = File.size(stdout_path) if stdout_readable?
-        hash["stderr_size"] = File.size(stderr_path) if stderr_readable?
-
-        if Flight.config.includes.include? 'script'
-          hash['script'] = load_script
-        end
-
-        # Always serialize the result_files
-        if results_dir && Dir.exist?(results_dir)
-          files =  Dir.glob(File.join(results_dir, '**/*'))
-                      .map { |p| Pathname.new(p) }
-                      .reject(&:directory?)
-                      .select(&:readable?) # These would be unusual and should be rejected
-                      .map { |p| { file: p.to_s, size: p.size } }
-          hash['result_files'] = files
-        else
-          hash['result_files'] = nil
-        end
-      end
-    end
-
     def controls_file(name)
       controls_dir.file(name)
     end
@@ -325,8 +290,8 @@ module FlightJob
     # NOTE: The `state=` method should be used when updating the internal
     # state directly
     def update_scheduler_state(scheduler_state)
-      self.state = STATE_MAP.fetch(scheduler_state, 'UNKNOWN')
-      self.scheduler_state = scheduler_state
+      metadata['state'] = STATE_MAP.fetch(scheduler_state, 'UNKNOWN')
+      metadata['scheduler_state'] = scheduler_state
     end
 
     def submit
@@ -353,15 +318,15 @@ module FlightJob
       cmd = [FlightJob.config.submit_script_path, metadata["rendered_path"]]
       execute_command(*cmd) do |status, out, err|
         # set the status/stdout/stderr
-        self.submit_status = status.exitstatus
-        self.submit_stdout = out
-        self.submit_stderr = err
+        metadata['submit_status'] = status.exitstatus
+        metadata['submit_stdout'] = out
+        metadata['submit_stderr'] = err
 
         # Set the initial state based on the exit status
-        if submit_status == 0
-          self.state = 'PENDING'
+        if metadata['submit_status'] == 0
+          metadata['state'] = 'PENDING'
         else
-          self.state = 'FAILED'
+          metadata['state'] = 'FAILED'
         end
 
         # Persist the current state of the job
@@ -370,10 +335,10 @@ module FlightJob
 
         # Parse stdout on successful commands
         process_output('submit', status, out) do |data|
-          self.scheduler_id = data['id']
-          self.stdout_path = data['stdout'].blank? ? nil : data['stdout']
-          self.stderr_path = data['stderr'].blank? ? nil : data['stderr']
-          self.results_dir = data['results_dir']
+          metadata['scheduler_id'] = data['id']
+          metadata['stdout_path'] = data['stdout'].blank? ? nil : data['stdout']
+          metadata['stderr_path'] = data['stderr'].blank? ? nil : data['stderr']
+          metadata['results_dir'] = data['results_dir']
         end
 
         # Persist the updated version of the metadata
@@ -392,8 +357,8 @@ module FlightJob
       # an error condition if they are
       unless scheduler_id
         FlightJob.logger.error "Can not monitor job '#{id}' as it did not report its scheduler_id"
-        self.reason = "Did not report it's scheduler ID"
-        self.state = "FAILED"
+        metadata['reason'] = "Did not report it's scheduler ID"
+        metadata['state'] = "FAILED"
         File.write(metadata_path, YAML.dump(metadata))
         return
       end
@@ -410,13 +375,26 @@ module FlightJob
                         data['end_time']
 
           if data['reason'] == ''
-            self.reason = nil
+            metadata['reason'] = nil
           elsif data['reason']
-            self.reason = data['reason']
+            metadata['reason'] = data['reason']
           end
           File.write(metadata_path, YAML.dump(metadata))
         end
       end
+    end
+
+    def decorate
+      Decorators::JobDecorator.new(self)
+    end
+
+    # Jobs need to be serialized via the decorator
+    def serializable_hash
+      raise InternalError, "Unexpectedly tried to serializer a job resource"
+    end
+
+    def controls_dir
+      @controls_dir ||= ControlsDir.new(File.join(job_dir, 'controls'))
     end
 
     protected
@@ -430,10 +408,6 @@ module FlightJob
     end
 
     private
-
-    def controls_dir
-      @controls_dir ||= ControlsDir.new(File.join(job_dir, 'controls'))
-    end
 
     def job_dir
       @job_dir ||= File.join(FlightJob.config.jobs_dir, id)
@@ -451,14 +425,14 @@ module FlightJob
 
       case state
       when *PENDING_STATES
-        self.start_time = parse_time(est_start, type: "estimated_start_time")
-        self.end_time = parse_time(est_end, type: "estimated_end_time")
+        metadata['start_time'] = parse_time(est_start, type: "estimated_start_time")
+        metadata['end_time'] = parse_time(est_end, type: "estimated_end_time")
       when *RUNNING_STATES
-        self.start_time = parse_time(start, type: "actual_start_time")
-        self.end_time = parse_time(est_end, type: "estimated_end_time")
+        metadata['start_time'] = parse_time(start, type: "actual_start_time")
+        metadata['end_time'] = parse_time(est_end, type: "estimated_end_time")
       else
-        self.start_time = parse_time(start, type: "actual_start_time")
-        self.end_time = parse_time(end_time, type: "actual_end_time")
+        metadata['start_time'] = parse_time(start, type: "actual_start_time")
+        metadata['end_time'] = parse_time(end_time, type: "actual_end_time")
       end
     end
 
