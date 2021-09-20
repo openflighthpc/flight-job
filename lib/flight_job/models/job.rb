@@ -330,6 +330,10 @@ module FlightJob
       metadata['created_at']
     end
 
+    def results_dir
+      metadata['results_dir']
+    end
+
     def state
       metadata['state']
     end
