@@ -38,47 +38,53 @@ set -e
 which "jq" >/dev/null
 set +e
 
+# Source the parser
+source "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/parser.sh"
+
 # Specify the template for the JSON response
 # NOTE: scontrol does not distinguish between actual/estimated times. Instead
 #       flight-job will set the times according to the state
 read -r -d '' template <<'TEMPLATE' || true
 {
-  version: 0,
-  state: ($state),
-  reason: ($reason),
-  start_time: ($start_time),
-  end_time: ($end_time),
-  estimated_start_time: ($estimated_start_time),
-  estimated_end_time: ($estimated_end_time)
+  version: 1,
+  state: (
+    if $state == "" then "UNKNOWN" else $state end
+  ),
+  scheduler_state: ($scheduler_state),
+  reason: (
+    if $reason == "" then null else $reason end
+  ),
+  start_time: (
+    if $start_time == ""  then null else $start_time end
+  ),
+  end_time: (
+    if $end_time == "" then null else $end_time end
+  ),
+  estimated_start_time: (
+    if $estimated_start_time == "" then null else $estimated_start_time end
+  ),
+  estimated_end_time: (
+    if $estimated_end_time == "" then null else $estimated_end_time end
+  )
 }
 TEMPLATE
 
 # Fetch the state of the job
 raw_control=$(scontrol show job "$1" --oneline 2>&1)
 exit_status="$?"
-control=$(echo "$raw_control" | head -n 1 | tr ' ' '\n')
 cat <<EOF >&2
 scontrol:
-$control
+$raw_control
 EOF
 
 if [[ "$exit_status" -eq 0 ]]; then
-  state=$( echo "$control" | grep '^JobState=' | cut -d= -f2)
-  reason=$(echo "$control" | grep '^Reason='   | cut -d= -f2)
-  if [[ "$reason" == "None" ]]; then
-    reason=""
-  fi
-
-  estimated_start_time=$(echo "$control" | grep '^StartTime=' | cut -d= -f2)
-  if [[ "$(echo "$control" | grep "^NodeList=" | cut -d= -f2)" == "(null)" ]]; then
-    # Skip setting the start_time when there is no allocation
-    start_time=""
-  else
-    # Set the start_time if nodes where allocated to the job
-    start_time="$estimated_start_time"
-  fi
-
-  end_time=$(  echo "$control" | grep '^EndTime='   | cut -d= -f2)
+  state=$(                parse_scontrol_state  "$raw_control")
+  scheduler_state=$(      parse_scontrol_scheduler_state "$raw_control")
+  reason=$(               parse_scontrol_reason "$raw_control")
+  start_time=$(           parse_scontrol_start_time "$raw_control" "$state")
+  end_time=$(             parse_scontrol_end_time   "$raw_control" "$state")
+  estimated_start_time=$( parse_scontrol_estimated_start_time "$raw_control" "$state")
+  estimated_end_time=$(   parse_scontrol_estimated_end_time   "$raw_control" "$state")
 elif [[ "$raw_control" == "slurm_load_jobs error: Invalid job id specified" ]]; then
   # Fallback to sacct if scontrol does not recognise the ID
   raw_acct=$(sacct --noheader --parsable --jobs "$1" --format State,Reason,START,END,AllocTRES)
@@ -90,30 +96,23 @@ sacct:
 $raw_acct
 EOF
 
-  # Transition the job to "UNKNOWN" is sacct has no record of it
+  # Unset all the fields if the job is UNKNOWN
   if [[ "$exit_status" -eq 0 ]] && [ -z "$acct" ]; then
     state="UNKNOWN"
+    scheduler_state=""
     start_time=''
     end_time=''
     reason=''
 
-  # Extract the output from sacct
-elif [[ "$exit_status" -eq 0 ]]; then
-  # sacct sometimes tacks info onto the end of the state
-  state=$(echo "$acct" | cut -d'|' -f1 | cut -d' ' -f1)
-  reason=$(echo "$acct" | cut -d'|' -f2)
-  if [ -n "$(echo "$acct" | cut -d'|' -f5)" ]; then
-    # Set the start_time if any trackable resources where allocated to the job
-    start_time=$(echo "$acct" | cut -d'|' -f3)
-  else
-    # Skip setting the start_time when there are no allocated TRESS
-    start_time=""
-  fi
-  end_time=$(echo "$acct" | cut -d'|' -f4)
-
-  # The job will be in a terminal state if in sacct and thus the
-  # estimated_start_time is not important.
-  estimated_start_time=''
+    # Extract the output from sacct
+  elif [[ "$exit_status" -eq 0 ]]; then
+    state=$(                parse_sacct_state  "$acct")
+    scheduler_state=$(      parse_sacct_scheduler_state "$acct")
+    reason=$(               parse_sacct_reason "$acct")
+    start_time=$(           parse_sacct_start_time "$acct" "$state")
+    end_time=$(             parse_sacct_end_time   "$acct" "$state")
+    estimated_start_time=$( parse_sacct_estimated_start_time "$acct" "$state")
+    estimated_end_time=$(   parse_sacct_estimated_end_time   "$acct" "$state")
 
   # Exit the monitor process if sacct fails to prevent the job being updated
   else
@@ -125,27 +124,8 @@ else
   exit "$exit_status"
 fi
 
-# Convert "Unknown" times to empty string
-if [[ "$start_time" == "Unknown" ]] ; then
-  start_time=""
-fi
-if [[ "$estimated_start_time" == "Unknown" ]] ; then
-  estimated_start_time=""
-fi
-if [[ "$end_time" == "Unknown" ]] ; then
-  end_time=""
-fi
-
-# NOTE: Slurm does not make the distinguish between estimated/actual end times clear.
-#       Instead flight-job will infer which one is correct from the state mapping file
-#
-#       A similar principle is used to distinguish between the estimated/actual start
-#       times. The main difference being, jobs without an "allocation" will not have
-#       an "actual" start_time. This is because slurm sets a StartTime when the job
-#       is cancelled even when PENDING.
-estimated_end_time="$end_time"
-
 echo '{}' | jq  --arg state "$state" \
+                --arg scheduler_state "$scheduler_state" \
                 --arg reason "$reason" \
                 --arg estimated_start_time "$estimated_start_time" \
                 --arg estimated_end_time "$estimated_end_time" \

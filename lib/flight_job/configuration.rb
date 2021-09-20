@@ -64,11 +64,6 @@ module FlightJob
     attribute :scheduler, default: 'slurm'
     validates :scheduler, presence: true
 
-    attribute :state_map_path,
-              default: ->(config) { File.join("etc/job/state-maps", "#{config.scheduler}.yaml") },
-              transform: relative_to(root_path)
-    validates :state_map_path, presence: true
-
     attribute :submit_script_path,
               default: ->(config) { File.join('libexec/job', config.scheduler, 'submit.sh') },
               transform: relative_to(root_path)
