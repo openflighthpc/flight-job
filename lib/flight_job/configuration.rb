@@ -116,6 +116,17 @@ module FlightJob
       message: 'must be one of fatal, error, warn, info, debug or disabled'
     }
 
+    def join_schema_path(basename)
+      File.expand_path(
+        File.join('../../config/schemas/job', basename),
+        __dir__
+      )
+    end
+
+    def job_schema_path
+      join_schema_path('version1.json')
+    end
+
     def directives_name
       "directives.#{scheduler}.erb"
     end

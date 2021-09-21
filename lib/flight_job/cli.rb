@@ -237,7 +237,32 @@ module FlightJob
     end
 
     create_command 'run-monitor' do |c|
-      c.summary = 'Update the internal state of the data cache'
+      c.summary = 'Monitor the state of the jobs with the cluster scheduler'
+      c.description = <<~DESC.chomp
+        Flight Job maintains its own record about the jobs it submits to the
+        HPC scheduler.  Under normal usage patterns it is expected that Flight
+        Job will always be able to monitor the job until it either completes
+        or fails in some way.  However, under some HPC scheduler
+        configurations Flight Job may become unable to correctly update its
+        records.
+
+        If you find your jobs becoming stuck in an UNKNOWN state you will want
+        to periodically run this command.
+      DESC
+    end
+
+    create_command 'run-migration' do |c|
+      c.summary = 'Migrate Flight Job data'
+      c.description = <<~DESC.chomp
+        Migrate the Flight Job data to the latest data format.  You will want
+        to run this after Flight Job is updated.
+      DESC
+      c.action do
+        require_relative '../flight_job_migration.rb'
+        Flight.logger.info "Running: FlightJobMigration.migrate"
+        FlightJobMigration.migrate
+        Flight.logger.info 'Exited: 0'
+      end
     end
 
     alias_command 'create', 'create-script'

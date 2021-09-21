@@ -1,0 +1,27 @@
+{
+  "type" : "object",
+  "additionalProperties" : false,
+  "required" : [
+    "script_id", "state", "submit_status", "submit_stdout", "submit_stderr"
+  ],
+  "properties" : {
+    "created_at" : { "type" : "string", "format" : "date-time" },
+    "script_id" : { "type" : "string" },
+    "state" : { "type" : "string", "enum" : [
+      "PENDING", "FAILED", "COMPLETED", "CANCELLED", "UNKNOWN"
+    ] },
+    "submit_status" : { "type" : "integer", "minimum" : 0, "maximum" : 255 },
+    "submit_stdout" : { "type" : "string" },
+    "submit_stderr" : { "type" : "string" },
+    "rendered_path" : { "type" : "string" },
+    "version" : { "const": 0 },
+    "end_time" : { "type" : ["string", "null"], "format" : "date-time" },
+    "scheduler_id" : { "type" : ["string", "null"] },
+    "scheduler_state" : { "type" : "string" },
+    "start_time" : { "type" : ["string", "null"], "format" : "date-time" },
+    "stdout_path" : { "type" : ["string", "null"] },
+    "stderr_path" : { "type" : ["string", "null"] },
+    "results_dir" : { "type" : ["string", "null"] },
+    "reason" : { "type" : ["string", "null"] }
+  }
+}

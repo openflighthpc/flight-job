@@ -31,130 +31,32 @@ require 'json_schemer'
 require 'time'
 require 'open3'
 
+require_relative 'job/validator'
+
 module FlightJob
   class Job < ApplicationModel
+    RAW_SCHEMA = JSON.parse File.read(Flight.config.job_schema_path)
+    SCHEMA_VERSION = RAW_SCHEMA['oneOf'][0]["properties"]['version']['const']
+
     PENDING_STATES = ['PENDING']
     TERMINAL_STATES = ['FAILED', 'COMPLETED', 'CANCELLED', 'UNKNOWN']
     RUNNING_STATES = ['RUNNING']
     NON_TERMINAL_STATES = [*PENDING_STATES, *RUNNING_STATES]
-    STATES = [*PENDING_STATES, *RUNNING_STATES, *TERMINAL_STATES]
+    STATES = [*NON_TERMINAL_STATES, *TERMINAL_STATES]
 
     STATES_LOOKUP = {}.merge(PENDING_STATES.map { |s| [s, :pending] }.to_h)
                       .merge(RUNNING_STATES.map { |s| [s, :running] }.to_h)
                       .merge(TERMINAL_STATES.map { |s| [s, :terminal] }.to_h)
 
-    # JSON:Schemer supports oneOf matcher, however this makes the kinda cryptic
-    # error messages, super cryptic
-    SHARED_KEYS = ["created_at", "job_type", "rendered_path", "script_id", "version"]
-    SHARED_PROPS = {
-      "created_at" => { "type" => "string", "format" => "date-time" },
-      "rendered_path" => { "type" => "string", "minLength": 1 },
-      "script_id" => { "type" => "string", "minLength": 1 },
-      "version" => { "const" => "1.beta" }
-    }
-
+    # Break up the raw schema into its components
+    # This makes slightly nicer error reporting by removing the oneOf
     SCHEMAS = {
-      initial: JSONSchemer.schema({
-        "type" => "object",
-        "additionalProperties" => true,
-        "required" => SHARED_KEYS,
-        "properties" => {
-          **SHARED_PROPS,
-          "job_type" => { "enum" => ["INITIALIZING", "SINGLETON", "ARRAY", "FAILED_SUBMISSION"] }
-        }
-      }),
-
-      "INITIALIZING" => JSONSchemer.schema({
-        "type" => "object",
-        "additionalProperties" => false,
-        "required" => SHARED_KEYS,
-        "properties" => {
-          **SHARED_PROPS,
-          "job_type" => { "const" => "INITIALIZING" }
-        }
-      }),
-
-      "FAILED_SUBMISSION" => JSONSchemer.schema({
-        "type" => "object",
-        "additionalProperties" => false,
-        "required" => [*SHARED_KEYS, "submit_status", "submit_stdout", "submit_stderr"],
-        "properties" => {
-          **SHARED_PROPS,
-          "job_type" => { "const" => "FAILED_SUBMISSION" },
-          # NOTE: There are two edge cases where submit_status is set to 126
-          # * 'flight-job' fails to report back the status, OR
-          # * 'submit.sh' lies about exiting 0
-          #
-          # If 'flight-job' never reports back the status, the job will eventually
-          # be transitioned to FAILED_SUBMISSION/126.
-          #
-          # However the 'submit.sh' may exit 0 with invalid submit response JSON. This
-          # is a *lie* and is also reported back as FAILED_SUBMISSION/126.
-          "submit_status" => { "type" => "integer", "minimum" => 1, "maximum" => 255 },
-          "submit_stdout" => { "type" => "string" },
-          "submit_stderr" => { "type" => "string" },
-        }
-      })
+      initial: JSONSchemer.schema(RAW_SCHEMA.dup.tap { |s| s.delete("oneOf") })
     }
-
-    # The following are the keys which are shared by the "submitted" job types
-    SHARED_SUBMITTED_KEYS = [
-      *SHARED_KEYS, 'submit_status', 'submit_stdout', 'submit_stderr'
-    ]
-    SHARED_SUBMITTED_PROPS = SHARED_PROPS.merge({
-      "submit_status" => { const: 0 },
-      "submit_stdout" => { "type" => "string" },
-      "submit_stderr" => { "type" => "string" },
-      "scheduler_id" => { "type" => "string", "minLength" => 1 },
-      "results_dir" => { "type" => "string", "minLength" => 1 },
-    })
-
-    SCHEMAS.merge!({
-      "SINGLETON" => JSONSchemer.schema({
-        "type" => "object",
-        "additionalProperties" => false,
-        "required" => [
-          *SHARED_SUBMITTED_KEYS, 'state', 'scheduler_state'
-        ],
-        "properties" => {
-          # Required
-          **SHARED_SUBMITTED_PROPS,
-          "job_type" => { "const" => "SINGLETON" },
-          "state" => { "enum" => STATES },
-          "scheduler_state" => { "type" => "string", "minLength" => 1 },
-          # Optional
-          #
-          # NOTE: The transient dependency between 'state' and times
-          # are enforced by the monitor scripts.
-          #
-          # It is assumed they metadata will not be edited manually,
-          # and thus will remain accurate.
-          "estimated_start_time" => { "type" => ['date-time', 'null'] },
-          "estimated_end_time" => { "type" => ['date-time', 'null'] },
-          "start_time" => { "type" => ["date-time", "null"] },
-          "end_time" => { "type" => ["date-time", "null"] },
-          "reason" => { "type" => ["string", "null"] },
-          # Optional - Non empty
-          "stdout_path" => { "type" => "string", "minLength" => 1 },
-          "stderr_path" => { "type" => "string", "minLength" => 1 },
-        }
-      }),
-
-      "ARRAY" => JSONSchemer.schema({
-        "type" => "object",
-        "additionalProperties" => false,
-        "required" => [*SHARED_SUBMITTED_KEYS, 'lazy'],
-        "properties" => {
-          # Required
-          **SHARED_SUBMITTED_PROPS,
-          "job_type" => { "const" => "ARRAY" },
-          "lazy" => { "type" => "boolean" },
-          # Optional
-          "estimated_start_time" => { "type" => ['date-time', 'null'] },
-          "estimated_end_time" => { "type" => ['date-time', 'null'] },
-        }
-      })
-    })
+    RAW_SCHEMA['oneOf'].each do |schema|
+      type = schema['properties']['job_type']['const']
+      SCHEMAS.merge!({ type => JSONSchemer.schema(schema) })
+    end
 
     def self.load_all
       Dir.glob(new(id: '*').metadata_path).map do |path|
@@ -198,38 +100,10 @@ module FlightJob
       new(submit_script: script).tap(&:submit)
     end
 
-    validate on: :load do
-      # Ensure the active file does not exist in terminal states
-      if terminal?
-        FileUtils.rm_f active_index_path
-
-      # Otherwise, ensure the active file does exist
-      else
-        FileUtils.touch active_index_path
-      end
-
-      # TODO: Properly do this
-      if (metadata || {}).to_h['job_type'] == 'ARRAY'
-        FileUtils.touch active_index_path
-      end
-    end
-
-    # Verifies the metadata is valid before saving it
-    validate on: [:load, :save_metadata] do
-      # Run the initial schema, followed by the specific one
-      schema_errors = SCHEMAS[:initial].validate(metadata).to_a
-      if schema_errors.empty?
-        schema_errors = SCHEMAS[metadata['job_type']].validate(metadata).to_a
-      end
-
-      # Add the schema errors if any
-      unless schema_errors.empty?
-        FlightJob.logger.debug("The following metadata file is invalid: #{metadata_path}\n") do
-          JSON.pretty_generate(schema_errors)
-        end
-        errors.add(:metadata, 'is invalid')
-      end
-    end
+    validates_with Job::Validator, on: :load,
+      adjust_active_index: true,
+      migrate_metadata: true
+    validates_with Job::Validator, on: :save_metadata
 
     attr_writer :id
 
@@ -266,7 +140,7 @@ module FlightJob
         metadata["job_type"] = "INITIALIZING"
         metadata["rendered_path"] = File.join(job_dir, script.script_name)
         metadata["script_id"] = script.id
-        metadata["version"] = "1.beta"
+        metadata["version"] = SCHEMA_VERSION
 
       # Error has the job already exists
       else
@@ -276,6 +150,12 @@ module FlightJob
 
     def submitted?
       File.exists? metadata_path
+    end
+
+    def failed_migration_path
+      @failed_migration_path ||= File.join(
+        job_dir, ".migration-failed.#{SCHEMA_VERSION}.0"
+      )
     end
 
     def metadata_path
@@ -295,6 +175,10 @@ module FlightJob
         # method
         {}
       end
+    end
+
+    def reload_metadata
+      @metadata = nil
     end
 
     # NOTE: This is a subset of the full metadata file which is stored in the active file
