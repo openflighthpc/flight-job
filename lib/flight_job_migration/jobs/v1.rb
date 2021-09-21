@@ -75,7 +75,7 @@ module FlightJobMigration
       end
 
       def migrate!
-        Flight.logger.info "Migrating job '#{id}'"
+        Flight.logger.debug "Migrating job '#{id}'"
         if File.exists? metadata_path
           validate_original
           populate_metadata_from_original
@@ -91,7 +91,7 @@ module FlightJobMigration
         else
           raise MigrationError, "File does not exist: #{metadata_path}"
         end
-        Flight.logger.warn "Migrated job '#{id}' to version 1"
+        Flight.logger.info "Migrated job '#{id}' to version 1"
       end
 
       # Checks if the selected metadata is already the correct version

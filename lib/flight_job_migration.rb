@@ -47,4 +47,3 @@ module FlightJobMigration
     Jobs::MigrateV1.load_all.select(&:applicable?).each(&:migrate)
   end
 end
-
