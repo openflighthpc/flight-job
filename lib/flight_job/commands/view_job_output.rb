@@ -29,28 +29,34 @@ module FlightJob
   module Commands
     class ViewJobOutput < Command
       def run
-        assert_command_type_valid
-        assert_file_path
+        @job = load_job(args.first)
+
+        assert_output_type_valid
+        assert_stderr_not_merged if viewing_stderr?
+        assert_file_exists
+
         pager.page(File.read(file_path))
       end
 
       private
 
-      def assert_command_type_valid
+      def assert_output_type_valid
         return if [:stdout, :stderr].include?(opts.type)
         raise InternalError, "Invalid output type #{opts.type.inspect}"
       end
 
-      def assert_file_path
-        if opts.type == :stderr && job.stderr_merged?
+      def assert_stderr_not_merged
+        if @job.stderr_merged?
           prog_name = ENV.fetch('FLIGHT_PROGRAM_NAME') { 'bin/job' }
           raise MissingError, <<~ERROR.chomp
             Cannot display the job's standard error as it has been merged with standard out.
             Please run the following instead:
-            #{pastel.yellow "#{prog_name} view-job-stdout #{job.id}"}
+            #{pastel.yellow "#{prog_name} view-job-stdout #{@job.id}"}
           ERROR
         end
+      end
 
+      def assert_file_exists
         unless File.exists?(file_path)
           raise MissingError, "The job's standard " \
             "#{opts.type == :stdout ? 'output' : 'error'} file does not exists: "\
@@ -59,15 +65,15 @@ module FlightJob
       end
 
       def file_path
-        if opts.type == :stdout
-          job.stdout_path
+        if viewing_stderr?
+          @job.stderr_path!
         else
-          job.stderr_path
+          @job.stdout_path!
         end
       end
 
-      def job
-        @job ||= load_job(args.first)
+      def viewing_stderr?
+        opts.type == :stderr
       end
     end
   end
