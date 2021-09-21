@@ -36,6 +36,7 @@ module FlightJob
     PENDING_STATES = ['PENDING']
     TERMINAL_STATES = ['FAILED', 'COMPLETED', 'CANCELLED', 'UNKNOWN']
     RUNNING_STATES = ['RUNNING']
+    NON_TERMINAL_STATES = [*PENDING_STATES, *RUNNING_STATES]
     STATES = [*PENDING_STATES, *RUNNING_STATES, *TERMINAL_STATES]
 
     STATES_LOOKUP = {}.merge(PENDING_STATES.map { |s| [s, :pending] }.to_h)
@@ -314,7 +315,13 @@ module FlightJob
       metadata['results_dir']
     end
 
+    # DEPRECATED: This method belongs on the decorator!
+    #
+    # Unfortunately it is extensively used to control the life-cycle of a Job.
+    # This makes fully removing it, tricky. Instead, calls to this method will be progressively
+    # removed.
     def state
+      Flight.logger.warn "DEPRECATED: Job#state does not function correctly for array tasks"
       case job_type
       when 'INITIALIZING'
         'PENDING'
@@ -428,15 +435,27 @@ module FlightJob
     end
 
     def terminal?
-      STATES_LOOKUP[state] == :terminal
+      case job_type
+      when 'INITIALIZING'
+        false
+      when 'FAILED_SUBMISSION'
+        true
+      when 'SINGLETON'
+        STATES_LOOKUP[metadata['state']] == :terminal
+      when 'ARRAY'
+        if metadata['lazy']
+          false
+        else
+          !Task.load_last_non_terminal(id)
+        end
+      end
     end
 
-    # TODO: Do not error here, it causes issues in the validation
-    # Default to FAILED_SUBMISSION (probably?)
+    # NOTE: The job_type is used within the validation, thus the metadata
+    # may not be hash
     def job_type
-      metadata['job_type'] || raise(InternalError, <<~ERROR.chomp)
-        Failed to resolve the 'job_type' for job '#{id}'
-      ERROR
+      hash = metadata.is_a?(Hash) ? metadata : {}
+      hash['job_type']
     end
 
     def save_metadata

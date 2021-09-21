@@ -192,7 +192,7 @@ module FlightJob
       c.summary = "View the job's standard output"
       c.action do |args, opts|
         require_relative '../flight_job'
-        opts.type = :stdout
+        opts.type = :job_stdout
         FlightJob::Commands::ViewJobOutput.new(args, opts).run!
       end
     end
@@ -201,13 +201,39 @@ module FlightJob
       c.summary = "View the job's standard error"
       c.action do |args, opts|
         require_relative '../flight_job'
-        opts.type = :stderr
+        opts.type = :job_stderr
         FlightJob::Commands::ViewJobOutput.new(args, opts).run!
       end
     end
 
     create_command 'delete-job', 'JOB_ID' do |c|
       c.summary = 'Permanently remove a job'
+    end
+
+    create_command 'list-array-tasks', 'JOB_ID' do |c|
+      c.summary = 'List all the tasks for an array job'
+    end
+
+    create_command 'info-array-task', 'JOB_ID INDEX' do |c|
+      c.summary = 'Display details about an array task'
+    end
+
+    create_command 'view-array-task-stdout', 'JOB_ID INDEX' do |c|
+      c.summary = "View an array task's standard output"
+      c.action do |args, opts|
+        require_relative '../flight_job'
+        opts.type = :task_stdout
+        FlightJob::Commands::ViewJobOutput.new(args, opts).run!
+      end
+    end
+
+    create_command 'view-array-task-stderr', 'JOB_ID INDEX' do |c|
+      c.summary = "View an array task's standard error"
+      c.action do |args, opts|
+        require_relative '../flight_job'
+        opts.type = :task_stderr
+        FlightJob::Commands::ViewJobOutput.new(args, opts).run!
+      end
     end
 
     create_command 'run-monitor' do |c|
@@ -221,6 +247,11 @@ module FlightJob
     alias_command 'ls-job-results', 'list-job-results'
     alias_command 'list',   'list-jobs'
     alias_command 'info',   'info-job'
+
+    alias_command 'list-tasks', 'list-array-tasks'
+    alias_command 'info-task', 'info-array-task'
+    alias_command 'view-task-stdout', 'view-array-task-stdout'
+    alias_command 'view-task-stderr', 'view-array-task-stderr'
 
     if Flight.env.development?
       create_command 'console' do |c|
