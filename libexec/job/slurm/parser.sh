@@ -127,24 +127,41 @@ function _parse_state {
 # * scontrol needs to be called with the --oneline flag
 # ==============================================================================
 
+# Extracts the value for the given key and prints to stdout.
+parse_scontrol() {
+    local key_name
+    key_name="$1"
+
+    cat | head -n 1 | tr ' ' '\n' | grep "^${key_name}=" | cut -d= -f2
+}
+
+# Returns 0 if the scontrol input contains the given key.  The value of the
+# key is ignored, so a blank value counts as the key being present.
+_scontrol_contains_key() {
+    local key_name
+    key_name="$1"
+
+    cat | head -n 1 | tr ' ' '\n' | grep -q "^${key_name}="
+}
+
 # This function works on all scontrol outputs
 function parse_scontrol_job_type {
-  local control=$(echo "$1" | tr ' ' '\n')
-  if echo "$control" | grep "ArrayJobId" >/dev/null; then
-    printf "ARRAY"
-  else
-    printf "SINGLETON"
-  fi
+    if _scontrol_contains_key "ArrayJobId" ; then
+        printf "ARRAY"
+    else
+        printf "SINGLETON"
+    fi
 }
 
 # This function works on all scontrol outputs
 function parse_scontrol_scheduler_id {
-  local control=$(echo "$1" | head -n 1 | tr ' ' '\n')
-  if [ "$(parse_scontrol_job_type "$1")" == "ARRAY" ]; then
-    echo "$control" | grep '^ArrayJobId=' | cut -d= -f2
-  else
-    echo "$control" | grep '^JobId=' | cut -d= -f2
-  fi
+    local input
+    input=$(cat)
+    if [ "$(parse_scontrol_job_type <<< "${input}")" == "ARRAY" ] ; then
+        parse_scontrol "ArrayJobId" <<< "${input}"
+    else
+        parse_scontrol "JobId" <<< "${input}"
+    fi
 }
 
 function parse_scontrol_task_index {

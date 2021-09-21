@@ -35,6 +35,7 @@
 #-------------------------------------------------------------------------------
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+source "${DIR}/parser.sh"
 
 # Ensure jq is on the path
 set -e
@@ -69,25 +70,22 @@ if [[ $? -ne 0 ]]; then
   exit $?
 fi
 
-# Load the parsers
-source "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/parser.sh"
-
 # Run scontrol
-raw_control=$(scontrol show job "$id" --oneline)
+scontrol_output=$(scontrol show job "$id" --oneline)
 exit_status=$?
 cat <<EOF >&2
 scontrol output:
-$(echo "$raw_control" | head -n 1 | tr ' ' '\n')
+$(echo "$scontrol_output" | head -n 1 | tr ' ' '\n')
 EOF
 if [[ $exit_status -ne 0 ]]; then
   exit $exit_status
 fi
 
 # Determine the results directory / Job Type
-working=$(echo "$control" | grep '^WorkDir=' | cut -d= -f2)
-name=$(echo "$control" | grep '^JobName=' | cut -d= -f2)
+working=$(parse_scontrol WorkDir <<< "${scontrol_output}")
+name=$(parse_scontrol JobName <<< "${scontrol_output}")
 results_dir="${working}/${name}-outputs/$id"
-job_type=$(parse_scontrol_job_type "$raw_control")
+job_type=$(parse_scontrol_job_type <<< "$scontrol_output")
 
 # Create the JSON template
 read -r -d '' template <<'TEMPLATE' || true
@@ -101,7 +99,7 @@ TEMPLATE
 
 # Render and return the JSON payload
 echo '{}' | jq  \
-  --arg id      "$(parse_scontrol_scheduler_id "$raw_control")" \
+  --arg id      "$(parse_scontrol_scheduler_id <<< "$scontrol_output")" \
   --arg results_dir "$results_dir" \
   --arg job_type "$job_type" \
   "$template" | tr -d "\n"
