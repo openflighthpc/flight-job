@@ -30,7 +30,6 @@ require 'active_support/core_ext/module/delegation'
 
 require_relative 'flight_job/configuration'
 require_relative 'flight_job/command'
-
 require_relative 'flight_job_migration'
 
 module FlightJob

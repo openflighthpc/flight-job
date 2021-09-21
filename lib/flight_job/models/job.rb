@@ -31,6 +31,8 @@ require 'json_schemer'
 require 'time'
 require 'open3'
 
+require_relative 'job/validator'
+
 module FlightJob
   class Job < ApplicationModel
     RAW_SCHEMA = JSON.parse File.read(Flight.config.job_schema_path)
@@ -98,78 +100,10 @@ module FlightJob
       new(submit_script: script).tap(&:submit)
     end
 
-    validate on: :load do
-      # Ensure the active file does not exist in terminal states
-      if terminal?
-        FileUtils.rm_f active_index_path
-
-      # Otherwise, ensure the active file does exist
-      else
-        FileUtils.touch active_index_path
-      end
-
-      # TODO: Properly do this
-      if (metadata || {}).to_h['job_type'] == 'ARRAY'
-        FileUtils.touch active_index_path
-      end
-    end
-
-    # Verifies the metadata on load
-    validate on: :load do
-      # Run the initial schema, followed by the specific one
-      schema_errors = SCHEMAS[:initial].validate(metadata).to_a
-      if schema_errors.empty?
-        schema_errors = SCHEMAS[metadata['job_type']].validate(metadata).to_a
-      end
-
-      # Remove the migration flag file
-      if schema_errors.empty?
-        FileUtils.rm_f failed_migration_path
-
-      # Log skipping the migration
-      elsif File.exists? failed_migration_path
-        Flight.logger.warn "Skipping job '#{id}' migration as it previously failed!"
-
-      # Attempt to migrate the data
-      else
-        if FlightJobMigration::Jobs.migrate(job_dir)
-          @metadata = nil
-          schema_errors = SCHEMAS[:initial].validate(metadata).to_a
-          if schema_errors.empty?
-            schema_errors = SCHEMAS[metadata['job_type']].validate(metadata).to_a
-          end
-        else
-          # Flag the failure
-          FileUtils.touch failed_migration_path
-        end
-      end
-
-      # Add the schema errors
-      unless schema_errors.empty?
-        FlightJob.logger.debug("The following metadata file is invalid: #{metadata_path}\n") do
-          JSON.pretty_generate(schema_errors)
-        end
-        errors.add(:metadata, 'is invalid')
-      end
-    end
-
-    # Verify the metadata is valid on save
-    validate on: :save_metadata do
-      # Run the initial schema, followed by the specific one
-      schema_errors = SCHEMAS[:initial].validate(metadata).to_a
-      if schema_errors.empty?
-        schema_errors = SCHEMAS[metadata['job_type']].validate(metadata).to_a
-      end
-
-      # Add the schema errors
-      unless schema_errors.empty?
-        FlightJob.logger.debug("The following metadata file is invalid: #{metadata_path}\n") do
-          JSON.pretty_generate(schema_errors)
-        end
-        errors.add(:metadata, 'is invalid')
-      end
-    end
-
+    validates_with Job::Validator, on: :load,
+      adjust_active_index: true,
+      migrate_metadata: true
+    validates_with Job::Validator, on: :save_metadata
 
     attr_writer :id
 
@@ -241,6 +175,10 @@ module FlightJob
         # method
         {}
       end
+    end
+
+    def reload_metadata
+      @metadata = nil
     end
 
     # NOTE: This is a subset of the full metadata file which is stored in the active file
