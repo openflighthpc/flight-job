@@ -63,7 +63,7 @@ module FlightJob
         id = File.basename(File.dirname(path))
         job = new(id: id)
         if job.valid?(:load)
-          job.tap(&:monitor)
+          job.monitor
           if job.job_type == 'INITIALIZING'
             FlightJob.logger.debug("Skipping initializing job: #{job.id}")
             nil

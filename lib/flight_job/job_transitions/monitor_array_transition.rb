@@ -54,7 +54,12 @@ module FlightJob
       end
 
       def run!
-        FlightJob.logger.info("Monitoring Job: #{id}")
+        Flight.logger.info("Monitoring array job:#{id}:#{state}:#{job_type}:#{metadata['lazy'].inspect}")
+        if !metadata['lazy'].nil? && terminal?
+          FlightJob.logger.debug "Skipping monitor for terminated job: #{id}"
+          return
+        end
+
         cmd = [FlightJob.config.monitor_array_script_path, scheduler_id]
         execute_command(*cmd, tag: 'monitor') do |status, stdout, stderr, data|
           if status.success?
@@ -93,7 +98,7 @@ module FlightJob
             save_metadata
 
             # Remove the indexing file in terminal state
-            # FileUtils.rm_f active_index_path if terminal?
+            FileUtils.rm_f active_index_path if terminal?
           end
         end
       end
