@@ -44,24 +44,22 @@ module FlightJob
 
     # JSON:Schemer supports oneOf matcher, however this makes the kinda cryptic
     # error messages, super cryptic
-    #
-    # Instead there is an initial "default" validation, checks for the shared
-    # required keys. Then the "job_type" is used to select the specific
-    # validator.
-    #
-    # It is assumed the initial validator is ran before the others
     SHARED_KEYS = ["created_at", "job_type", "rendered_path", "script_id", "version"]
+    SHARED_PROPS = {
+      "created_at" => { "type" => "string", "format" => "date-time" },
+      "rendered_path" => { "type" => "string", "minLength": 1 },
+      "script_id" => { "type" => "string", "minLength": 1 },
+      "version" => { "const" => "1.beta" }
+    }
+
     SCHEMAS = {
       initial: JSONSchemer.schema({
         "type" => "object",
         "additionalProperties" => true,
         "required" => SHARED_KEYS,
         "properties" => {
-          "created_at" => { "type" => "string", "format" => "date-time" },
-          "job_type" => { "enum" => ["INITIALIZING", "SINGLETON", "FAILED_SUBMISSION"] },
-          "rendered_path" => { "type" => "string", "minLength": 1 },
-          "script_id" => { "type" => "string", "minLength": 1 },
-          "version" => { "const" => "1.beta" }
+          **SHARED_PROPS,
+          "job_type" => { "enum" => ["INITIALIZING", "SINGLETON", "ARRAY", "FAILED_SUBMISSION"] }
         }
       }),
 
@@ -70,7 +68,7 @@ module FlightJob
         "additionalProperties" => false,
         "required" => SHARED_KEYS,
         "properties" => {
-          **SHARED_KEYS.map { |k| [k, {}] }.to_h,
+          **SHARED_PROPS,
           "job_type" => { "const" => "INITIALIZING" }
         }
       }),
@@ -80,7 +78,7 @@ module FlightJob
         "additionalProperties" => false,
         "required" => [*SHARED_KEYS, "submit_status", "submit_stdout", "submit_stderr"],
         "properties" => {
-          **SHARED_KEYS.map { |k| [k, {}] }.to_h,
+          **SHARED_PROPS,
           "job_type" => { "const" => "FAILED_SUBMISSION" },
           # NOTE: There are two edge cases where submit_status is set to 126
           # * 'flight-job' fails to report back the status, OR
@@ -95,26 +93,34 @@ module FlightJob
           "submit_stdout" => { "type" => "string" },
           "submit_stderr" => { "type" => "string" },
         }
-      }),
+      })
+    }
 
+    # The following are the keys which are shared by the "submitted" job types
+    SHARED_SUBMITTED_KEYS = [
+      *SHARED_KEYS, 'submit_status', 'submit_stdout', 'submit_stderr'
+    ]
+    SHARED_SUBMITTED_PROPS = SHARED_PROPS.merge({
+      "submit_status" => { const: 0 },
+      "submit_stdout" => { "type" => "string" },
+      "submit_stderr" => { "type" => "string" },
+      "scheduler_id" => { "type" => "string", "minLength" => 1 },
+      "results_dir" => { "type" => "string", "minLength" => 1 },
+    })
+
+    SCHEMAS.merge!({
       "SINGLETON" => JSONSchemer.schema({
         "type" => "object",
         "additionalProperties" => false,
         "required" => [
-          *SHARED_KEYS, 'submit_status', 'submit_stdout', 'submit_stderr',
-          'scheduler_id', 'state', 'results_dir', 'stdout_path'
+          *SHARED_SUBMITTED_KEYS, 'state', 'scheduler_state'
         ],
         "properties" => {
           # Required
-          **SHARED_KEYS.map { |k| [k, {}] }.to_h,
+          **SHARED_SUBMITTED_PROPS,
           "job_type" => { "const" => "SINGLETON" },
-          "submit_status" => { const: 0 },
-          "submit_stdout" => { "type" => "string" },
-          "submit_stderr" => { "type" => "string" },
           "state" => { "enum" => STATES },
-          "scheduler_id" => { "type" => "string", "minLength" => 1 },
-          "results_dir" => { "type" => "string", "minLength" => 1 },
-          "stdout_path" => { "type" => "string", "minLength" => 1 },
+          "scheduler_state" => { "type" => "string", "minLength" => 1 },
           # Optional
           #
           # NOTE: The transient dependency between 'state' and times
@@ -128,11 +134,26 @@ module FlightJob
           "end_time" => { "type" => ["date-time", "null"] },
           "reason" => { "type" => ["string", "null"] },
           # Optional - Non empty
-          "scheduler_state" => { "type" => "string", "minLength" => 1 },
-          "stderr_path" => { "type" => "string", "minLength" => 1 }
+          "stdout_path" => { "type" => "string", "minLength" => 1 },
+          "stderr_path" => { "type" => "string", "minLength" => 1 },
+        }
+      }),
+
+      "ARRAY" => JSONSchemer.schema({
+        "type" => "object",
+        "additionalProperties" => false,
+        "required" => [*SHARED_SUBMITTED_KEYS, 'lazy'],
+        "properties" => {
+          # Required
+          **SHARED_SUBMITTED_PROPS,
+          "job_type" => { "const" => "ARRAY" },
+          "lazy" => { "type" => "boolean" },
+          # Optional
+          "estimated_start_time" => { "type" => ['date-time', 'null'] },
+          "estimated_end_time" => { "type" => ['date-time', 'null'] },
         }
       })
-    }
+    })
 
     def self.load_all
       Dir.glob(new(id: '*').metadata_path).map do |path|
@@ -178,12 +199,16 @@ module FlightJob
 
     validate on: :load do
       # Ensure the active file does not exist in terminal states
-      # TODO: This will need to be reworked for array-jobs
       if terminal?
         FileUtils.rm_f active_index_path
 
       # Otherwise, ensure the active file does exist
       else
+        FileUtils.touch active_index_path
+      end
+
+      # TODO: Properly do this
+      if (metadata || {}).to_h['job_type'] == 'ARRAY'
         FileUtils.touch active_index_path
       end
     end
@@ -309,11 +334,35 @@ module FlightJob
     end
 
     def stdout_path
-      metadata['stdout_path']
+      stdout_path!
+    rescue
+      Flight.logger.debug $!
+      nil
+    end
+
+    def stdout_path!
+      case job_type
+      when 'SINGLETON'
+        metadata['stdout_path']
+      else
+        raise InvalidOperation, failure_message("Could not get the standard output")
+      end
     end
 
     def stderr_path
-      metadata['stderr_path']
+      stderr_path!
+    rescue
+      Flight.logger.debug $!
+      nil
+    end
+
+    def stderr_path!
+      case job_type
+      when 'SINGLETON'
+        metadata['stderr_path']
+      else
+        raise InvalidOperation, failure_message("Could not get the standard error")
+      end
     end
 
     def submitted?
@@ -349,13 +398,14 @@ module FlightJob
       JobTransitions::SubmitTransition.new(self).run!
     end
 
-    # Deliberately not a case statement to allow fall through
     def monitor
-      if job_type == 'INITIALIZING'
+      case job_type
+      when 'INITIALIZING'
         JobTransitions::FailedSubmissionTransition.new(self).run
-      end
-      if job_type == 'SINGLETON'
+      when 'SINGLETON'
         JobTransitions::MonitorSingletonTransition.new(self).run!
+      when 'ARRAY'
+        JobTransitions::MonitorArrayTransition.new(self).run!
       end
     end
 
@@ -372,6 +422,7 @@ module FlightJob
       @controls_dir ||= ControlsDir.new(File.join(job_dir, 'controls'))
     end
 
+    # NOTE: Requires parity with task_dir
     def job_dir
       @job_dir ||= File.join(FlightJob.config.jobs_dir, id)
     end
@@ -380,6 +431,8 @@ module FlightJob
       STATES_LOOKUP[state] == :terminal
     end
 
+    # TODO: Do not error here, it causes issues in the validation
+    # Default to FAILED_SUBMISSION (probably?)
     def job_type
       metadata['job_type'] || raise(InternalError, <<~ERROR.chomp)
         Failed to resolve the 'job_type' for job '#{id}'
@@ -391,7 +444,7 @@ module FlightJob
         FileUtils.mkdir_p File.dirname(metadata_path)
         File.write metadata_path, YAML.dump(metadata)
       else
-        FlightJob.logger.error("Failed to savve job metadata: #{id}")
+        FlightJob.logger.error("Failed to save job metadata: #{id}")
         FlightJob.logger.info(errors.full_messages.join("\n"))
         raise InternalError, "Unexpectedly failed to save job '#{id}' metadata"
       end
@@ -405,6 +458,34 @@ module FlightJob
       else
         Time.parse(created_at) <=> Time.parse(other.created_at)
       end
+    end
+
+    private
+
+    # Generates an error message according to the job_type
+    # The assumption being, the operation failed due to having the wrong type.
+    def failure_message(desc)
+      type = nil
+      begin
+        type = job_type
+      rescue
+        # NOOP - This method only generates messages, in practice this condition
+        # should have already been caught
+      end
+
+      suffix =  case type
+                when 'SINGLETON'
+                  "for '#{id}' as it is an individual job."
+                when 'ARRAY'
+                  "for '#{id}' as it is an array job."
+                when 'INITIALIZING'
+                  "for job '#{id}' as it is pending submission."
+                when 'FAILED_SUBMISSION'
+                  "for job '#{id}' as it did not succesfully submit."
+                else
+                  "for job '#{id}' for an unknown reason."
+                end
+      "#{desc} #{suffix}"
     end
   end
 end

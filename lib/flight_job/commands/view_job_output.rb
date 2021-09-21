@@ -30,26 +30,19 @@ module FlightJob
     class ViewJobOutput < Command
       def run
         @job = load_job(args.first)
-        assert_job_submitted
-        assert_type_valid
-        assert_stderr_not_merged if opts.type == :stderr
-        file_path = @job.send("#{opts.type}_path")
-        assert_file_exists(file_path)
+
+        assert_output_type_valid
+        assert_stderr_not_merged if viewing_stderr?
+        assert_file_exists
+
         pager.page(File.read(file_path))
       end
 
       private
 
-      def assert_job_submitted
-        return if @job.submitted?
-        raise MissingError, "The job's standard " \
-          "#{opts.type == :stdout ? 'output' : 'error'} is not available as "\
-          "the job did not succesfully submit"
-      end
-
-      def assert_type_valid
+      def assert_output_type_valid
         return if [:stdout, :stderr].include?(opts.type)
-        raise InternalError, "Invalid output type #{opts.type.inspect}" 
+        raise InternalError, "Invalid output type #{opts.type.inspect}"
       end
 
       def assert_stderr_not_merged
@@ -63,12 +56,24 @@ module FlightJob
         end
       end
 
-      def assert_file_exists(path)
-        unless File.exists?(path)
+      def assert_file_exists
+        unless File.exists?(file_path)
           raise MissingError, "The job's standard " \
             "#{opts.type == :stdout ? 'output' : 'error'} file does not exists: "\
-            "#{pastel.yellow(path)}"
+            "#{pastel.yellow(file_path)}"
         end
+      end
+
+      def file_path
+        if viewing_stderr?
+          @job.stderr_path!
+        else
+          @job.stdout_path!
+        end
+      end
+
+      def viewing_stderr?
+        opts.type == :stderr
       end
     end
   end

@@ -45,9 +45,9 @@ module FlightJob
         end
       end
 
-      delegate :id, to: :object
+      delegate :id, :state, to: :object
       delegate_metadata :script_id, :start_time, :end_time, :scheduler_id, :scheduler_state,
-        :stdout_path, :stderr_path, :results_dir, :reason, :created_at, :state,
+        :stdout_path, :stderr_path, :results_dir, :reason, :created_at,
         :submit_status, :submit_stdout, :submit_stderr, :estimated_start_time, :estimated_end_time
 
       def actual_start_time

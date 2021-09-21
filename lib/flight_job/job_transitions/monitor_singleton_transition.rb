@@ -30,23 +30,30 @@ module FlightJob
     class MonitorSingletonTransition < SimpleDelegator
       include JobTransitions::JobTransitionHelper
 
-      MONITOR_RESPONSE_SCHEMAS = {
+      SHARED_KEYS = ["version", "state", "stdout_path", "stderr_path", "scheduler_state"]
+      SHARED_PROPS = {
+        "version" => { "const" => 1 },
+        "stdout_path" => { "type" => ['null', "string"] },
+        "stderr_path" => { "type" => ['null', "string"] }
+      }
+      SCHEMAS = {
         initial: JSONSchemer.schema({
           "type" => "object",
           "additionalProperties" => true,
-          "required" => ["version", "state"],
+          "required" => SHARED_KEYS,
           "properties" => {
-            "version" => { "const" => 1 },
-            "state" => { "enum" => Job::STATES }
+            **SHARED_PROPS,
+            "state" => { "enum" => Job::STATES },
           }
         }),
 
         "PENDING" => JSONSchemer.schema({
           "type" => "object",
           "additionalProperties" => false,
-          "required" => [],
+          "required" => SHARED_KEYS,
           "properties" => {
-            "version" => {}, "state" => {},
+            **SHARED_PROPS,
+            "state" => { "const" => "PENDING" },
             "scheduler_state" => { "type" => "string", "minLength": 1 },
             "reason" => { "type" => ["string", "null"] },
             "start_time" => { "type" => "null" },
@@ -59,9 +66,10 @@ module FlightJob
         "RUNNING" => JSONSchemer.schema({
           "type" => "object",
           "additionalProperties" => false,
-          "required" => ["start_time"],
+          "required" => [*SHARED_KEYS, "start_time"],
           "properties" => {
-            "version" => {}, "state" => {},
+            **SHARED_PROPS,
+            "state" => { "const" => "RUNNING" },
             "scheduler_state" => { "type" => "string", "minLength": 1 },
             "reason" => { "type" => ["string", "null"] },
             "start_time" => { "type" => "string", "minLength": 1 },
@@ -74,9 +82,10 @@ module FlightJob
         "COMPLETED" => JSONSchemer.schema({
           "type" => "object",
           "additionalProperties" => false,
-          "required" => ["start_time"],
+          "required" => [*SHARED_KEYS, "start_time", "end_time"],
           "properties" => {
-            "version" => {}, "state" => {},
+            **SHARED_PROPS,
+            "state" => { "enum" => ["COMPLETED", "FAILED"] },
             "scheduler_state" => { "type" => "string", "minLength": 1 },
             "reason" => { "type" => ["string", "null"] },
             "start_time" => { "type" => "string", "minLength": 1 },
@@ -89,9 +98,10 @@ module FlightJob
         "CANCELLED" => JSONSchemer.schema({
           "type" => "object",
           "additionalProperties" => false,
-          "required" => ["start_time"],
+          "required" => [*SHARED_KEYS, "end_time"],
           "properties" => {
-            "version" => {}, "state" => {},
+            **SHARED_PROPS,
+            "state" => { "const" => "CANCELLED" },
             "scheduler_state" => { "type" => "string", "minLength": 1 },
             "reason" => { "type" => ["string", "null"] },
             "start_time" => { "type" => ["null", "string"] },
@@ -104,10 +114,11 @@ module FlightJob
         "UNKNOWN" => JSONSchemer.schema({
           "type" => "object",
           "additionalProperties" => false,
-          "required" => ["start_time"],
+          "required" => SHARED_KEYS,
           "properties" => {
-            "version" => {}, "state" => {},
-            "scheduler_state" => { "type" => "string", "minLength": 1 },
+            **SHARED_PROPS,
+            "state" => { "const" => "UNKNOWN" },
+            "scheduler_state" => { "type" => ["null", "string"] },
             "reason" => { "type" => ["string", "null"] },
             "start_time" => { "type" => "null" },
             "end_time" => { "type" => "null" },
@@ -143,48 +154,17 @@ module FlightJob
         execute_command(*cmd, tag: 'monitor') do |status, stdout, stderr, data|
           if status.success?
             # Validate the output
-            validate_data(MONITOR_RESPONSE_SCHEMAS[:initial], data, tag: "monitor (initial)")
-            validate_data(MONITOR_RESPONSE_SCHEMAS[data['state']], data, tag: "monitor (#{data['state']})")
+            validate_data(SCHEMAS[:initial], data, tag: "monitor (initial)")
+            validate_data(SCHEMAS[data['state']], data, tag: "monitor (#{data['state']})")
 
-            data.each do |key, value|
-              # Ignore the metadata version
-              next if key == "version"
-
-              # Treat empty string/nil as the same value
-              value = nil if value == ''
-
-              # Parse and set times
-              if /_time\Z/.match? key
-                metadata[key] = parse_time(value, type: key)
-
-              # Set other keys
-              else
-                metadata[key] = value
-              end
-            end
-
-            if data['reason'] == ''
-              metadata['reason'] = nil
-            elsif data['reason']
-              metadata['reason'] = data['reason']
-            end
+            # Update the attributes
+            apply_task_attributes(__getobj__, data)
             save_metadata
 
             # Remove the indexing file in terminal state
             FileUtils.rm_f active_index_path if terminal?
           end
         end
-      end
-
-      private
-
-      def parse_time(time, type:)
-        return nil if ['', nil].include?(time)
-        Time.parse(time).strftime("%Y-%m-%dT%T%:z")
-      rescue ArgumentError
-        FlightJob.logger.error "Failed to parse #{type}: #{time}"
-        FlightJob.logger.debug $!.full_message
-        raise_command_error
       end
     end
   end

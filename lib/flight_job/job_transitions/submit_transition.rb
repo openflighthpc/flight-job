@@ -31,15 +31,15 @@ module FlightJob
       include JobTransitionHelper
       include ActiveModel::Validations
 
-      SUBMIT_RESPONSE_SCHEMA = JSONSchemer.schema({
+      SCHEMA = JSONSchemer.schema({
         "type" => "object",
         "additionalProperties" => false,
-        "required" => ["id", "results_dir"],
+        "required" => ["job_type", "version", "id", "results_dir"],
         "properties" => {
-          "id" => { "type" => "string" },
-          "stdout" => { "type" => ["string", "null"] },
-          "stderr" => { "type" => ["string", "null"] },
-          "results_dir" => { "type" => "string" },
+          "version" => { "const" => 1 },
+          "id" => { "type" => "string", "minLength" => 1 },
+          "results_dir" => { "type" => "string", "minLength" => 1 },
+          "job_type" => { "enum" => ["SINGLETON", "ARRAY"] }
         }
       })
 
@@ -87,35 +87,39 @@ module FlightJob
           metadata['submit_stdout'] = out
           metadata['submit_stderr'] = err
 
-          if status.success?
-            begin
-              validate_data(SUBMIT_RESPONSE_SCHEMA, data, tag: 'submit')
-              # The job was submitted correctly and is now pending
-              metadata['job_type'] = 'SINGLETON'
-              metadata['state'] = 'PENDING'
-              metadata['scheduler_id'] = data['id']
-              metadata['stdout_path'] = data['stdout'].blank? ? nil : data['stdout']
-              metadata['stderr_path'] = data['stderr'].blank? ? nil : data['stderr']
-              metadata['results_dir'] = data['results_dir']
-              save_metadata
-            rescue CommandError
-              # The command lied about exiting 0! It did not report the json payload
-              # correctly. Changing the status to 126
-              metadata['job_type'] = 'FAILED_SUBMISSION'
-              metadata['submit_status'] = 126
-              metadata["submit_stderr"] << "\nFailed to parse JSON response"
-              save_metadata
-              raise $!
-            end
-          else
-            # The submission failed
+          # Return early if the submission failed
+          unless status.success?
             metadata['job_type'] = 'FAILED_SUBMISSION'
             save_metadata
+            FileUtils.rm_f active_index_path
+            return
           end
 
-          # Remove the indexing file if in non-terminal state
-          if terminal?
-            FileUtils.rm_f active_index_path
+          # Validate the payload format
+          begin
+            validate_data(SCHEMA, data, tag: 'submit')
+          rescue CommandError
+            # The command lied about exiting 0! It did not report the json payload
+            # correctly. Changing the status to 126
+            metadata['job_type'] = 'FAILED_SUBMISSION'
+            metadata['submit_status'] = 126
+            metadata["submit_stderr"] << "\nFailed to parse JSON response"
+            save_metadata
+            raise $!
+          end
+
+          # The job was submitted correctly and is now pending
+          metadata['results_dir'] = data['results_dir']
+          metadata['scheduler_id'] = data['id']
+          metadata['job_type'] = data['job_type']
+
+          # Run the monitor
+          case data['job_type']
+          when 'SINGLETON'
+            metadata['state'] = 'PENDING'
+            MonitorSingletonTransition.new(__getobj__).run!
+          when 'ARRAY'
+            MonitorArrayTransition.new(__getobj__).run!
           end
         end
       end

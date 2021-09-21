@@ -122,9 +122,52 @@ function _parse_state {
 # ==============================================================================
 # scontrol parsers
 #
-# NOTE: Unless otherwise stated, these parsers are designed for an individual
-# job/task
+# NOTE:
+# * Unless otherwise stated, these parsers are designed for an individual job/task
+# * scontrol needs to be called with the --oneline flag
 # ==============================================================================
+
+# Extracts the value for the given key and prints to stdout.
+parse_scontrol() {
+    local key_name
+    key_name="$1"
+
+    cat | head -n 1 | tr ' ' '\n' | grep "^${key_name}=" | cut -d= -f2
+}
+
+# Returns 0 if the scontrol input contains the given key.  The value of the
+# key is ignored, so a blank value counts as the key being present.
+_scontrol_contains_key() {
+    local key_name
+    key_name="$1"
+
+    cat | head -n 1 | tr ' ' '\n' | grep -q "^${key_name}="
+}
+
+# This function works on all scontrol outputs
+function parse_scontrol_job_type {
+    if _scontrol_contains_key "ArrayJobId" ; then
+        printf "ARRAY"
+    else
+        printf "SINGLETON"
+    fi
+}
+
+# This function works on all scontrol outputs
+function parse_scontrol_scheduler_id {
+    local input
+    input=$(cat)
+    if [ "$(parse_scontrol_job_type <<< "${input}")" == "ARRAY" ] ; then
+        parse_scontrol "ArrayJobId" <<< "${input}"
+    else
+        parse_scontrol "JobId" <<< "${input}"
+    fi
+}
+
+function parse_scontrol_task_index {
+  local control=$(echo "$1" | head -n 1 | tr ' ' '\n')
+  echo "$control" | grep '^ArrayTaskId=' | cut -d= -f2
+}
 
 function parse_scontrol_state {
   local scheduler_state=$(parse_scontrol_scheduler_state "$1")
@@ -142,6 +185,16 @@ function parse_scontrol_reason {
   if [[ "$reason" != "None" ]]; then
     printf "$reason"
   fi
+}
+
+function parse_scontrol_stdout {
+  local control=$(echo "$1" | head -n 1 | tr ' ' '\n')
+  echo "$control" | grep '^StdOut=' | cut -d= -f2
+}
+
+function parse_scontrol_stderr {
+  local control=$(echo "$1" | head -n 1 | tr ' ' '\n')
+  echo "$control" | grep '^StdErr=' | cut -d= -f2
 }
 
 function parse_scontrol_start_time {
@@ -183,8 +236,8 @@ function parse_scontrol_estimated_end_time {
 # ==============================================================================
 # sacct parsers
 #
-# NOTE: Unless otherwise stated, these parsers are designed for an individual
-# job/task
+# NOTE: All sacct parsers are designed for a single row with:
+#       --format State,Reason,START,END,AllocTRES,JobID
 # ==============================================================================
 
 function parse_sacct_state {
@@ -231,4 +284,9 @@ function parse_sacct_estimated_end_time {
   local state="$2"
   local time=$(echo "$1" | cut -d'|' -f4)
   _parse_estimated_end_time "$time" "$state"
+}
+
+function parse_sacct_task_index {
+  local state="$2"
+  echo "$1" | cut -d'|' -f6 | sed 's/^.*_//g'
 }

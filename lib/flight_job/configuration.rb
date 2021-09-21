@@ -74,6 +74,11 @@ module FlightJob
               transform: relative_to(root_path)
     validates :monitor_script_path, presence: true
 
+    attribute :monitor_array_script_path,
+              default: ->(config) { File.join('libexec/job', config.scheduler, 'monitor-array.sh') },
+              transform: relative_to(root_path)
+    validates :monitor_array_script_path, presence: true
+
     attribute :adapter_script_path,
               default: ->(config) { File.join("usr/share/job/adapter.#{config.scheduler}.erb") },
               transform: relative_to(root_path)
