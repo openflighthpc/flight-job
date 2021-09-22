@@ -61,7 +61,7 @@ module FlightJob
             # Validate the output
             validate_data(SCHEMA, data, tag: "monitor-array")
             data['tasks'].each do |index, datum|
-              validate_data(TASK_SCHEMAS[:initial], datum, tag: "monitor-array task: #{index} (initial)")
+              validate_data(TASK_SCHEMAS[:common], datum, tag: "monitor-array task: #{index} (common)")
               state = datum['state']
               validate_data(TASK_SCHEMAS[state], datum, tag: "monitor-array task: #{index} (#{state})")
             end

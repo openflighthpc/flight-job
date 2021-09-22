@@ -25,6 +25,8 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+require 'open3'
+
 module FlightJob
   module JobTransitions
     module JobTransitionHelper
