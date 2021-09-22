@@ -109,7 +109,8 @@
 # The default value will automatically use the 'scheduler' config. This feature
 # is not supported when overridden.
 #
-# Relative paths are expanded from flight_ROOT. **
+# Relative paths are expanded according to the "Relative path expansion" rules
+# described below.
 #
 # The environment variable flight_JOB_cancel_script_path takes precedence.
 # ==============================================================================

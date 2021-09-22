@@ -33,13 +33,13 @@ module FlightJob
         if job.cancel
           # The job may not have been cancelled by this point, so the current
           # state is displayed
-          puts render_output(Outputs::InfoJob, job)
+          puts render_output(Outputs::InfoJob, job.decorate)
         else
           # This is an intentional misnomer
           #
           # There are race conditions between Job#cancel and the job otherwise
-          # terminating naturally
-          raise InputError, "Can not cancel terminated job: #{id}"
+          # terminating naturally.
+          raise InputError, "Cannot cancel terminated job: #{id}"
         end
       end
     end
