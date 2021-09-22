@@ -57,11 +57,7 @@ module FlightJob
         end
       end
 
-      def run!
-        raise NotImplementedError
-      end
-
-      def run!
+      def run
         # Validate and load the script
         unless valid?
           FlightJob.config.logger("The script is not in a valid submission state: #{id}\n") do
@@ -117,9 +113,9 @@ module FlightJob
           case data['job_type']
           when 'SINGLETON'
             metadata['state'] = 'PENDING'
-            MonitorSingletonTransition.new(__getobj__).run!
+            MonitorSingletonTransition.new(__getobj__).run
           when 'ARRAY'
-            MonitorArrayTransition.new(__getobj__).run!
+            MonitorArrayTransition.new(__getobj__).run
           end
         end
       end

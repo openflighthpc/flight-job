@@ -285,7 +285,7 @@ module FlightJob
     end
 
     def submit
-      JobTransitions::SubmitTransition.new(self).run!
+      JobTransitions::SubmitTransition.new(self).run
     end
 
     def monitor
@@ -293,9 +293,9 @@ module FlightJob
       when 'INITIALIZING'
         JobTransitions::FailedSubmissionTransition.new(self).run
       when 'SINGLETON'
-        JobTransitions::MonitorSingletonTransition.new(self).run!
+        JobTransitions::MonitorSingletonTransition.new(self).run
       when 'ARRAY'
-        JobTransitions::MonitorArrayTransition.new(self).run!
+        JobTransitions::MonitorArrayTransition.new(self).run
       end
     end
 

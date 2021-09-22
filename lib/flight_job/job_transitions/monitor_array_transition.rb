@@ -50,10 +50,6 @@ module FlightJob
       TASK_SCHEMAS = MonitorSingletonTransition::SCHEMAS
 
       def run
-        raise NotImplementedError
-      end
-
-      def run!
         FlightJob.logger.info("Monitoring Job: #{id}")
         cmd = [FlightJob.config.monitor_array_script_path, scheduler_id]
         execute_command(*cmd, tag: 'monitor') do |status, stdout, stderr, data|
