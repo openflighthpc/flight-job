@@ -37,7 +37,7 @@ module FlightJob
         "stderr_path" => { "type" => ['null', "string"] }
       }
       SCHEMAS = {
-        initial: JSONSchemer.schema({
+        common: JSONSchemer.schema({
           "type" => "object",
           "additionalProperties" => true,
           "required" => SHARED_KEYS,
@@ -129,10 +129,6 @@ module FlightJob
       }.tap { |h| h["FAILED"] = h["COMPLETED"] }
 
       def run
-        raise NotImplementedError
-      end
-
-      def run!
         # Skip jobs that have terminated, this allows the method to be called liberally
         if Job::STATES_LOOKUP[state] == :terminal
           FlightJob.logger.debug "Skipping monitor for terminated job: #{id}"
@@ -154,7 +150,7 @@ module FlightJob
         execute_command(*cmd, tag: 'monitor') do |status, stdout, stderr, data|
           if status.success?
             # Validate the output
-            validate_data(SCHEMAS[:initial], data, tag: "monitor (initial)")
+            validate_data(SCHEMAS[:common], data, tag: "monitor (common)")
             validate_data(SCHEMAS[data['state']], data, tag: "monitor (#{data['state']})")
 
             # Update the attributes

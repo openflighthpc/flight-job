@@ -29,7 +29,6 @@ require 'json'
 require 'securerandom'
 require 'json_schemer'
 require 'time'
-require 'open3'
 
 require_relative 'job/validator'
 
@@ -51,7 +50,7 @@ module FlightJob
     # Break up the raw schema into its components
     # This makes slightly nicer error reporting by removing the oneOf
     SCHEMAS = {
-      initial: JSONSchemer.schema(RAW_SCHEMA.dup.tap { |s| s.delete("oneOf") })
+      common: JSONSchemer.schema(RAW_SCHEMA.dup.tap { |s| s.delete("oneOf") })
     }
     RAW_SCHEMA['oneOf'].each do |schema|
       type = schema['properties']['job_type']['const']
@@ -286,7 +285,7 @@ module FlightJob
     end
 
     def submit
-      JobTransitions::SubmitTransition.new(self).run!
+      JobTransitions::SubmitTransition.new(self).run
     end
 
     def monitor
@@ -294,9 +293,9 @@ module FlightJob
       when 'INITIALIZING'
         JobTransitions::FailedSubmissionTransition.new(self).run
       when 'SINGLETON'
-        JobTransitions::MonitorSingletonTransition.new(self).run!
+        JobTransitions::MonitorSingletonTransition.new(self).run
       when 'ARRAY'
-        JobTransitions::MonitorArrayTransition.new(self).run!
+        JobTransitions::MonitorArrayTransition.new(self).run
       end
     end
 
