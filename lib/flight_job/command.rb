@@ -28,7 +28,6 @@
 require 'ostruct'
 require 'pastel'
 require 'tty-editor'
-require 'tty-pager'
 
 require 'open3'
 require 'stringio'
