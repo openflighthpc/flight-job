@@ -75,7 +75,7 @@ module FlightJob
       @pastel ||= Pastel.new
     end
 
-    Pager = Struct.new(:retry_file, :follow) do
+    Pager = Struct.new(:retry_file, :follow, :pastel) do
       def page(arg)
         path = arg.is_a?(Hash) ? arg[:path] : arg.to_s
         if path
@@ -127,7 +127,7 @@ module FlightJob
     end
 
     def pager
-      @pager ||= Pager.new(opts.F || opts.retry, opts.F || opts.follow)
+      @pager ||= Pager.new(opts.F || opts.retry, opts.F || opts.follow, pastel)
     end
 
     # Check if the given option flag denotes STDIN
