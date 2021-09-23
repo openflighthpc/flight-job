@@ -25,35 +25,22 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require 'tty-prompt'
-
 module FlightJob
   module Commands
-    class DeleteJob < Command
+    class CancelJob < Command
       def run
         job = load_job(args.first)
-
-        if $stdout.tty? && !job.terminal?
-          $stderr.puts pastel.red <<~WARN.chomp
-            Job '#{job.id}' is currently #{job.state}!
-            You should first cancel the job with:
-          WARN
-          $stderr.puts pastel.yellow "#{CLI.program(:name)} cancel-job #{args.first}"
-          $stderr.puts
-          if prompt.no? pastel.bold("Do you wish to delete the job anyway?")
-            raise InputError, "The job has not been deleted"
-          end
+        if job.cancel
+          # The job may not have been cancelled by this point, so the current
+          # state is displayed
+          puts render_output(Outputs::InfoJob, job.decorate)
+        else
+          # This is an intentional misnomer
+          #
+          # There are race conditions between Job#cancel and the job otherwise
+          # terminating naturally.
+          raise InputError, "Cannot cancel terminated job: #{id}"
         end
-
-        FlightJob.logger.warn "Permanently removing job: #{job.id}"
-        FileUtils.rm_rf File.dirname(job.metadata_path)
-        $stderr.puts "Removed job: #{job.id}"
-      end
-
-      private
-
-      def prompt
-        @prompt ||= TTY::Prompt.new(help_color: :yellow)
       end
     end
   end

@@ -115,6 +115,7 @@ module FlightJob
             metadata['state'] = 'PENDING'
             MonitorSingletonTransition.new(__getobj__).run
           when 'ARRAY'
+            metadata['cancelled'] = false
             MonitorArrayTransition.new(__getobj__).run
           end
         end

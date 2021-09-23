@@ -76,6 +76,7 @@ read -r -d '' task_template <<'TEMPLATE' || true
 TEMPLATE
 
 # Define the tasks variables
+cancelled="false"
 lazy="false"
 tasks=""
 
@@ -88,6 +89,8 @@ $raw_control
 EOF
 
 if [[ "$exit_status" -eq 0 ]]; then
+  array_job_state="UNKNOWN"
+
   while IFS= read -r line; do
     index=$(parse_scontrol_task_index "$line")
     if echo "$index" | grep -P '^\d+$' >/dev/null; then
@@ -120,10 +123,15 @@ if [[ "$exit_status" -eq 0 ]]; then
       # Skipping the pseudo-task entry, setting the lazy create flag
       lazy="true"
     fi
+
+    job_id_raw=$(parse_scontrol_job_id "$line")
+    if [ "$job_id_raw" == "$1" ] ; then
+        array_job_state=$(parse_scontrol_state "$line")
+    fi
   done <<< "$raw_control"
 elif [[ "$raw_control" == "slurm_load_jobs error: Invalid job id specified" ]]; then
   # Fallback to sacct if scontrol does not recognise the ID
-  raw_acct=$(sacct --noheader --parsable --jobs "$1" --format State,Reason,START,END,AllocTRES,JobID)
+  raw_acct=$(sacct --noheader --parsable --jobs "$1" --format State,Reason,START,END,AllocTRES,JobID,JobIDRaw)
   exit_status="$?"
   cat <<EOF >&2
 
@@ -143,6 +151,8 @@ EOF
     echo "No Tasks Found!" >&2
 
   elif [[ "$exit_status" -eq 0 ]]; then
+    array_job_state="UNKNOWN"
+
     while IFS= read -r line; do
       state=$(                parse_sacct_state  "$line")
       scheduler_state=$(      parse_sacct_scheduler_state "$line")
@@ -170,6 +180,11 @@ EOF
 
       # Store the task as a JSON fragment
       tasks="$tasks, \"$index\" : $json"
+
+      job_id_raw=$(parse_sacct_job_id_raw "$line")
+      if [ "$job_id_raw" == "$1" ] ; then
+          array_job_state=$(parse_sacct_state "$line")
+      fi
     done <<< "$acct"
 
   # Exit the monitor process if sacct fails to prevent the job being updated
@@ -186,15 +201,22 @@ fi
 tasks=$(echo "$tasks" | sed 's/^,//g')
 tasks="{ $tasks }"
 
+if [ "$array_job_state" == "CANCELLED" ] ; then
+    cancelled="true"
+    lazy="false"
+fi
+
 # Render the response JSON
 read -r -d '' template <<'TEMPLATE' || true
 {
   version: 1,
+  cancelled: (if $cancelled == "true" then true else false end),
   lazy: (if $lazy == "true" then true else false end),
   tasks: ($tasks)
 }
 TEMPLATE
 echo '{}' | jq  \
+  --arg cancelled "$cancelled" \
   --arg lazy "$lazy" \
   --argjson tasks "$tasks" \
   "$template" | tr -d "\n"

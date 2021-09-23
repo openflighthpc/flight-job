@@ -299,6 +299,10 @@ module FlightJob
       end
     end
 
+    def cancel
+      JobTransitions::CancelTransition.new(self).run
+    end
+
     def decorate
       Decorators::JobDecorator.new(self)
     end
