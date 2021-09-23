@@ -213,7 +213,10 @@ module FlightJob
     create_command 'delete-job', 'JOB_ID' do |c|
       c.summary = 'Permanently remove the specified job'
       c.description = <<~DESC.chomp
-      This will permanently remove the Flight Job record of the specified job.
+      This will permanently remove Flight Job's record of the specified job.
+      Flight Job will no longer be able to help you access the specified job's
+      results.
+
       If a record is kept elsewhere such as the HPC scheduler's accouting
       database, that record will not be affected.
       DESC
