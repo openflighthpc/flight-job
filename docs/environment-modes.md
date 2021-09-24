@@ -58,7 +58,7 @@ file would be loaded from `/opt/flight-job/etc/job.yaml` and any relative
 paths expanded from `/opt/flight-job`.  E.g., by default the templates would
 be loaded from `/opt/flight-job/usr/share/job/templates`.
 
-There are two mechanisms by which standalone mode can be activated, either
+There are two mechanisms by which development mode can be activated, either
 of which is sufficient.
 
 * Create the file `.flight-envionment` containing the line

@@ -203,11 +203,11 @@
 #
 # Relative paths, where supported, are expanded in one of two ways:
 #
-# 1. If Flight Job Script API was installed from the OpenFlight package repos,
-#    they will be expanded from the value of the `flight_ROOT` environment
+# 1. If Flight Job was installed from the OpenFlight package repos, they will
+#    be expanded from the value of the `flight_ROOT` environment
 #    variable.
-# 2. Otherwise they will be expanded from the Flight Job Script API
-#    installation directory.
+# 2. Otherwise they will be expanded from the Flight Job installation
+#    directory.
 #
 # More details can be found at
 # https://github.com/openflighthpc/flight-job/blob/master/docs/environment-modes.md
