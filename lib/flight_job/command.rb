@@ -80,9 +80,11 @@ module FlightJob
         if path
           open_path(path) { |io| page_io(io) }
         else
-          io = StringIO.new(text.to_s)
-          page_io(io)
-          true
+          IO.pipe do |read, write|
+            write.write(text.to_s)
+            write.close
+            page_io(read)
+          end
         end
       end
 
