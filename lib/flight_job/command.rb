@@ -76,12 +76,11 @@ module FlightJob
     end
 
     Pager = Struct.new(:retry_file, :follow, :pastel) do
-      def page(arg)
-        path = arg.is_a?(Hash) ? arg[:path] : arg.to_s
+      def page(text = nil, path: nil)
         if path
           open_path(path) { |io| page_io(io) }
         else
-          io = StringIO.new(arg.to_s)
+          io = StringIO.new(text.to_s)
           page_io(io)
           true
         end
