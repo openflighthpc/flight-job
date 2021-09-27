@@ -81,7 +81,7 @@ module FlightJob
         if path
           open_path(path) { |io| page_io(io) }
         else
-          io = StringIO.new(str)
+          io = StringIO.new(arg.to_s)
           page_io(io)
           true
         end
