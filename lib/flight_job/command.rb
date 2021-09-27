@@ -206,9 +206,9 @@ module FlightJob
       if !(job.results_dir && Dir.exists?(job.results_dir))
         case job.state
         when 'PENDING'
-          raise MissingError, 'Your job has not started, please try again latter...'
+          raise MissingError, 'Your job has not started, please try again later...'
         when *Job::RUNNING_STATES
-          raise MissingError, 'No job results found, please try again latter...'
+          raise MissingError, 'No job results found, please try again later...'
         else
           raise MissingError, 'No job results found.'
         end
