@@ -26,7 +26,7 @@
     },
     "job_type": {
       "enum": [
-        "INITIALIZING",
+        "SUBMITTING",
         "SINGLETON",
         "ARRAY",
         "FAILED_SUBMISSION"
@@ -61,7 +61,7 @@
           "const": 1
         },
         "job_type": {
-          "const": "INITIALIZING"
+          "const": "SUBMITTING"
         }
       }
     },

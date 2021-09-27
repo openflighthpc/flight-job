@@ -28,15 +28,15 @@ additionalProperties: true
 properties:
   <<: *SHARED_PROPERTIES
   job_type:
-    enum: ["INITIALIZING", "SINGLETON", "ARRAY", "FAILED_SUBMISSION"]
+    enum: ["SUBMITTING", "SINGLETON", "ARRAY", "FAILED_SUBMISSION"]
 oneOf:
-  # INITIALIZING Jobs
+  # SUBMITTING Jobs
   - type: "object"
     additionalProperties: false
     <<: *SHARED_REQUIRED
     properties:
       <<: *SHARED_PROPERTIES
-      job_type: { "const" : "INITIALIZING" }
+      job_type: { "const" : "SUBMITTING" }
 
   # FAILED_SUBMISSION Jobs
   - type: "object"

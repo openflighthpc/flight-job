@@ -63,8 +63,8 @@ module FlightJob
         job = new(id: id)
         if job.valid?(:load)
           job.tap(&:monitor)
-          if job.job_type == 'INITIALIZING'
-            FlightJob.logger.debug("Skipping initializing job: #{job.id}")
+          if job.submitting?
+            FlightJob.logger.debug("Skipping #{job_type} job: #{job.id}")
             nil
           else
             job
@@ -136,7 +136,7 @@ module FlightJob
       # Initialize the job with the script
       if metadata.empty?
         metadata["created_at"] = Time.now.rfc3339
-        metadata["job_type"] = "INITIALIZING"
+        metadata["job_type"] = "SUBMITTING"
         metadata["rendered_path"] = File.join(job_dir, script.script_name)
         metadata["script_id"] = script.id
         metadata["version"] = SCHEMA_VERSION
@@ -206,7 +206,7 @@ module FlightJob
     def state
       Flight.logger.warn "DEPRECATED: Job#state does not function correctly for array tasks"
       case job_type
-      when 'INITIALIZING'
+      when 'SUBMITTING'
         'PENDING'
       when 'FAILED_SUBMISSION'
         'FAILED'
@@ -256,7 +256,7 @@ module FlightJob
     end
 
     def submitted?
-      job_type != 'INITIALIZING'
+      ['SUBMITTING'].include? job_type
     end
 
     def scheduler_id
@@ -327,7 +327,7 @@ module FlightJob
 
     def terminal?
       case job_type
-      when 'INITIALIZING'
+      when 'SUBMITTING'
         false
       when 'FAILED_SUBMISSION'
         true
@@ -388,7 +388,7 @@ module FlightJob
                   "for '#{id}' as it is an individual job."
                 when 'ARRAY'
                   "for '#{id}' as it is an array job."
-                when 'INITIALIZING'
+                when 'SUBMITTING'
                   "for job '#{id}' as it is pending submission."
                 when 'FAILED_SUBMISSION'
                   "for job '#{id}' as it did not succesfully submit."
