@@ -33,7 +33,7 @@ module FlightJob
       # The 'ls' command will fail if bad arguments are provided to it. This can
       # not be easily detected as 'ls' will likely exit 2 regardless. Instead a
       # generic error is raised instead.
-      HARD_ERROR = "An error occurred when running the 'ls' command!"
+      LS_ERROR = "An error occurred when running the 'ls' command!"
 
       def run
         job = load_job(args.first)
@@ -52,7 +52,7 @@ module FlightJob
             if Job::TERMINAL_STATES.include?(job.state)
               $stderr.puts pastel.yellow 'No job results found.'
             else
-              $stderr.puts pastel.yellow 'No job results found, please try again latter...'
+              $stderr.puts pastel.yellow 'No job results found, please try again later...'
             end
           elsif status.success?
             puts stdout
@@ -61,7 +61,7 @@ module FlightJob
         end
 
         # Handle errors
-        raise InternalError, HARD_ERROR unless status
+        raise InternalError, LS_ERROR unless status
       end
 
       private
