@@ -200,18 +200,27 @@ module FlightJob
       end
     end
 
-    def assert_results_dir_exists(job)
-      # NOTE: Jobs created with old versions of flight-job will not have a
-      # results directory.
-      if !(job.results_dir && Dir.exists?(job.results_dir))
-        case job.state
-        when 'PENDING'
-          raise MissingError, 'Your job has not started, please try again later...'
-        when *Job::RUNNING_STATES
-          raise MissingError, 'No job results found, please try again later...'
-        else
-          raise MissingError, 'No job results found.'
-        end
+    def assert_results_dir_exists(job, allow_empty: true)
+      error = if !job.results_dir
+                true
+              elsif !Dir.exists?(job.results_dir)
+                true
+              elsif allow_empty
+                false
+              elsif Dir.empty?(job.results_dir)
+                true
+              else
+                false
+              end
+      return unless error
+
+      case job.state
+      when 'PENDING'
+        raise MissingError, 'Your job has not started, please try again later...'
+      when *Job::RUNNING_STATES
+        raise MissingError, 'No job results found, please try again later...'
+      else
+        raise MissingError, 'No job results found.'
       end
     end
   end

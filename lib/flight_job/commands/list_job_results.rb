@@ -37,7 +37,7 @@ module FlightJob
 
       def run
         job = load_job(args.first)
-        assert_results_dir_exists(job)
+        assert_results_dir_exists(job, allow_empty: hard_wrap?)
 
         FlightJob.logger.debug "Running: ls #{job.results_dir} #{ls_options.join(" ")}"
         cmd = ['ls', job.results_dir, *ls_options]
@@ -48,15 +48,7 @@ module FlightJob
         else
           # When soft wrapping, hide the ls error
           stdout, status = Open3.capture2(*cmd)
-          if status.success? && stdout.empty?
-            if Job::TERMINAL_STATES.include?(job.state)
-              $stderr.puts pastel.yellow 'No job results found.'
-            else
-              $stderr.puts pastel.yellow 'No job results found, please try again later...'
-            end
-          elsif status.success?
-            puts stdout
-          end
+          puts stdout if status.success?
           status.success?
         end
 
