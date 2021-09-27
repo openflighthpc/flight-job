@@ -36,11 +36,11 @@ module FlightJob
       LS_ERROR = "An error occurred when running the 'ls' command!"
 
       def run
-        job = load_job(args.first)
-        assert_results_dir_exists(job, allow_empty: advanced?)
+        @job = load_job(args.first)
+        assert_results_dir_exists(@job, allow_empty: advanced?)
 
-        FlightJob.logger.debug "Running: ls #{job.results_dir} #{ls_options.join(" ")}"
-        cmd = ['ls', job.results_dir, *ls_options]
+        FlightJob.logger.debug "Running: ls #{@job.results_dir} #{ls_options.join(" ")}"
+        cmd = ['ls', directory, *ls_options]
 
         status = if advanced?
           # When the user has provided options to the `ls` command, emit
@@ -59,9 +59,19 @@ module FlightJob
 
       private
 
+      def directory
+        path = args[1] || ''
+        path = '' if path[0] == '-'
+        File.join(@job.results_dir, path)
+      end
+
       # Return true if the user has provided options to `ls`.
       def advanced?
-        args.length > 1
+        !user_ls_options.empty?
+      end
+
+      def user_ls_options
+        args.select { |a| a[0] == '-' }
       end
 
       def ls_options
@@ -69,7 +79,7 @@ module FlightJob
           base = []
           base << '-lAR' if opts.verbose
           base << '--color' if $stdout.tty?
-          [*base, *args[1..]]
+          [*base, *user_ls_options ]
         end
       end
     end
