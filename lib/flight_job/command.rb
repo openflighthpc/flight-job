@@ -108,7 +108,7 @@ module FlightJob
       def page_io(io)
         # Determines the command
         cmd = if follow
-                'less -SFX +F -Ps"Press h for help or q to quit"'
+                'less -S +F -Ps"Press h for help, F to follow, or q to quit"'
               elsif ['less', nil].include?(ENV['PAGER'])
                 'less -SFRX -Ps"Press h for help or q to quit"'
               else
