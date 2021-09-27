@@ -31,16 +31,17 @@ additionalProperties: true
 properties:
   <<: *SHARED_PROPERTIES
   job_type:
-    enum: ["INITIALIZING", "MONITORING", "SINGLETON", "ARRAY", "FAILED_SUBMISSION"]
+    enum: ["SUBMITTING", "MONITORING", "SINGLETON", "ARRAY", "FAILED_SUBMISSION"]
+
 oneOf:
-  # INITIALIZING Jobs
+  # SUBMITTING Jobs
   # NOTE: All jobs are created in the state before submit.sh is ran
   - type: "object"
     additionalProperties: false
     <<: *SHARED_REQUIRED
     properties:
       <<: *SHARED_PROPERTIES
-      job_type: { "const" : "INITIALIZING" }
+      job_type: { "const" : "SUBMITTING" }
 
   # MONITORING Jobs
   # NOTE: This represents jobs which where succesfully submitted but have

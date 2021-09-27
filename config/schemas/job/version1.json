@@ -26,7 +26,7 @@
     },
     "job_type": {
       "enum": [
-        "INITIALIZING",
+        "SUBMITTING",
         "MONITORING",
         "SINGLETON",
         "ARRAY",
@@ -62,7 +62,7 @@
           "const": 1
         },
         "job_type": {
-          "const": "INITIALIZING"
+          "const": "SUBMITTING"
         }
       }
     },
