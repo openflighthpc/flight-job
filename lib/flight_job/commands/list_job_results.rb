@@ -37,16 +37,17 @@ module FlightJob
 
       def run
         job = load_job(args.first)
-        assert_results_dir_exists(job, allow_empty: hard_wrap?)
+        assert_results_dir_exists(job, allow_empty: advanced?)
 
         FlightJob.logger.debug "Running: ls #{job.results_dir} #{ls_options.join(" ")}"
         cmd = ['ls', job.results_dir, *ls_options]
 
-        status = if hard_wrap?
-          # When hard wrapping, emit STDOUT/STDERR directly to the terminal
+        status = if advanced?
+          # When the user has provided options to the `ls` command, emit
+          # STDOUT/STDERR directly to the terminal
           Kernel.system(*cmd)
         else
-          # When soft wrapping, hide the ls error
+          # When we control the `ls` options we provide nicer error messages.
           stdout, status = Open3.capture2(*cmd)
           puts stdout if status.success?
           status.success?
@@ -58,7 +59,8 @@ module FlightJob
 
       private
 
-      def hard_wrap?
+      # Return true if the user has provided options to `ls`.
+      def advanced?
         args.length > 1
       end
 
