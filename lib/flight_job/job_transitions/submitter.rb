@@ -27,18 +27,6 @@
 
 module FlightJob
   module JobTransitions
-    SUBMITTER_SCHEMA = JSONSchemer.schema({
-      "type" => "object",
-      "additionalProperties" => false,
-      "required" => ["job_type", "version", "id", "results_dir"],
-      "properties" => {
-        "version" => { "const" => 1 },
-        "id" => { "type" => "string", "minLength" => 1 },
-        "results_dir" => { "type" => "string", "minLength" => 1 },
-        "job_type" => { "enum" => ["SINGLETON", "ARRAY"] }
-      }
-    })
-
     Submitter = Struct.new(:job) do
       include JobTransitionHelper
       include ActiveModel::Validations
@@ -97,34 +85,8 @@ module FlightJob
             return
           end
 
-          # Validate the payload format
-          begin
-            validate_data(SUBMITTER_SCHEMA, data, tag: 'submit')
-          rescue CommandError
-            # The command lied about exiting 0! It did not report the json payload
-            # correctly. Changing the status to 126
-            job.metadata['job_type'] = 'FAILED_SUBMISSION'
-            job.metadata['submit_status'] = 126
-            job.metadata["submit_stderr"] << "\nFailed to parse JSON response"
-            job.save_metadata
-            raise $!
-          end
-
-          # The job was submitted correctly and is now pending
-          job.metadata['results_dir'] = data['results_dir']
-          job.metadata['scheduler_id'] = data['id']
-          job.metadata['job_type'] = data['job_type']
-
-          # Run the monitor
-          case data['job_type']
-          when 'SINGLETON'
-            job.metadata['state'] = 'PENDING'
-            SingletonMonitor.new(job).run!
-          when 'ARRAY'
-            job.metadata['cancelled'] = false
-            job.metadata['lazy'] = true
-            ArrayMonitor.new(job).run!
-          end
+          # Bootstrap the monitors
+          BootstrapMonitor.new(job).run!
         end
       end
     end

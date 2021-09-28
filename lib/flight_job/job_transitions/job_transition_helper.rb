@@ -62,13 +62,8 @@ module FlightJob
 
         data = nil
         if status.success?
-          begin
-            data = JSON.parse(cmd_stdout.split("\n").last.to_s)
-          rescue JSON::ParserError
-            FlightJob.logger.error("Failed to parse #{tag} JSON for job: #{id}")
-            FlightJob.logger.debug($!.message)
-            raise_command_error
-          end
+          # TODO: Remove this, bad JSON needs to be handled higher up
+          data = parse_stdout_json(cmd_stdout, tag: tag)
         end
 
         yield(status, cmd_stdout, cmd_stderr, data)

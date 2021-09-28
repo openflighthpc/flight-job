@@ -147,10 +147,6 @@ module FlightJob
       end
     end
 
-    def submitted?
-      File.exists? metadata_path
-    end
-
     def failed_migration_path
       @failed_migration_path ||= File.join(
         job_dir, ".migration-failed.#{SCHEMA_VERSION}.0"
@@ -256,7 +252,7 @@ module FlightJob
     end
 
     def submitted?
-      ['SUBMITTING'].include? job_type
+      !['SUBMITTING', 'MONITORING'].include? job_type
     end
 
     def scheduler_id
@@ -293,6 +289,8 @@ module FlightJob
       success = case job_type
       when 'SUBMITTING'
         JobTransitions::FailedSubmitter.new(self).run
+      when 'MONITORING'
+        JobTransitions::MonitorBootstrapper.new(self).run
       when 'SINGLETON'
         JobTransitions::SingletonMonitor.new(self).run
       when 'ARRAY'
