@@ -63,8 +63,8 @@ module FlightJob
         job = new(id: id)
         if job.valid?(:load)
           job.tap(&:monitor)
-          if job.submitting?
-            FlightJob.logger.debug("Skipping #{job_type} job: #{job.id}")
+          if job.initializing?
+            FlightJob.logger.debug("Skipping #{job.job_type} job: #{job.id}")
             nil
           else
             job
@@ -251,8 +251,8 @@ module FlightJob
       end
     end
 
-    def submitted?
-      !['SUBMITTING', 'MONITORING'].include? job_type
+    def initializing?
+      ['SUBMITTING', 'MONITORING'].include? job_type
     end
 
     def scheduler_id

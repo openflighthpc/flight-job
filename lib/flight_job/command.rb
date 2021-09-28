@@ -245,8 +245,9 @@ module FlightJob
           end
           raise InternalError, "Unexpectedly failed to load job: #{id}"
         end
-        job.monitor
-        unless job.submitted?
+        initializing = job.initializing?
+        monitored = job.monitor
+        if initializing && !monitored
           raise MissingJobError, "Could not load initializing job: #{id}"
         end
       end
