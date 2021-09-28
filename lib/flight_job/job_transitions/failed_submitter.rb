@@ -46,7 +46,7 @@ module FlightJob
             The following job is being flagged as FAILED as it has not been submitted: #{job.id}
           ERROR
           job.metadata['job_type'] = "FAILED_SUBMISSION"
-          job.metadata['submit_status'] = 128
+          job.metadata['submit_status'] = 126
           job.metadata['submit_stdout'] = ''
           job.metadata['submit_stderr'] = 'Failed to run the submission command for an unknown reason'
           job.save_metadata

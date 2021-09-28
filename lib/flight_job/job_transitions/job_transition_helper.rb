@@ -30,6 +30,15 @@ require 'open3'
 module FlightJob
   module JobTransitions
     module JobTransitionHelper
+      # TODO: Remove me!
+      def method_missing(s, *args)
+        if respond_to? :job
+          job.send(s, *args)
+        else
+          __getobj__.send(s, *args)
+        end
+      end
+
       def execute_command(*cmd, tag:)
         # NOTE: Should the PATH be configurable instead of inherited from the environment?
         # This could lead to differences when executed via the CLI or the webapp
