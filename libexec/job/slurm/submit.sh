@@ -27,15 +27,15 @@
 #==============================================================================
 
 #-------------------------------------------------------------------------------
-# WARNING - README
+# WARNING do not modify this file.
 #
-# This is an internally managed file, any changes maybe lost on the next update!
-# Please make any installation specific changes within the provided 'sbatch.sh'
-# script or clone the entire 'slurm' directory.
+# If this file is not suitable for your cluster environment, please follow the
+# instructions at
+# https://github.com/openflighthpc/flight-job/blob/master/docs/scheduler-integration.md
+# to create a custom scheduler integration.
 #-------------------------------------------------------------------------------
 
 set -o pipefail
-# set -x
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source "${DIR}/functions.sh"
@@ -56,10 +56,7 @@ run_scontrol() {
 
 parse_scontrol_output() {
     assert_array_var PARSE_RESULT
-    local working
-    local name
-    local scontrol_output
-    local submission_id
+    local working name scontrol_output submission_id
 
     submission_id="${PARSE_RESULT[submission_id]}"
     scontrol_output="$(cat)"
@@ -100,8 +97,7 @@ TEMPLATE
 
 main() {
     declare -A PARSE_RESULT
-    local exit_status
-    local output
+    local exit_status output
 
     check_progs jq scontrol sbatch
 

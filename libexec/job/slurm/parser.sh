@@ -81,37 +81,37 @@ declare -A STATE_MAP=(
   ["TIMEOUT"]="FAILED"
 )
 
-function _parse_time {
+_parse_time() {
   if [[ "$1" != "Unknown" ]]; then
     printf "$1"
   fi
 }
 
-function _parse_start_time {
+_parse_start_time() {
   if echo "RUNNING COMPLETED FAILED CANCELLED" | grep -q "$2"; then
     _parse_time "$1"
   fi
 }
 
-function _parse_end_time {
+_parse_end_time() {
   if echo "COMPLETED FAILED CANCELLED" | grep -q "$2"; then
     _parse_time "$1"
   fi
 }
 
-function _parse_estimated_start_time {
+_parse_estimated_start_time() {
   if [ "PENDING" == "$2" ]; then
     _parse_time "$1"
   fi
 }
 
-function _parse_estimated_end_time {
+_parse_estimated_end_time() {
   if echo "RUNNING PENDING" | grep -q "$2"; then
     _parse_time "$1"
   fi
 }
 
-function _parse_state {
+_parse_state() {
   if [ -n "${STATE_MAP["$1"]}" ]; then
     printf "${STATE_MAP["$1"]}"
   else
@@ -180,35 +180,41 @@ parse_scontrol_scheduler_id() {
 }
 
 parse_scontrol_job_id() {
-  echo "$1" | grep '^JobId=' | cut -d= -f2
+    parse_scontrol JobId
 }
 
-function parse_scontrol_task_index {
-  echo "$1" | grep '^ArrayTaskId=' | cut -d= -f2
+parse_scontrol_task_index() {
+    parse_scontrol ArrayTaskId
 }
 
-function parse_scontrol_state {
-  local scheduler_state=$(parse_scontrol_scheduler_state "$1")
-  _parse_state "$scheduler_state"
+parse_scontrol_state() {
+    local scheduler_state
+    if (( $# == 0 )) ; then
+        scheduler_state=$(parse_scontrol_scheduler_state)
+    else
+        scheduler_state=$(parse_scontrol_scheduler_state <<< "$1")
+    fi
+    _parse_state "$scheduler_state"
 }
 
-function parse_scontrol_scheduler_state {
-  echo "$1" | grep '^JobState=' | cut -d= -f2
+parse_scontrol_scheduler_state() {
+    parse_scontrol JobState
 }
 
-function parse_scontrol_reason {
-  local reason=$(echo "$1" | grep '^Reason='   | cut -d= -f2)
-  if [[ "$reason" != "None" ]]; then
-    printf "$reason"
-  fi
+parse_scontrol_reason() {
+    local reason
+    reason="$(parse_scontrol Reason)"
+    if [[ "$reason" != "None" ]]; then
+        printf "$reason"
+    fi
 }
 
-function parse_scontrol_stdout {
-  echo "$1" | grep '^StdOut=' | cut -d= -f2
+parse_scontrol_stdout() {
+    parse_scontrol StdOut
 }
 
-function parse_scontrol_stderr {
-  echo "$1" | grep '^StdErr=' | cut -d= -f2
+parse_scontrol_stderr() {
+    parse_scontrol StdErr
 }
 
 parse_scontrol_start_time() {
@@ -255,57 +261,72 @@ parse_scontrol_estimated_end_time() {
 #       --format State,Reason,START,END,AllocTRES,JobID,JobIDRaw
 # ==============================================================================
 
-function parse_sacct_state {
-  local scheduler_state=$(parse_sacct_scheduler_state "$1")
-  _parse_state "$scheduler_state"
-}
-
-function parse_sacct_scheduler_state {
-  echo "$1" | cut -d'|' -f1 | cut -d' ' -f1
-}
-
-function parse_sacct_reason {
-  echo "$1" | cut -d'|' -f2
-}
-
-function parse_sacct_start_time {
-  local state="$2"
-
-  # Check if CANCELLED jobs actually started
-  if [ "$state" == "CANCELLED" ]; then
-    # Skip setting the start_time when there are no allocated TRESS
-    if [ -z "$(echo "$acct" | cut -d'|' -f5)" ]; then
-      return 0
+parse_sacct_field() {
+    local field
+    field="$1"
+    shift
+    if (( $# == 0 )) ; then
+        cat       | cut -d'|' -f${field}
+    else
+        echo "$1" | cut -d'|' -f${field}
     fi
-  fi
-
-  local time=$(echo "$1" | cut -d'|' -f3)
-  _parse_start_time "$time" "$state"
 }
 
-function parse_sacct_end_time {
-  local state="$2"
-  local time=$(echo "$1" | cut -d'|' -f4)
-  _parse_end_time "$time" "$state"
+parse_sacct_state() {
+    local scheduler_state
+    scheduler_state=$(parse_sacct_scheduler_state "$1")
+    _parse_state "$scheduler_state"
 }
 
-function parse_sacct_estimated_start_time {
-  local state="$2"
-  local time=$(echo "$1" | cut -d'|' -f3)
-  _parse_estimated_start_time "$time" "$state"
+parse_sacct_scheduler_state() {
+    parse_sacct_field 1 "$1" | cut -d' ' -f1
 }
 
-function parse_sacct_estimated_end_time {
-  local state="$2"
-  local time=$(echo "$1" | cut -d'|' -f4)
-  _parse_estimated_end_time "$time" "$state"
+parse_sacct_reason() {
+    parse_sacct_field 2 "$1"
 }
 
-function parse_sacct_task_index {
-  local state="$2"
-  echo "$1" | cut -d'|' -f6 | sed 's/^.*_//g'
+parse_sacct_start_time() {
+    local state time
+    state="$2"
+
+    # Check if CANCELLED jobs actually started
+    if [ "$state" == "CANCELLED" ]; then
+        # Skip setting the start_time when there are no allocated TRESS
+        if [ -z "$(echo "$1" | cut -d'|' -f5)" ]; then
+            return 0
+        fi
+    fi
+
+    time=$(parse_sacct_field 3 "$1")
+    _parse_start_time "$time" "$state"
+}
+
+parse_sacct_end_time() {
+    local state time
+    state="$2"
+    time=$(parse_sacct_field 4 "$1")
+    _parse_end_time "$time" "$state"
+}
+
+parse_sacct_estimated_start_time() {
+    local state time
+    state="$2"
+    time=$(parse_sacct_field 3 "$1")
+    _parse_estimated_start_time "$time" "$state"
+}
+
+parse_sacct_estimated_end_time() {
+    local state time
+    state="$2"
+    time=$(parse_sacct_field 4 "$1")
+    _parse_estimated_end_time "$time" "$state"
+}
+
+parse_sacct_task_index() {
+    parse_sacct_field 6 "$1" | sed 's/^.*_//g'
 }
 
 parse_sacct_job_id_raw() {
-  echo "$1" | cut -d'|' -f7
+    parse_sacct_field 7 "$1"
 }
