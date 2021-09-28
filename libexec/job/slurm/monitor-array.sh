@@ -137,14 +137,15 @@ parse_scontrol_output() {
     local job_id_raw tasks
 
     ARRAY_JOB_STATE="UNKNOWN"
+    tasks='{}'
 
     while read -r line; do
       line=$(echo "$line" | tr ' ' '\n')
       index=$(parse_task_index <<< "${line}")
       if echo "${index}" | grep -P '^\d+$' >/dev/null; then
           parse_task <<< "${line}"
-          declare -p TASK_PARSE_RESULT >&2
-          tasks="${tasks}, \"${index}\" : $(generate_task_json)"
+          # declare -p TASK_PARSE_RESULT >&2
+          tasks="$(accumalate_json_object "$tasks" "$index" "$(generate_task_json)")"
       else
         # The Slurm ARRAY_JOB has not yet been turned into a Slurm ARRAY_TASK.
         # New tasks could still be created.
@@ -157,10 +158,7 @@ parse_scontrol_output() {
       fi
     done
 
-    # Reform tasks into valid JSON (remove leading comma/ add braces)
-    tasks=$(echo "$tasks" | sed 's/^,//g')
-    tasks="{ $tasks }"
-    PARSE_RESULT[tasks]="${tasks}"
+    PARSE_RESULT[tasks]="$tasks"
 }
 
 parse_sacct_output() {
@@ -170,12 +168,13 @@ parse_sacct_output() {
     local job_id_raw tasks
 
     ARRAY_JOB_STATE="UNKNOWN"
+    tasks='{}'
 
     while IFS= read -r line; do
         index=$(parse_task_index <<< "$line")
         parse_task <<< "${line}"
-        declare -p TASK_PARSE_RESULT >&2
-        tasks="${tasks}, \"${index}\" : $(generate_task_json)"
+        # declare -p TASK_PARSE_RESULT >&2
+        tasks="$(accumalate_json_object "$tasks" "$index" "$(generate_task_json)")"
 
         job_id_raw=$(parse_job_id_raw <<< "$line")
         if [ "$job_id_raw" == "${JOB_ID}" ] ; then
@@ -183,9 +182,6 @@ parse_sacct_output() {
         fi
     done
 
-    # Reform tasks into valid JSON (remove leading comma/ add braces)
-    tasks=$(echo "$tasks" | sed 's/^,//g')
-    tasks="{ $tasks }"
     PARSE_RESULT[tasks]="${tasks}"
 }
 
@@ -226,7 +222,7 @@ main() {
         PARSE_RESULT[cancelled]="true"
         PARSE_RESULT[lazy]="false"
     fi
-    declare -p PARSE_RESULT >&2
+    # declare -p PARSE_RESULT >&2
 
     generate_template | report_metadata
 }
