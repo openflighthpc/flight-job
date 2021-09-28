@@ -59,19 +59,19 @@ module FlightJob
         rescue CommandError
           # The command lied about exiting 0! It did not report the json payload
           # correctly. Changing the status to 128
-          metadata['job_type'] = 'FAILED_SUBMISSION'
-          metadata['submit_status'] = 128
-          metadata["submit_stderr"] << <<~MSG.chomp
+          job.metadata['job_type'] = 'FAILED_SUBMISSION'
+          job.metadata['submit_status'] = 128
+          job.metadata["submit_stderr"] << <<~MSG.chomp
             Failed to parse JSON response after the command original exited 0!
           MSG
-          save_metadata
+          job.save_metadata
           raise $!
         end
 
         # The job was submitted correctly and is now pending
-        metadata['results_dir'] = data['results_dir']
-        metadata['scheduler_id'] = data['id']
-        metadata['job_type'] = data['job_type']
+        job.metadata['results_dir'] = data['results_dir']
+        job.metadata['scheduler_id'] = data['id']
+        job.metadata['job_type'] = data['job_type']
 
         # Run the monitor
         case data['job_type']
