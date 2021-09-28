@@ -39,6 +39,7 @@ set -o pipefail
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source "${DIR}/functions.sh"
+source "${DIR}/parser.sh"
 
 run_scontrol() {
     scontrol show job "${1}" --oneline 2>&1
@@ -46,24 +47,6 @@ run_scontrol() {
 
 run_sacct() {
   sacct --noheader --parsable --jobs "$1" --format State,Reason,START,END,AllocTRES
-}
-
-parse_job() {
-    assert_array_var PARSE_RESULT
-    local parse_input state
-
-    parse_input="$(cat)"
-    state=$(parse_state <<< "${parse_input}")
-
-    PARSE_RESULT[state]="${state}"
-    PARSE_RESULT[scheduler_state]=$(parse_scheduler_state <<< "${parse_input}")
-    PARSE_RESULT[reason]=$(parse_reason <<< "${parse_input}")
-    PARSE_RESULT[start_time]=$(parse_start_time "${state}" <<< "${parse_input}")
-    PARSE_RESULT[end_time]=$(parse_end_time "${state}" <<< "${parse_input}")
-    PARSE_RESULT[estimated_start_time]=$(parse_estimated_start_time "$state" <<< "${parse_input}")
-    PARSE_RESULT[estimated_end_time]=$(parse_estimated_end_time "$state" <<< "${parse_input}")
-    PARSE_RESULT[stdout_path]=$(parse_stdout <<< "${parse_input}")
-    PARSE_RESULT[stderr_path]=$(parse_stderr <<< "${parse_input}")
 }
 
 generate_template() {
@@ -124,7 +107,7 @@ main() {
     if [[ $exit_status -eq 0 ]] ; then
         output="$(echo "$output" | head -n 1 | tr ' ' '\n')"
         source_parsers "scontrol"
-        parse_job <<< "${output}"
+        parse_task <<< "${output}"
     elif [[ "${output}" == "slurm_load_jobs error: Invalid job id specified" ]] ; then
         output=$(run_sacct "$1" | tee >(log_command "sacct" 1>&2))
         exit_status=$?
@@ -133,7 +116,7 @@ main() {
             PARSE_RESULT[state]="UNKNOWN"
         elif [[ $exit_status -eq 0 ]]; then
             source_parsers "sacct"
-            parse_job <<< "${output}"
+            parse_task <<< "${output}"
         else
             exit $exit_status
         fi

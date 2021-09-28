@@ -39,9 +39,10 @@ set -o pipefail
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source "${DIR}/functions.sh"
+source "${DIR}/parser.sh"
 
 generate_task_json() {
-    assert_array_var TASK_PARSE_RESULT
+    assert_array_var PARSE_RESULT
 
     read -r -d '' task_template <<'TEMPLATE' || true
 {
@@ -75,15 +76,15 @@ generate_task_json() {
 TEMPLATE
 
     echo '{}' | jq  \
-      --arg state "${TASK_PARSE_RESULT[state]}" \
-      --arg scheduler_state "${TASK_PARSE_RESULT[scheduler_state]}" \
-      --arg reason "${TASK_PARSE_RESULT[reason]}" \
-      --arg stdout_path "${TASK_PARSE_RESULT[stdout_path]}" \
-      --arg stderr_path "${TASK_PARSE_RESULT[stderr_path]}" \
-      --arg estimated_start_time "${TASK_PARSE_RESULT[estimated_start_time]}" \
-      --arg estimated_end_time "${TASK_PARSE_RESULT[estimated_end_time]}" \
-      --arg start_time "${TASK_PARSE_RESULT[start_time]}" \
-      --arg end_time "${TASK_PARSE_RESULT[end_time]}" \
+      --arg state "${PARSE_RESULT[state]}" \
+      --arg scheduler_state "${PARSE_RESULT[scheduler_state]}" \
+      --arg reason "${PARSE_RESULT[reason]}" \
+      --arg stdout_path "${PARSE_RESULT[stdout_path]}" \
+      --arg stderr_path "${PARSE_RESULT[stderr_path]}" \
+      --arg estimated_start_time "${PARSE_RESULT[estimated_start_time]}" \
+      --arg estimated_end_time "${PARSE_RESULT[estimated_end_time]}" \
+      --arg start_time "${PARSE_RESULT[start_time]}" \
+      --arg end_time "${PARSE_RESULT[end_time]}" \
       "$task_template"
 }
 
@@ -99,9 +100,9 @@ generate_template() {
 TEMPLATE
 
     echo '{}' | jq  \
-      --arg cancelled "${PARSE_RESULT[cancelled]}" \
-      --arg lazy "${PARSE_RESULT[lazy]}" \
-      --argjson tasks "${PARSE_RESULT[tasks]}" \
+      --arg cancelled "${JOB_RESULT[cancelled]}" \
+      --arg lazy "${JOB_RESULT[lazy]}" \
+      --argjson tasks "${JOB_RESULT[tasks]}" \
       "$template"
 }
 
@@ -113,30 +114,12 @@ run_sacct() {
   sacct --noheader --parsable --jobs "$1" --format State,Reason,START,END,AllocTRES,JobID,JobIDRaw
 }
 
-parse_task() {
-    assert_array_var TASK_PARSE_RESULT
-    local parse_input state
-
-    parse_input="$(cat)"
-    state=$(parse_state <<< "${parse_input}")
-    TASK_PARSE_RESULT[state]="${state}"
-    TASK_PARSE_RESULT[scheduler_state]=$(parse_scheduler_state <<< "${parse_input}")
-    TASK_PARSE_RESULT[reason]=$(parse_reason <<< "${parse_input}")
-    TASK_PARSE_RESULT[start_time]=$(parse_start_time "${state}" <<< "${parse_input}")
-    TASK_PARSE_RESULT[end_time]=$(parse_end_time "${state}" <<< "${parse_input}")
-    TASK_PARSE_RESULT[estimated_start_time]=$(parse_estimated_start_time "${state}" <<< "${parse_input}")
-    TASK_PARSE_RESULT[estimated_end_time]=$(parse_estimated_end_time "${state}" <<< "${parse_input}")
-    TASK_PARSE_RESULT[stdout_path]=$(parse_stdout <<< "${parse_input}")
-    TASK_PARSE_RESULT[stderr_path]=$(parse_stderr <<< "${parse_input}")
-}
-
 parse_scontrol_output() {
-    assert_array_var PARSE_RESULT
+    assert_array_var JOB_RESULT
     assert_var ARRAY_JOB_STATE
-    declare -A TASK_PARSE_RESULT
-    local job_id_raw tasks
+    declare -A PARSE_RESULT
+    local tasks
 
-    ARRAY_JOB_STATE="UNKNOWN"
     tasks='{}'
 
     while read -r line; do
@@ -144,56 +127,54 @@ parse_scontrol_output() {
       index=$(parse_task_index <<< "${line}")
       if echo "${index}" | grep -P '^\d+$' >/dev/null; then
           parse_task <<< "${line}"
-          # declare -p TASK_PARSE_RESULT >&2
+          # declare -p PARSE_RESULT >&2
           tasks="$(accumalate_json_object "$tasks" "$index" "$(generate_task_json)")"
       else
         # The Slurm ARRAY_JOB has not yet been turned into a Slurm ARRAY_TASK.
         # New tasks could still be created.
-        PARSE_RESULT[lazy]="true"
+        JOB_RESULT[lazy]="true"
       fi
   
-      job_id_raw=$(parse_job_id <<< "${line}")
-      if [ "$job_id_raw" == "${JOB_ID}" ] ; then
+      if [ "$(parse_job_id <<< "${line}")" == "${JOB_ID}" ] ; then
           ARRAY_JOB_STATE=$(parse_state <<< "${line}")
       fi
     done
 
-    PARSE_RESULT[tasks]="$tasks"
+    JOB_RESULT[tasks]="$tasks"
 }
 
 parse_sacct_output() {
-    assert_array_var PARSE_RESULT
+    assert_array_var JOB_RESULT
     assert_var ARRAY_JOB_STATE
-    declare -A TASK_PARSE_RESULT
-    local job_id_raw tasks
+    declare -A PARSE_RESULT
+    local tasks
 
-    ARRAY_JOB_STATE="UNKNOWN"
     tasks='{}'
 
     while IFS= read -r line; do
         index=$(parse_task_index <<< "$line")
         parse_task <<< "${line}"
-        # declare -p TASK_PARSE_RESULT >&2
+        # declare -p PARSE_RESULT >&2
         tasks="$(accumalate_json_object "$tasks" "$index" "$(generate_task_json)")"
 
-        job_id_raw=$(parse_job_id_raw <<< "$line")
-        if [ "$job_id_raw" == "${JOB_ID}" ] ; then
+        if [ "$(parse_job_id <<< "$line")" == "${JOB_ID}" ] ; then
             ARRAY_JOB_STATE=$(parse_state <<< "$line")
         fi
     done
 
-    PARSE_RESULT[tasks]="${tasks}"
+    JOB_RESULT[tasks]="${tasks}"
 }
 
 main() {
     JOB_ID="$1"
-    declare -A PARSE_RESULT
+    declare -A JOB_RESULT
     local ARRAY_JOB_STATE exit_status output
 
     check_progs jq scontrol sacct
 
-    PARSE_RESULT[cancelled]="false"
-    PARSE_RESULT[lazy]="false"
+    ARRAY_JOB_STATE="UNKNOWN"
+    JOB_RESULT[cancelled]="false"
+    JOB_RESULT[lazy]="false"
 
     output=$(run_scontrol "${JOB_ID}" | tee >(log_command "scontrol" 1>&2))
     exit_status=$?
@@ -219,10 +200,10 @@ main() {
     fi
 
     if [ "$ARRAY_JOB_STATE" == "CANCELLED" ] ; then
-        PARSE_RESULT[cancelled]="true"
-        PARSE_RESULT[lazy]="false"
+        JOB_RESULT[cancelled]="true"
+        JOB_RESULT[lazy]="false"
     fi
-    # declare -p PARSE_RESULT >&2
+    # declare -p JOB_RESULT >&2
 
     generate_template | report_metadata
 }

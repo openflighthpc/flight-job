@@ -39,6 +39,7 @@ set -o pipefail
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source "${DIR}/functions.sh"
+source "${DIR}/parser.sh"
 
 submit_job() {
     $DIR/sbatch-wrapper.sh "$1"

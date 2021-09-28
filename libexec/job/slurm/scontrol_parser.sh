@@ -89,6 +89,12 @@ parse_scheduler_id() {
     fi
 }
 
+# Return the JobID.
+#
+# For non ARRAY_TASKs the meaning of JobID is clear.
+#
+# ARRAY_TASKs have essentially two IDs: `<ARRAY_JOB_ID>_<TASK_INDEX>` and its
+# own JobID.  This function returns the latter of those.
 parse_job_id() {
     parse_field JobId
 }

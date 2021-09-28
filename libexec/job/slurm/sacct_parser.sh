@@ -48,9 +48,7 @@ parse_field() {
 }
 
 parse_state() {
-    local scheduler_state
-    scheduler_state=$(parse_scheduler_state "$1")
-    _parse_state "$scheduler_state"
+    _parse_state "$(parse_scheduler_state)"
 }
 
 parse_scheduler_state() {
@@ -107,7 +105,13 @@ parse_task_index() {
     parse_field 6 | sed 's/^.*_//g'
 }
 
-parse_job_id_raw() {
+# Return the JobID.
+#
+# For non ARRAY_TASKs the meaning of JobID is clear.
+#
+# ARRAY_TASKs have essentially two IDs: `<ARRAY_JOB_ID>_<TASK_INDEX>` and its
+# own JobID.  This function returns the latter of those.
+parse_job_id() {
     parse_field 7
 }
 
