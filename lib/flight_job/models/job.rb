@@ -290,7 +290,7 @@ module FlightJob
       when 'SUBMITTING'
         JobTransitions::FailedSubmitter.new(self).run
       when 'MONITORING'
-        JobTransitions::MonitorBootstrapper.new(self).run
+        JobTransitions::BootstrapMonitor.new(self).run
       when 'SINGLETON'
         JobTransitions::SingletonMonitor.new(self).run
       when 'ARRAY'
