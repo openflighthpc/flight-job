@@ -39,56 +39,35 @@ set -o pipefail
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source "${DIR}/functions.sh"
-source "${DIR}/parser.sh"
 
 run_scontrol() {
-    # scontrol show job "${1}" --oneline | head -n1 | tr ' ' '\n'
     scontrol show job "${1}" --oneline 2>&1
-}
-
-parse_scontrol_output() {
-    assert_array_var PARSE_RESULT
-    local parse_input state
-
-    parse_input="$(cat)"
-    PARSE_RESULT[state]=$(parse_scontrol_state <<< "${parse_input}")
-    state="${PARSE_RESULT[state]}"
-    PARSE_RESULT[scheduler_state]=$(parse_scontrol_scheduler_state <<< "${parse_input}")
-    PARSE_RESULT[reason]=$(parse_scontrol_reason <<< "${parse_input}")
-    PARSE_RESULT[start_time]=$(parse_scontrol_start_time "${parse_input}" "${state}")
-    PARSE_RESULT[end_time]=$(parse_scontrol_end_time "${parse_input}" "${state}")
-    PARSE_RESULT[estimated_start_time]=$(parse_scontrol_estimated_start_time "${parse_input}" "$state")
-    PARSE_RESULT[estimated_end_time]=$(parse_scontrol_estimated_end_time "${parse_input}" "$state")
-    PARSE_RESULT[stdout_path]=$(parse_scontrol_stdout <<< "${parse_input}")
-    PARSE_RESULT[stderr_path]=$(parse_scontrol_stderr <<< "${parse_input}")
 }
 
 run_sacct() {
   sacct --noheader --parsable --jobs "$1" --format State,Reason,START,END,AllocTRES
 }
 
-parse_sacct_output() {
+parse_job() {
     assert_array_var PARSE_RESULT
     local parse_input state
 
     parse_input="$(cat)"
-    PARSE_RESULT[state]=$(parse_sacct_state  "${parse_input}")
-    state="${PARSE_RESULT[state]}"
-    PARSE_RESULT[scheduler_state]=$(parse_sacct_scheduler_state "${parse_input}")
-    PARSE_RESULT[reason]=$(parse_sacct_reason "${parse_input}")
-    PARSE_RESULT[start_time]=$(parse_sacct_start_time "${parse_input}" "$state")
-    PARSE_RESULT[end_time]=$(parse_sacct_end_time   "${parse_input}" "$state")
-    PARSE_RESULT[estimated_start_time]=$(parse_sacct_estimated_start_time "${parse_input}" "$state")
-    PARSE_RESULT[estimated_end_time]=$(parse_sacct_estimated_end_time   "${parse_input}" "$state")
-}
+    state=$(parse_state <<< "${parse_input}")
 
+    PARSE_RESULT[state]="${state}"
+    PARSE_RESULT[scheduler_state]=$(parse_scheduler_state <<< "${parse_input}")
+    PARSE_RESULT[reason]=$(parse_reason <<< "${parse_input}")
+    PARSE_RESULT[start_time]=$(parse_start_time "${state}" <<< "${parse_input}")
+    PARSE_RESULT[end_time]=$(parse_end_time "${state}" <<< "${parse_input}")
+    PARSE_RESULT[estimated_start_time]=$(parse_estimated_start_time "$state" <<< "${parse_input}")
+    PARSE_RESULT[estimated_end_time]=$(parse_estimated_end_time "$state" <<< "${parse_input}")
+    PARSE_RESULT[stdout_path]=$(parse_stdout <<< "${parse_input}")
+    PARSE_RESULT[stderr_path]=$(parse_stderr <<< "${parse_input}")
+}
 
 generate_template() {
     local template
-
-    # Specify the template for the JSON response
-    # NOTE: scontrol does not distinguish between actual/estimated times. Instead
-    #       flight-job will set the times according to the state
     read -r -d '' template <<'TEMPLATE' || true
 {
   version: 1,
@@ -139,13 +118,13 @@ main() {
 
     check_progs jq scontrol sacct
 
-    # Fetch the state of the job
     output=$(run_scontrol "$1" | tee >(log_command "scontrol" 1>&2))
     exit_status=$?
 
     if [[ $exit_status -eq 0 ]] ; then
         output="$(echo "$output" | head -n 1 | tr ' ' '\n')"
-        parse_scontrol_output <<< "${output}"
+        source_parsers "scontrol"
+        parse_job <<< "${output}"
     elif [[ "${output}" == "slurm_load_jobs error: Invalid job id specified" ]] ; then
         output=$(run_sacct "$1" | tee >(log_command "sacct" 1>&2))
         exit_status=$?
@@ -153,7 +132,8 @@ main() {
         if [[ $exit_status -eq 0 ]] && [ -z "$output" ]; then
             PARSE_RESULT[state]="UNKNOWN"
         elif [[ $exit_status -eq 0 ]]; then
-            parse_sacct_output <<< "${output}"
+            source_parsers "sacct"
+            parse_job <<< "${output}"
         else
             exit $exit_status
         fi

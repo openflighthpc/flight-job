@@ -39,7 +39,6 @@ set -o pipefail
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source "${DIR}/functions.sh"
-source "${DIR}/parser.sh"
 
 submit_job() {
     $DIR/sbatch-wrapper.sh "$1"
@@ -54,25 +53,18 @@ run_scontrol() {
     scontrol show job "${1}" --oneline | head -n1 | tr ' ' '\n'
 }
 
-parse_scontrol_output() {
+parse_job() {
     assert_array_var PARSE_RESULT
-    local working name scontrol_output submission_id
+    local working_dir job_name parse_input submission_id
 
+    parse_input="$(cat)"
     submission_id="${PARSE_RESULT[submission_id]}"
-    scontrol_output="$(cat)"
-    PARSE_RESULT[job_type]=$(parse_scontrol_job_type <<< "${scontrol_output}")
-    PARSE_RESULT[scheduler_id]=$(parse_scontrol_scheduler_id <<< "${scontrol_output}")
-    PARSE_RESULT[results_dir]=$(parse_results_dir "${submission_id}" <<< "${scontrol_output}")
-}
+    working_dir=$(parse_field WorkDir <<< "${parse_input}")
+    job_name=$(parse_field JobName <<< "${parse_input}")
 
-parse_results_dir() {
-    local working name scontrol_output submission_id
-    submission_id="$1"
-
-    scontrol_output="$(cat)"
-    working=$(parse_scontrol WorkDir <<< "${scontrol_output}")
-    name=$(parse_scontrol JobName <<< "${scontrol_output}")
-    echo "${working}/${name}-outputs/${submission_id}"
+    PARSE_RESULT[job_type]=$(parse_job_type <<< "${parse_input}")
+    PARSE_RESULT[scheduler_id]=$(parse_scheduler_id <<< "${parse_input}")
+    PARSE_RESULT[results_dir]="${working_dir}/${job_name}-outputs/${submission_id}" 
 }
 
 # Print to stdout the JSON template to be returned to flight job.
@@ -114,7 +106,8 @@ main() {
         exit $exit_status
     fi
 
-    parse_scontrol_output <<< "${output}"
+    source_parsers "scontrol"
+    parse_job <<< "${output}"
     declare -A | grep PARSE_RESULT >&2
 
     generate_template | report_metadata

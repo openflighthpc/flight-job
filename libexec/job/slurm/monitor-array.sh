@@ -27,24 +27,23 @@
 #==============================================================================
 
 #-------------------------------------------------------------------------------
-# WARNING - README
+# WARNING do not modify this file.
 #
-# This is an internally managed file, any changes maybe lost on the next update!
-# Please clone the entire 'slurm' directory in order to modify this file.
+# If this file is not suitable for your cluster environment, please follow the
+# instructions at
+# https://github.com/openflighthpc/flight-job/blob/master/docs/scheduler-integration.md
+# to create a custom scheduler integration.
 #-------------------------------------------------------------------------------
 
-# Ensure jq is on the path
-set -e
-which "jq" >/dev/null
-set +e
+set -o pipefail
 
-# Source the parser
-source "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/parser.sh"
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+source "${DIR}/functions.sh"
 
-# Specify the template for the JSON response
-# NOTE: scontrol does not distinguish between actual/estimated times. Instead
-#       flight-job will set the times according to the state
-read -r -d '' task_template <<'TEMPLATE' || true
+generate_task_json() {
+    assert_array_var TASK_PARSE_RESULT
+
+    read -r -d '' task_template <<'TEMPLATE' || true
 {
   version: 1,
   state: (
@@ -75,140 +74,22 @@ read -r -d '' task_template <<'TEMPLATE' || true
 }
 TEMPLATE
 
-# Define the tasks variables
-cancelled="false"
-lazy="false"
-tasks=""
+    echo '{}' | jq  \
+      --arg state "${TASK_PARSE_RESULT[state]}" \
+      --arg scheduler_state "${TASK_PARSE_RESULT[scheduler_state]}" \
+      --arg reason "${TASK_PARSE_RESULT[reason]}" \
+      --arg stdout_path "${TASK_PARSE_RESULT[stdout_path]}" \
+      --arg stderr_path "${TASK_PARSE_RESULT[stderr_path]}" \
+      --arg estimated_start_time "${TASK_PARSE_RESULT[estimated_start_time]}" \
+      --arg estimated_end_time "${TASK_PARSE_RESULT[estimated_end_time]}" \
+      --arg start_time "${TASK_PARSE_RESULT[start_time]}" \
+      --arg end_time "${TASK_PARSE_RESULT[end_time]}" \
+      "$task_template"
+}
 
-# Fetch the state of the job
-raw_control=$(scontrol show job "$1" --oneline 2>&1)
-exit_status="$?"
-cat <<EOF >&2
-scontrol:
-$raw_control
-EOF
-
-if [[ "$exit_status" -eq 0 ]]; then
-  array_job_state="UNKNOWN"
-
-  while IFS= read -r line; do
-    line=$(echo "$line" | tr ' ' '\n')
-    index=$(parse_scontrol_task_index "$line")
-    if echo "$index" | grep -P '^\d+$' >/dev/null; then
-      # Generate and store the JSON for the task
-      state=$(                parse_scontrol_state  "$line")
-      scheduler_state=$(      parse_scontrol_scheduler_state "$line")
-      reason=$(               parse_scontrol_reason "$line")
-      start_time=$(           parse_scontrol_start_time "$line" "$state")
-      end_time=$(             parse_scontrol_end_time   "$line" "$state")
-      estimated_start_time=$( parse_scontrol_estimated_start_time "$line" "$state")
-      estimated_end_time=$(   parse_scontrol_estimated_end_time   "$line" "$state")
-      stdout_path=$(          parse_scontrol_stdout "$line")
-      stderr_path=$(          parse_scontrol_stderr "$line")
-
-      json=$( \
-        echo '{}' | jq  \
-          --arg state "$state" \
-          --arg scheduler_state "$scheduler_state" \
-          --arg reason "$reason" \
-          --arg stdout_path "$stdout_path" \
-          --arg stderr_path "$stderr_path" \
-          --arg estimated_start_time "$estimated_start_time" \
-          --arg estimated_end_time "$estimated_end_time" \
-          --arg start_time "$start_time" \
-          --arg end_time "$end_time" \
-          "$task_template" \
-      )
-      tasks="$tasks, \"$index\" : $json"
-    else
-      # Skipping the pseudo-task entry, setting the lazy create flag
-      lazy="true"
-    fi
-
-    job_id_raw=$(parse_scontrol_job_id "$line")
-    if [ "$job_id_raw" == "$1" ] ; then
-        array_job_state=$(parse_scontrol_state "$line")
-    fi
-  done <<< "$raw_control"
-elif [[ "$raw_control" == "slurm_load_jobs error: Invalid job id specified" ]]; then
-  # Fallback to sacct if scontrol does not recognise the ID
-  raw_acct=$(sacct --noheader --parsable --jobs "$1" --format State,Reason,START,END,AllocTRES,JobID,JobIDRaw)
-  exit_status="$?"
-  cat <<EOF >&2
-
-sacct:
-$raw_acct
-EOF
-
-  # Remove every second line from output
-  # NOTE: sacct output looks something like this:
-  #
-  # COMPLETED|None|2021-09-01T15:58:03|2021-09-01T15:58:03|billing=1,cpu=1,mem=1M,node=1|155_1|
-  # COMPLETED||2021-09-01T15:58:03|2021-09-01T15:58:03|cpu=1,mem=1M,node=1|155_1.batch|
-  acct=$(echo "$raw_acct" | awk 'FNR%2')
-
-  if [[ "$exit_status" -eq 0 ]] && [ -z "$acct" ]; then
-    # NOOP
-    echo "No Tasks Found!" >&2
-
-  elif [[ "$exit_status" -eq 0 ]]; then
-    array_job_state="UNKNOWN"
-
-    while IFS= read -r line; do
-      state=$(                parse_sacct_state  "$line")
-      scheduler_state=$(      parse_sacct_scheduler_state "$line")
-      reason=$(               parse_sacct_reason "$line")
-      start_time=$(           parse_sacct_start_time "$line" "$state")
-      end_time=$(             parse_sacct_end_time   "$line" "$state")
-      estimated_start_time=$( parse_sacct_estimated_start_time "$line" "$state")
-      estimated_end_time=$(   parse_sacct_estimated_end_time   "$line" "$state")
-
-      # Generate the index/json
-      index=$(parse_sacct_task_index "$line")
-      json=$( \
-        echo '{}' | jq  \
-          --arg state "$state" \
-          --arg scheduler_state "$scheduler_state" \
-          --arg reason "$reason" \
-          --arg stdout_path "" \
-          --arg stderr_path "" \
-          --arg estimated_start_time "$estimated_start_time" \
-          --arg estimated_end_time "$estimated_end_time" \
-          --arg start_time "$start_time" \
-          --arg end_time "$end_time" \
-          "$task_template" \
-      )
-
-      # Store the task as a JSON fragment
-      tasks="$tasks, \"$index\" : $json"
-
-      job_id_raw=$(parse_sacct_job_id_raw "$line")
-      if [ "$job_id_raw" == "$1" ] ; then
-          array_job_state=$(parse_sacct_state "$line")
-      fi
-    done <<< "$acct"
-
-  # Exit the monitor process if sacct fails to prevent the job being updated
-  else
-    echo "$sacct" >&3
-    exit "$exit_status"
-  fi
-else
-  # Exit the monitor process if scontrol fails to prevent the job being updated
-  exit "$exit_status"
-fi
-
-# Reform tasks into valid JSON (remove leading comma/ add braces)
-tasks=$(echo "$tasks" | sed 's/^,//g')
-tasks="{ $tasks }"
-
-if [ "$array_job_state" == "CANCELLED" ] ; then
-    cancelled="true"
-    lazy="false"
-fi
-
-# Render the response JSON
-read -r -d '' template <<'TEMPLATE' || true
+generate_template() {
+    local template
+    read -r -d '' template <<'TEMPLATE' || true
 {
   version: 1,
   cancelled: (if $cancelled == "true" then true else false end),
@@ -216,8 +97,138 @@ read -r -d '' template <<'TEMPLATE' || true
   tasks: ($tasks)
 }
 TEMPLATE
-echo '{}' | jq  \
-  --arg cancelled "$cancelled" \
-  --arg lazy "$lazy" \
-  --argjson tasks "$tasks" \
-  "$template" | tr -d "\n"
+
+    echo '{}' | jq  \
+      --arg cancelled "${PARSE_RESULT[cancelled]}" \
+      --arg lazy "${PARSE_RESULT[lazy]}" \
+      --argjson tasks "${PARSE_RESULT[tasks]}" \
+      "$template"
+}
+
+run_scontrol() {
+    scontrol show job "${1}" --oneline 2>&1
+}
+
+run_sacct() {
+  sacct --noheader --parsable --jobs "$1" --format State,Reason,START,END,AllocTRES,JobID,JobIDRaw
+}
+
+parse_task() {
+    assert_array_var TASK_PARSE_RESULT
+    local parse_input state
+
+    parse_input="$(cat)"
+    state=$(parse_state <<< "${parse_input}")
+    TASK_PARSE_RESULT[state]="${state}"
+    TASK_PARSE_RESULT[scheduler_state]=$(parse_scheduler_state <<< "${parse_input}")
+    TASK_PARSE_RESULT[reason]=$(parse_reason <<< "${parse_input}")
+    TASK_PARSE_RESULT[start_time]=$(parse_start_time "${state}" <<< "${parse_input}")
+    TASK_PARSE_RESULT[end_time]=$(parse_end_time "${state}" <<< "${parse_input}")
+    TASK_PARSE_RESULT[estimated_start_time]=$(parse_estimated_start_time "${state}" <<< "${parse_input}")
+    TASK_PARSE_RESULT[estimated_end_time]=$(parse_estimated_end_time "${state}" <<< "${parse_input}")
+    TASK_PARSE_RESULT[stdout_path]=$(parse_stdout <<< "${parse_input}")
+    TASK_PARSE_RESULT[stderr_path]=$(parse_stderr <<< "${parse_input}")
+}
+
+parse_scontrol_output() {
+    assert_array_var PARSE_RESULT
+    assert_var ARRAY_JOB_STATE
+    declare -A TASK_PARSE_RESULT
+    local job_id_raw tasks
+
+    ARRAY_JOB_STATE="UNKNOWN"
+
+    while read -r line; do
+      line=$(echo "$line" | tr ' ' '\n')
+      index=$(parse_task_index <<< "${line}")
+      if echo "${index}" | grep -P '^\d+$' >/dev/null; then
+          parse_task <<< "${line}"
+          declare -p TASK_PARSE_RESULT >&2
+          tasks="${tasks}, \"${index}\" : $(generate_task_json)"
+      else
+        # The Slurm ARRAY_JOB has not yet been turned into a Slurm ARRAY_TASK.
+        # New tasks could still be created.
+        PARSE_RESULT[lazy]="true"
+      fi
+  
+      job_id_raw=$(parse_job_id <<< "${line}")
+      if [ "$job_id_raw" == "${JOB_ID}" ] ; then
+          ARRAY_JOB_STATE=$(parse_state <<< "${line}")
+      fi
+    done
+
+    # Reform tasks into valid JSON (remove leading comma/ add braces)
+    tasks=$(echo "$tasks" | sed 's/^,//g')
+    tasks="{ $tasks }"
+    PARSE_RESULT[tasks]="${tasks}"
+}
+
+parse_sacct_output() {
+    assert_array_var PARSE_RESULT
+    assert_var ARRAY_JOB_STATE
+    declare -A TASK_PARSE_RESULT
+    local job_id_raw tasks
+
+    ARRAY_JOB_STATE="UNKNOWN"
+
+    while IFS= read -r line; do
+        index=$(parse_task_index <<< "$line")
+        parse_task <<< "${line}"
+        declare -p TASK_PARSE_RESULT >&2
+        tasks="${tasks}, \"${index}\" : $(generate_task_json)"
+
+        job_id_raw=$(parse_job_id_raw <<< "$line")
+        if [ "$job_id_raw" == "${JOB_ID}" ] ; then
+            ARRAY_JOB_STATE=$(parse_state <<< "$line")
+        fi
+    done
+
+    # Reform tasks into valid JSON (remove leading comma/ add braces)
+    tasks=$(echo "$tasks" | sed 's/^,//g')
+    tasks="{ $tasks }"
+    PARSE_RESULT[tasks]="${tasks}"
+}
+
+main() {
+    JOB_ID="$1"
+    declare -A PARSE_RESULT
+    local ARRAY_JOB_STATE exit_status output
+
+    check_progs jq scontrol sacct
+
+    PARSE_RESULT[cancelled]="false"
+    PARSE_RESULT[lazy]="false"
+
+    output=$(run_scontrol "${JOB_ID}" | tee >(log_command "scontrol" 1>&2))
+    exit_status=$?
+
+    if [[ $exit_status -eq 0 ]] ; then
+        source_parsers "scontrol"
+        parse_scontrol_output <<< "$output"
+    elif [[ "${output}" == "slurm_load_jobs error: Invalid job id specified" ]] ; then
+        output=$(run_sacct "$JOB_ID" | tee >(log_command "sacct" 1>&2))
+        exit_status=$?
+        # XXX Replace with -X / --allocations
+        output=$(echo "$output" | awk 'FNR%2')
+        if [[ $exit_status -eq 0 ]] && [ -z "$output" ]; then
+            echo "No Tasks Found!" >&2
+        elif [[ $exit_status -eq 0 ]]; then
+            source_parsers "sacct"
+            parse_sacct_output <<< "${output}"
+        else
+            exit $exit_status
+        fi
+    else
+        exit $exit_status
+    fi
+
+    if [ "$ARRAY_JOB_STATE" == "CANCELLED" ] ; then
+        PARSE_RESULT[cancelled]="true"
+        PARSE_RESULT[lazy]="false"
+    fi
+    declare -p PARSE_RESULT >&2
+
+    generate_template | report_metadata
+}
+
+main "$@"
