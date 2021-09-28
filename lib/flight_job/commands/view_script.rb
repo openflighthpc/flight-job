@@ -29,7 +29,7 @@ module FlightJob
   module Commands
     class ViewScript < Command
       def run
-        pager.page(File.read script.script_path)
+        pager.page(path: script.script_path)
       end
 
       def script

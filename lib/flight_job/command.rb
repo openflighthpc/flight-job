@@ -28,7 +28,9 @@
 require 'ostruct'
 require 'pastel'
 require 'tty-editor'
-require 'tty-pager'
+
+require 'open3'
+require 'stringio'
 
 module FlightJob
   class Command
@@ -73,10 +75,60 @@ module FlightJob
       @pastel ||= Pastel.new
     end
 
+    Pager = Struct.new(:retry_file, :follow, :pastel) do
+      def page(text = nil, path: nil)
+        if path
+          open_path(path) { |io| page_io(io) }
+        else
+          IO.pipe do |read, write|
+            write.write(text.to_s)
+            write.close
+            page_io(read)
+          end
+        end
+      end
+
+      private
+
+      def open_path(path)
+        # Wait for the file to become available with --retry
+        if retry_file && !File.exists?(path)
+          $stderr.puts pastel.yellow("Waiting for: #{path}")
+          sleep 1 until File.exists?(path)
+        elsif !File.exists?(path)
+          return false
+        end
+
+        File.open(path) do |io|
+          yield io if block_given?
+        end
+
+        return true
+      end
+
+      def page_io(io)
+        # Determines the command
+        cmd = if follow
+                'less -S +F -Ps"Press h for help, F to follow, or q to quit"'
+              elsif ['less', nil].include?(ENV['PAGER'])
+                'less -SFRX -Ps"Press h for help or q to quit"'
+              else
+                ENV['PAGER']
+              end
+
+        # Manually pages the file to allow following
+        # Disable interrupt!
+        # The process is now controlled by the pager
+        trap('SIGINT', 'IGNORE')
+        pid = Kernel.spawn(cmd, in: io, out: $stdout)
+        Process.wait pid
+      ensure
+        trap('SIGINT', 'DEFAULT')
+      end
+    end
+
     def pager
-      pager = ENV.fetch('PAGER', 'less')
-      pager = "#{pager} #{ENV.fetch('LESS', '-SFRX -Ps"Press h for help or q to quit"')}" if pager == 'less'
-      @pager ||= TTY::Pager.new(command: pager)
+      @pager ||= Pager.new(opts.F || opts.retry, opts.F || opts.follow, pastel)
     end
 
     # Check if the given option flag denotes STDIN
