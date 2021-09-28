@@ -58,9 +58,9 @@ module FlightJob
           validate_data(SUBMITTER_SCHEMA, data, tag: 'submit')
         rescue CommandError
           # The command lied about exiting 0! It did not report the json payload
-          # correctly. Changing the status to 126
+          # correctly. Changing the status to 128
           job.metadata['job_type'] = 'FAILED_SUBMISSION'
-          job.metadata['submit_status'] = 126
+          job.metadata['submit_status'] = 128
           job.metadata["submit_stderr"] << <<~MSG.chomp
             Failed to parse JSON response after the command original exited 0!
           MSG
