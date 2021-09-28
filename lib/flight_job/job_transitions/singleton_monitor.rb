@@ -27,147 +27,149 @@
 
 module FlightJob
   module JobTransitions
-    class SingletonMonitor < SimpleDelegator
+    SINGLETON_SHARED_KEYS = ["version", "state", "stdout_path", "stderr_path", "scheduler_state"]
+    SINGLETON_SHARED_PROPS = {
+      "version" => { "const" => 1 },
+      "stdout_path" => { "type" => ['null', "string"] },
+      "stderr_path" => { "type" => ['null', "string"] }
+    }
+    SINGLETON_STDOUT_SCHEMAS = {
+      common: JSONSchemer.schema({
+        "type" => "object",
+        "additionalProperties" => true,
+        "required" => SINGLETON_SHARED_KEYS,
+        "properties" => {
+          **SINGLETON_SHARED_PROPS,
+          "state" => { "enum" => Job::STATES },
+        }
+      }),
+
+      "PENDING" => JSONSchemer.schema({
+        "type" => "object",
+        "additionalProperties" => false,
+        "required" => SINGLETON_SHARED_KEYS,
+        "properties" => {
+          **SINGLETON_SHARED_PROPS,
+          "state" => { "const" => "PENDING" },
+          "scheduler_state" => { "type" => "string", "minLength": 1 },
+          "reason" => { "type" => ["string", "null"] },
+          "start_time" => { "type" => "null" },
+          "end_time" => { "type" => "null" },
+          "estimated_start_time" => { "type" => ["string", "null"] },
+          "estimated_end_time" => { "type" => ["string", "null"] }
+        }
+      }),
+
+      "RUNNING" => JSONSchemer.schema({
+        "type" => "object",
+        "additionalProperties" => false,
+        "required" => [*SINGLETON_SHARED_KEYS, "start_time"],
+        "properties" => {
+          **SINGLETON_SHARED_PROPS,
+          "state" => { "const" => "RUNNING" },
+          "scheduler_state" => { "type" => "string", "minLength": 1 },
+          "reason" => { "type" => ["string", "null"] },
+          "start_time" => { "type" => "string", "minLength": 1 },
+          "end_time" => { "type" => "null" },
+          "estimated_start_time" => { "type" => "null" },
+          "estimated_end_time" => { "type" => ["string", "null"] }
+        }
+      }),
+
+      "COMPLETED" => JSONSchemer.schema({
+        "type" => "object",
+        "additionalProperties" => false,
+        "required" => [*SINGLETON_SHARED_KEYS, "start_time", "end_time"],
+        "properties" => {
+          **SINGLETON_SHARED_PROPS,
+          "state" => { "enum" => ["COMPLETED", "FAILED"] },
+          "scheduler_state" => { "type" => "string", "minLength": 1 },
+          "reason" => { "type" => ["string", "null"] },
+          "start_time" => { "type" => "string", "minLength": 1 },
+          "end_time" => { "type" => "string", "minLength": 1 },
+          "estimated_start_time" => { "type" => "null" },
+          "estimated_end_time" => { "type" => "null" }
+        }
+      }),
+
+      "CANCELLED" => JSONSchemer.schema({
+        "type" => "object",
+        "additionalProperties" => false,
+        "required" => [*SINGLETON_SHARED_KEYS, "end_time"],
+        "properties" => {
+          **SINGLETON_SHARED_PROPS,
+          "state" => { "const" => "CANCELLED" },
+          "scheduler_state" => { "type" => "string", "minLength": 1 },
+          "reason" => { "type" => ["string", "null"] },
+          "start_time" => { "type" => ["null", "string"] },
+          "end_time" => { "type" => "string", "minLength": 1 },
+          "estimated_start_time" => { "type" => "null" },
+          "estimated_end_time" => { "type" => "null" }
+        }
+      }),
+
+      "UNKNOWN" => JSONSchemer.schema({
+        "type" => "object",
+        "additionalProperties" => false,
+        "required" => SINGLETON_SHARED_KEYS,
+        "properties" => {
+          **SINGLETON_SHARED_PROPS,
+          "state" => { "const" => "UNKNOWN" },
+          "scheduler_state" => { "type" => ["null", "string"] },
+          "reason" => { "type" => ["string", "null"] },
+          "start_time" => { "type" => "null" },
+          "end_time" => { "type" => "null" },
+          "estimated_start_time" => { "type" => "null" },
+          "estimated_end_time" => { "type" => "null" }
+        }
+      })
+    }.tap { |h| h["FAILED"] = h["COMPLETED"] }
+
+    SingletonMonitor = Struct.new(:job) do
       include JobTransitions::JobTransitionHelper
-
-      SHARED_KEYS = ["version", "state", "stdout_path", "stderr_path", "scheduler_state"]
-      SHARED_PROPS = {
-        "version" => { "const" => 1 },
-        "stdout_path" => { "type" => ['null', "string"] },
-        "stderr_path" => { "type" => ['null', "string"] }
-      }
-      SCHEMAS = {
-        common: JSONSchemer.schema({
-          "type" => "object",
-          "additionalProperties" => true,
-          "required" => SHARED_KEYS,
-          "properties" => {
-            **SHARED_PROPS,
-            "state" => { "enum" => Job::STATES },
-          }
-        }),
-
-        "PENDING" => JSONSchemer.schema({
-          "type" => "object",
-          "additionalProperties" => false,
-          "required" => SHARED_KEYS,
-          "properties" => {
-            **SHARED_PROPS,
-            "state" => { "const" => "PENDING" },
-            "scheduler_state" => { "type" => "string", "minLength": 1 },
-            "reason" => { "type" => ["string", "null"] },
-            "start_time" => { "type" => "null" },
-            "end_time" => { "type" => "null" },
-            "estimated_start_time" => { "type" => ["string", "null"] },
-            "estimated_end_time" => { "type" => ["string", "null"] }
-          }
-        }),
-
-        "RUNNING" => JSONSchemer.schema({
-          "type" => "object",
-          "additionalProperties" => false,
-          "required" => [*SHARED_KEYS, "start_time"],
-          "properties" => {
-            **SHARED_PROPS,
-            "state" => { "const" => "RUNNING" },
-            "scheduler_state" => { "type" => "string", "minLength": 1 },
-            "reason" => { "type" => ["string", "null"] },
-            "start_time" => { "type" => "string", "minLength": 1 },
-            "end_time" => { "type" => "null" },
-            "estimated_start_time" => { "type" => "null" },
-            "estimated_end_time" => { "type" => ["string", "null"] }
-          }
-        }),
-
-        "COMPLETED" => JSONSchemer.schema({
-          "type" => "object",
-          "additionalProperties" => false,
-          "required" => [*SHARED_KEYS, "start_time", "end_time"],
-          "properties" => {
-            **SHARED_PROPS,
-            "state" => { "enum" => ["COMPLETED", "FAILED"] },
-            "scheduler_state" => { "type" => "string", "minLength": 1 },
-            "reason" => { "type" => ["string", "null"] },
-            "start_time" => { "type" => "string", "minLength": 1 },
-            "end_time" => { "type" => "string", "minLength": 1 },
-            "estimated_start_time" => { "type" => "null" },
-            "estimated_end_time" => { "type" => "null" }
-          }
-        }),
-
-        "CANCELLED" => JSONSchemer.schema({
-          "type" => "object",
-          "additionalProperties" => false,
-          "required" => [*SHARED_KEYS, "end_time"],
-          "properties" => {
-            **SHARED_PROPS,
-            "state" => { "const" => "CANCELLED" },
-            "scheduler_state" => { "type" => "string", "minLength": 1 },
-            "reason" => { "type" => ["string", "null"] },
-            "start_time" => { "type" => ["null", "string"] },
-            "end_time" => { "type" => "string", "minLength": 1 },
-            "estimated_start_time" => { "type" => "null" },
-            "estimated_end_time" => { "type" => "null" }
-          }
-        }),
-
-        "UNKNOWN" => JSONSchemer.schema({
-          "type" => "object",
-          "additionalProperties" => false,
-          "required" => SHARED_KEYS,
-          "properties" => {
-            **SHARED_PROPS,
-            "state" => { "const" => "UNKNOWN" },
-            "scheduler_state" => { "type" => ["null", "string"] },
-            "reason" => { "type" => ["string", "null"] },
-            "start_time" => { "type" => "null" },
-            "end_time" => { "type" => "null" },
-            "estimated_start_time" => { "type" => "null" },
-            "estimated_end_time" => { "type" => "null" }
-          }
-        })
-      }.tap { |h| h["FAILED"] = h["COMPLETED"] }
 
       def run
         run!
         return true
       rescue
-        Flight.logger.error "Failed to monitor singleton job '#{id}'"
+        Flight.logger.error "Failed to monitor singleton job '#{job.id}'"
         Flight.logger.warn $!
         return false
       end
 
       def run!
         # Skip jobs that have terminated, this allows the method to be called liberally
-        if Job::STATES_LOOKUP[state] == :terminal
-          FlightJob.logger.debug "Skipping monitor for terminated job: #{id}"
+        if Job::STATES_LOOKUP[job.state] == :terminal
+          FlightJob.logger.debug "Skipping monitor for terminated job: #{job.id}"
           return
         end
 
         # Jobs without a scheduler ID should not be in a running/pending state. It is
         # an error condition if they are
-        unless scheduler_id
-          FlightJob.logger.error "Can not monitor job '#{id}' as it did not report its scheduler_id"
-          metadata['reason'] = "Did not report it's scheduler ID"
-          metadata['state'] = "FAILED"
-          save_metadata
+        unless job.scheduler_id
+          FlightJob.logger.error <<~ERROR
+            Can not monitor job '#{job.id}' as it did not report its scheduler_id
+          ERROR
+          job.metadata['reason'] = "Did not report it's scheduler ID"
+          job.metadata['state'] = "FAILED"
+          job.save_metadata
           return
         end
 
-        FlightJob.logger.info("Monitoring Job: #{id}")
-        cmd = [FlightJob.config.monitor_script_path, scheduler_id]
+        FlightJob.logger.info("Monitoring Job: #{job.id}")
+        cmd = [FlightJob.config.monitor_script_path, job.scheduler_id]
         execute_command(*cmd, tag: 'monitor') do |status, stdout, stderr, data|
           if status.success?
             # Validate the output
-            validate_data(SCHEMAS[:common], data, tag: "monitor (common)")
-            validate_data(SCHEMAS[data['state']], data, tag: "monitor (#{data['state']})")
+            validate_data(SINGLETON_STDOUT_SCHEMAS[:common], data, tag: "monitor (common)")
+            validate_data(SINGLETON_STDOUT_SCHEMAS[data['state']], data, tag: "monitor (#{data['state']})")
 
             # Update the attributes
-            apply_task_attributes(__getobj__, data)
-            save_metadata
+            apply_task_attributes(job, data)
+            job.save_metadata
 
             # Remove the indexing file in terminal state
-            FileUtils.rm_f active_index_path if terminal?
+            FileUtils.rm_f job.active_index_path if job.terminal?
           else
             raise_command_error
           end

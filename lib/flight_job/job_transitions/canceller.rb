@@ -36,7 +36,7 @@ module FlightJob
         run!
         return true
       rescue
-        Flight.logger.error "Failed to submit job '#{id}'"
+        Flight.logger.error "Failed to submit job '#{job.id}'"
         Flight.logger.warn $!
         return false
       end
