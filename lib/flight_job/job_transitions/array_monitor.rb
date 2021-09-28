@@ -25,43 +25,45 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+require_relative 'singleton_monitor'
+
 module FlightJob
   module JobTransitions
-    class ArrayMonitor < SimpleDelegator
-      include JobTransitions::JobTransitionHelper
-
-      SCHEMA = JSONSchemer.schema({
-        "type" => "object",
-        "additionalProperties" => false,
-        "required" => ["tasks", "lazy"],
-        "properties" => {
-          "version" => { "const" => 1 },
-          "lazy" => { "type" => "boolean" },
-          "cancelled" => { "type" => "boolean" },
-          "tasks" => {
-            "type" => "object",
-            "additionalProperties" => false, # Redundant, probably ...
-            "patternProperties" => {
-              # Tasks are validated against the singleton jobs schemas
-              ".*" => { "type" => "object" }
-            }
+    ARRAY_STDOUT_SCHEMA = JSONSchemer.schema({
+      "type" => "object",
+      "additionalProperties" => false,
+      "required" => ["tasks", "lazy"],
+      "properties" => {
+        "version" => { "const" => 1 },
+        "lazy" => { "type" => "boolean" },
+        "cancelled" => { "type" => "boolean" },
+        "tasks" => {
+          "type" => "object",
+          "additionalProperties" => false, # Redundant, probably ...
+          "patternProperties" => {
+            # Tasks are validated against the singleton jobs schemas
+            ".*" => { "type" => "object" }
           }
         }
-      })
-      TASK_SCHEMAS = SingletonMonitor::SCHEMAS
+      }
+    })
+
+    # Ensure the singleton monitor is loaded for its constants
+    ArrayMonitor = Struct.new(:job) do
+      include JobTransitions::JobTransitionHelper
 
       def run
         run!
         return true
       rescue
-        Flight.logger.error "Failed to monitor array job '#{id}'"
+        Flight.logger.error "Failed to monitor array job '#{job.id}'"
         Flight.logger.warn $!
         return false
       end
 
       def run!
-        FlightJob.logger.info("Monitoring Job: #{id}")
-        cmd = [FlightJob.config.monitor_array_script_path, scheduler_id]
+        FlightJob.logger.info("Monitoring Job: #{job.id}")
+        cmd = [FlightJob.config.monitor_array_script_path, job.scheduler_id]
         execute_command(*cmd, tag: 'monitor') do |status, stdout, stderr, data|
           if status.success?
             validate_response(data)
@@ -76,11 +78,11 @@ module FlightJob
       private
 
       def validate_response(data)
-        validate_data(SCHEMA, data, tag: "monitor-array")
+        validate_data(ARRAY_STDOUT_SCHEMA, data, tag: "monitor-array")
         data['tasks'].each do |index, datum|
-          validate_data(TASK_SCHEMAS[:common], datum, tag: "monitor-array task: #{index} (common)")
+          validate_data(SINGLETON_STDOUT_SCHEMAS[:common], datum, tag: "monitor-array task: #{index} (common)")
           state = datum['state']
-          validate_data(TASK_SCHEMAS[state], datum, tag: "monitor-array task: #{index} (#{state})")
+          validate_data(SINGLETON_STDOUT_SCHEMAS[state], datum, tag: "monitor-array task: #{index} (#{state})")
         end
       end
 
@@ -112,7 +114,7 @@ module FlightJob
             FlightJob.logger.info(errors.full_messages.join("\n"))
           end
           raise InternalError, <<~ERROR.chomp
-            Unexpectedly failed to monitor '#{id}' due to invalid task(s)!
+            Unexpectedly failed to monitor '#{job.id}' due to invalid task(s)!
           ERROR
         end
       end
