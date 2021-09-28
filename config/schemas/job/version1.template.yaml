@@ -12,13 +12,16 @@ __meta__:
     version:
       <<: *VERSION
   SUBMITTED_REQUIRED: &SUBMITTED_REQUIRED
-    required: ['submit_status', 'submit_stdout', 'submit_stderr', 'scheduler_id']
+    required: ['submit_status', 'submit_stdout', 'submit_stderr']
   SUBMITTED_PROPERTIES: &SUBMITTED_PROPERTIES
     submit_status: { const: 0 }
     submit_stdout: { "type" : "string" }
     submit_stderr: { "type" : "string" }
-    scheduler_id: { "type" : "string", "minLength" : 1 }
     results_dir: { "type" : "string", "minLength" : 1 }
+  SCHED_ID_REQUIRED: &SCHED_ID_REQUIRED
+    required: ["scheduler_id"]
+  SCHED_ID_PROPERTIES: &SCHED_ID_PROPERTIES
+    scheduler_id: { "type" : "string", "minLength" : 1 }
   STATES_ENUM: &STATES_ENUM
     enum: ["PENDING", "RUNNING", "FAILED", "COMPLETED", "CANCELLED", "UNKNOWN"]
 
@@ -28,15 +31,29 @@ additionalProperties: true
 properties:
   <<: *SHARED_PROPERTIES
   job_type:
-    enum: ["INITIALIZING", "SINGLETON", "ARRAY", "FAILED_SUBMISSION"]
+    enum: ["INITIALIZING", "MONITORING", "SINGLETON", "ARRAY", "FAILED_SUBMISSION"]
 oneOf:
   # INITIALIZING Jobs
+  # NOTE: All jobs are created in the state before submit.sh is ran
   - type: "object"
     additionalProperties: false
     <<: *SHARED_REQUIRED
     properties:
       <<: *SHARED_PROPERTIES
       job_type: { "const" : "INITIALIZING" }
+
+  # MONITORING Jobs
+  # NOTE: This represents jobs which where succesfully submitted but have
+  # not been monitored for the first time
+  - type: "object"
+    additionalProperties: false
+    allOf:
+      - *SHARED_REQUIRED
+      - *SUBMITTED_REQUIRED
+    properties:
+      <<: *SHARED_PROPERTIES
+      <<: *SUBMITTED_PROPERTIES
+      job_type: { "const" : "MONITORING" }
 
   # FAILED_SUBMISSION Jobs
   - type: "object"
@@ -57,11 +74,13 @@ oneOf:
     allOf:
       - *SHARED_REQUIRED
       - *SUBMITTED_REQUIRED
+      - *SCHED_ID_REQUIRED
       - required: ['state', 'scheduler_state']
     properties:
       # Required
       <<: *SHARED_PROPERTIES
       <<: *SUBMITTED_PROPERTIES
+      <<: *SCHED_ID_PROPERTIES
       job_type: { "const" : "SINGLETON" }
       state: *STATES_ENUM
       scheduler_state: { "type" : "string", "minLength" : 1 }
@@ -87,11 +106,13 @@ oneOf:
     allOf:
       - *SHARED_REQUIRED
       - *SUBMITTED_REQUIRED
+      - *SCHED_ID_REQUIRED
       - required: ['lazy']
     properties:
       # Required
       <<: *SHARED_PROPERTIES
       <<: *SUBMITTED_PROPERTIES
+      <<: *SCHED_ID_PROPERTIES
       job_type: { "const" : "ARRAY" }
       lazy: { "type" : "boolean" }
       cancelled: { "type" : "boolean" }

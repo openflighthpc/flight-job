@@ -110,8 +110,19 @@ module FlightJob
       metadata['script_id']
     end
 
-    def submitted?
-      File.exists? metadata_path
+    def submit_script=(script)
+      # Initialize the job with the script
+      if metadata.empty?
+        metadata["created_at"] = Time.now.rfc3339
+        metadata["job_type"] = "INITIALIZING"
+        metadata["rendered_path"] = File.join(job_dir, script.script_name)
+        metadata["script_id"] = script.id
+        metadata["version"] = SCHEMA_VERSION
+
+      # Error has the job already exists
+      else
+        raise InternalError, "Cannot set the 'script' as the metadata is already loaded"
+      end
     end
 
     def failed_migration_path
@@ -272,6 +283,8 @@ module FlightJob
       success = case job_type
       when 'SUBMITTING'
         JobTransitions::FailedSubmitter.new(self).run
+      when 'MONITORING'
+        JobTransitions::BootstrapMonitor.new(self).run
       when 'SINGLETON'
         JobTransitions::SingletonMonitor.new(self).run
       when 'ARRAY'
@@ -306,8 +319,6 @@ module FlightJob
 
     def terminal?
       case job_type
-      when 'INITIALIZING'
-        false
       when 'FAILED_SUBMISSION'
         true
       when 'SINGLETON'
@@ -318,6 +329,8 @@ module FlightJob
         else
           !Task.load_last_non_terminal(id)
         end
+      else
+        false
       end
     end
 

@@ -27,6 +27,7 @@
     "job_type": {
       "enum": [
         "INITIALIZING",
+        "MONITORING",
         "SINGLETON",
         "ARRAY",
         "FAILED_SUBMISSION"
@@ -102,6 +103,61 @@
         "version": {
           "const": 1
         },
+        "submit_status": {
+          "const": 0
+        },
+        "submit_stdout": {
+          "type": "string"
+        },
+        "submit_stderr": {
+          "type": "string"
+        },
+        "results_dir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "job_type": {
+          "const": "MONITORING"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "required": [
+            "created_at",
+            "job_type",
+            "rendered_path",
+            "script_id",
+            "version"
+          ]
+        },
+        {
+          "required": [
+            "submit_status",
+            "submit_stdout",
+            "submit_stderr"
+          ]
+        }
+      ],
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rendered_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "script_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "const": 1
+        },
         "job_type": {
           "const": "FAILED_SUBMISSION"
         },
@@ -135,7 +191,11 @@
           "required": [
             "submit_status",
             "submit_stdout",
-            "submit_stderr",
+            "submit_stderr"
+          ]
+        },
+        {
+          "required": [
             "scheduler_id"
           ]
         },
@@ -171,11 +231,11 @@
         "submit_stderr": {
           "type": "string"
         },
-        "scheduler_id": {
+        "results_dir": {
           "type": "string",
           "minLength": 1
         },
-        "results_dir": {
+        "scheduler_id": {
           "type": "string",
           "minLength": 1
         },
@@ -253,7 +313,11 @@
           "required": [
             "submit_status",
             "submit_stdout",
-            "submit_stderr",
+            "submit_stderr"
+          ]
+        },
+        {
+          "required": [
             "scheduler_id"
           ]
         },
@@ -288,11 +352,11 @@
         "submit_stderr": {
           "type": "string"
         },
-        "scheduler_id": {
+        "results_dir": {
           "type": "string",
           "minLength": 1
         },
-        "results_dir": {
+        "scheduler_id": {
           "type": "string",
           "minLength": 1
         },
