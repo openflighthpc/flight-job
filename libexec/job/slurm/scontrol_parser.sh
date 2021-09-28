@@ -69,7 +69,6 @@ _scontrol_contains_key() {
     fi
 }
 
-# This function works on all scontrol outputs
 parse_job_type() {
     if _scontrol_contains_key "ArrayJobId" ; then
         printf "ARRAY"
@@ -78,7 +77,6 @@ parse_job_type() {
     fi
 }
 
-# This function works on all scontrol outputs
 parse_scheduler_id() {
     local input
     input=$(cat)
