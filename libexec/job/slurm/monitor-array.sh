@@ -106,6 +106,10 @@ TEMPLATE
       "$template"
 }
 
+# There are multiple definitions of run_scontrol in the Slurm integration.
+#
+# XXX Find a mechanism to remove the difference and extract to a common
+# location (scontrol_parser.sh).
 run_scontrol() {
     scontrol show job "${1}" --oneline 2>&1
 }

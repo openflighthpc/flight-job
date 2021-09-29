@@ -50,6 +50,10 @@ parse_submission_id() {
     PARSE_RESULT[submission_id]=$( cut -d' ' -f4)
 }
 
+# There are multiple definitions of run_scontrol in the Slurm integration.
+#
+# XXX Find a mechanism to remove the difference and extract to a common
+# location (scontrol_parser.sh).
 run_scontrol() {
     scontrol show job "${1}" --oneline | head -n1 | tr ' ' '\n'
 }
