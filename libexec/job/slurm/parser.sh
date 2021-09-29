@@ -27,8 +27,19 @@
 #==============================================================================
 
 # ==============================================================================
-# State Mapping and helper functions
+# Parsing functions and helpers specific to Slurm but not specific to any
+# particular Slurm CLI, e.g., `scontrol` or `sacct.
 # ==============================================================================
+
+source_parsers() {
+    if [[ "$1" == "scontrol" ]] ; then
+        source "${DIR}/scontrol_parser.sh"
+    elif [[ "$1" == "sacct" ]] ; then
+        source "${DIR}/sacct_parser.sh"
+    else
+        fail_with "unknown parser type $1"
+    fi
+}
 
 declare -A STATE_MAP=(
   ["BF"]="FAILED"
@@ -80,59 +91,3 @@ declare -A STATE_MAP=(
   ["TO"]="FAILED"
   ["TIMEOUT"]="FAILED"
 )
-
-_parse_time() {
-  if [[ "$1" != "Unknown" ]]; then
-    printf "$1"
-  fi
-}
-
-_parse_start_time() {
-  if echo "RUNNING COMPLETED FAILED CANCELLED" | grep -q "$2"; then
-    _parse_time "$1"
-  fi
-}
-
-_parse_end_time() {
-  if echo "COMPLETED FAILED CANCELLED" | grep -q "$2"; then
-    _parse_time "$1"
-  fi
-}
-
-_parse_estimated_start_time() {
-  if [ "PENDING" == "$2" ]; then
-    _parse_time "$1"
-  fi
-}
-
-_parse_estimated_end_time() {
-  if echo "RUNNING PENDING" | grep -q "$2"; then
-    _parse_time "$1"
-  fi
-}
-
-_parse_state() {
-  if [ -n "${STATE_MAP["$1"]}" ]; then
-    printf "${STATE_MAP["$1"]}"
-  else
-    printf "UNKNOWN"
-  fi
-}
-
-parse_task() {
-    assert_array_var PARSE_RESULT
-    local parse_input state
-
-    parse_input="$(cat)"
-    state="$(parse_state <<< "${parse_input}")"
-
-    PARSE_RESULT[state]="${state}"
-    PARSE_RESULT[scheduler_state]=$(parse_scheduler_state <<< "${parse_input}")
-    PARSE_RESULT[reason]=$(parse_reason <<< "${parse_input}")
-    PARSE_RESULT[start_time]=$(parse_start_time "${state}" <<< "${parse_input}")
-    PARSE_RESULT[end_time]=$(parse_end_time "${state}" <<< "${parse_input}")
-    PARSE_RESULT[estimated_start_time]=$(parse_estimated_start_time "$state" <<< "${parse_input}")
-    PARSE_RESULT[estimated_end_time]=$(parse_estimated_end_time "$state" <<< "${parse_input}")
-    PARSE_RESULT[stdout_path]=$(parse_stdout <<< "${parse_input}")
-    PARSE_RESULT[stderr_path]=$(parse_stderr <<< "${parse_input}")
-}

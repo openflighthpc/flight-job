@@ -26,6 +26,132 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+# ==============================================================================
+# Library of functions suitable for any scheduler integration.  Nothing should
+# be specific to any particular scheduler integration.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# JSON manipulation functions.
+# ------------------------------------------------------------------------------
+
+# Add the $2 to the end of the JSON array given in $1.
+json_array_append() {
+    local array item
+    array="$1"
+    item="$2"
+    jq --argjson item "$item" '. += [$item]' <<< "$array"
+}
+
+# Add the $3 to the JSON object given in $1 with index $2.
+json_object_insert() {
+    local object index item
+    object="$1"
+    index="$2"
+    item="$3"
+    jq --arg index "$index" --argjson item "$item" \
+        '. + {($index): $item}' \
+        <<< "$object"
+}
+
+# ------------------------------------------------------------------------------
+# Parser helper functions.  These should be suitable to work with any
+# scheduler integration.
+# ------------------------------------------------------------------------------
+
+_parse_time() {
+    if [[ "$1" != "Unknown" ]]; then
+        printf "$1"
+    fi
+}
+
+_parse_start_time() {
+    if echo "RUNNING COMPLETED FAILED CANCELLED" | grep -q "$2"; then
+        _parse_time "$1"
+    fi
+}
+
+_parse_end_time() {
+    if echo "COMPLETED FAILED CANCELLED" | grep -q "$2"; then
+        _parse_time "$1"
+    fi
+}
+
+_parse_estimated_start_time() {
+    if [ "PENDING" == "$2" ]; then
+        _parse_time "$1"
+    fi
+}
+
+_parse_estimated_end_time() {
+    if echo "RUNNING PENDING" | grep -q "$2"; then
+        _parse_time "$1"
+    fi
+}
+
+_parse_state() {
+    assert_assoc_array_var STATE_MAP
+    if [ -n "${STATE_MAP["$1"]}" ]; then
+        printf "${STATE_MAP["$1"]}"
+    else
+        printf "UNKNOWN"
+    fi
+}
+
+# Parse stdin to a PARSE_RESULT.
+#
+# Requires suitable parser primitives to be available for the given stdin.
+parse_task() {
+    assert_assoc_array_var PARSE_RESULT
+    local parse_input state
+
+    parse_input="$(cat)"
+    state="$(parse_state <<< "${parse_input}")"
+
+    PARSE_RESULT[state]="${state}"
+    PARSE_RESULT[scheduler_state]=$(parse_scheduler_state <<< "${parse_input}")
+    PARSE_RESULT[reason]=$(parse_reason <<< "${parse_input}")
+    PARSE_RESULT[start_time]=$(parse_start_time "${state}" <<< "${parse_input}")
+    PARSE_RESULT[end_time]=$(parse_end_time "${state}" <<< "${parse_input}")
+    PARSE_RESULT[estimated_start_time]=$(parse_estimated_start_time "$state" <<< "${parse_input}")
+    PARSE_RESULT[estimated_end_time]=$(parse_estimated_end_time "$state" <<< "${parse_input}")
+    PARSE_RESULT[stdout_path]=$(parse_stdout <<< "${parse_input}")
+    PARSE_RESULT[stderr_path]=$(parse_stderr <<< "${parse_input}")
+}
+
+# ------------------------------------------------------------------------------
+# Assertion helpers.  Fail early if certain assertions are not met for easier
+# debugging.
+# ------------------------------------------------------------------------------
+
+# Fail unless arguments $* is an associative array.
+assert_progs() {
+    local progs p r
+    progs="$*"
+    for p in ${progs}; do
+        r=$(type -p $p)
+        if [ $? != 0 -o ! -x "$r" ]; then
+            fail_with "This system does not provide a required binary (${p})."
+        fi
+    done
+}
+
+# Fail unless $1 is an associative array.
+assert_assoc_array_var() {
+    declare -A | grep -q "declare -A $1" || fail_with "no $1 associative array declared"
+}
+
+# Fail unless $1 is defined.  The defined as the empty string is accepted.
+assert_var() {
+    if [[ -z ${1+x} ]] ; then
+        fail_with "var $1 not declared"
+    fi
+}
+
+# ------------------------------------------------------------------------------
+# Miscellaneous utility functions
+# ------------------------------------------------------------------------------
+
 fail_with() {
     local msg code
     msg="$1"
@@ -46,27 +172,6 @@ emit() {
     fi
 }
 
-check_progs() {
-    local progs p r
-    progs="$*"
-    for p in ${progs}; do
-        r=$(type -p $p)
-        if [ $? != 0 -o ! -x "$r" ]; then
-            fail_with "This system does not provide a required binary (${p})."
-        fi
-    done
-}
-
-assert_array_var() {
-    declare -A | grep -q "declare -A $1" || fail_with "no $1 associative array declared"
-}
-
-assert_var() {
-    if [[ -z ${1+x} ]] ; then
-        fail_with "var $1 not declared"
-    fi
-}
-
 # Read JSON template from stdin and report it to flight job.
 report_metadata() {
     # Currently, we report the metadata as the last line of stdout.  It must
@@ -80,31 +185,4 @@ log_command() {
 $1 output:
 $(cat)
 EOF
-}
-
-accumalate_json_array() {
-    local array item
-    array="$1"
-    item="$2"
-    jq --argjson item "$item" '. += [$item]' <<< "$array"
-}
-
-accumalate_json_object() {
-    local object index item
-    object="$1"
-    index="$2"
-    item="$3"
-    jq --arg index "$index" --argjson item "$item" \
-        '. + {($index): $item}' \
-        <<< "$object"
-}
-
-source_parsers() {
-    if [[ "$1" == "scontrol" ]] ; then
-        source "${DIR}/scontrol_parser.sh"
-    elif [[ "$1" == "sacct" ]] ; then
-        source "${DIR}/sacct_parser.sh"
-    else
-        fail_with "unknown parser type $1"
-    fi
 }

@@ -42,7 +42,7 @@ source "${DIR}/functions.sh"
 source "${DIR}/parser.sh"
 
 generate_task_json() {
-    assert_array_var PARSE_RESULT
+    assert_assoc_array_var PARSE_RESULT
 
     read -r -d '' task_template <<'TEMPLATE' || true
 {
@@ -115,7 +115,7 @@ run_sacct() {
 }
 
 parse_scontrol_output() {
-    assert_array_var JOB_RESULT
+    assert_assoc_array_var JOB_RESULT
     assert_var ARRAY_JOB_STATE
     declare -A PARSE_RESULT
     local tasks
@@ -128,7 +128,7 @@ parse_scontrol_output() {
       if echo "${index}" | grep -P '^\d+$' >/dev/null; then
           parse_task <<< "${line}"
           # declare -p PARSE_RESULT >&2
-          tasks="$(accumalate_json_object "$tasks" "$index" "$(generate_task_json)")"
+          tasks="$(json_object_insert "$tasks" "$index" "$(generate_task_json)")"
       else
         # The Slurm ARRAY_JOB has not yet been turned into a Slurm ARRAY_TASK.
         # New tasks could still be created.
@@ -144,7 +144,7 @@ parse_scontrol_output() {
 }
 
 parse_sacct_output() {
-    assert_array_var JOB_RESULT
+    assert_assoc_array_var JOB_RESULT
     assert_var ARRAY_JOB_STATE
     declare -A PARSE_RESULT
     local tasks
@@ -155,7 +155,7 @@ parse_sacct_output() {
         index=$(parse_task_index <<< "$line")
         parse_task <<< "${line}"
         # declare -p PARSE_RESULT >&2
-        tasks="$(accumalate_json_object "$tasks" "$index" "$(generate_task_json)")"
+        tasks="$(json_object_insert "$tasks" "$index" "$(generate_task_json)")"
 
         if [ "$(parse_job_id <<< "$line")" == "${JOB_ID}" ] ; then
             ARRAY_JOB_STATE=$(parse_state <<< "$line")
@@ -170,7 +170,7 @@ main() {
     declare -A JOB_RESULT
     local ARRAY_JOB_STATE exit_status output
 
-    check_progs jq scontrol sacct
+    assert_progs jq scontrol sacct
 
     ARRAY_JOB_STATE="UNKNOWN"
     JOB_RESULT[cancelled]="false"

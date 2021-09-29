@@ -99,7 +99,7 @@ main() {
     local exit_status
     local output
 
-    check_progs jq scontrol sacct
+    assert_progs jq scontrol sacct
 
     output=$(run_scontrol "$1" | tee >(log_command "scontrol" 1>&2))
     exit_status=$?

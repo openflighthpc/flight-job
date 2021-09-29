@@ -46,7 +46,7 @@ submit_job() {
 }
 
 parse_submission_id() {
-    assert_array_var PARSE_RESULT
+    assert_assoc_array_var PARSE_RESULT
     PARSE_RESULT[submission_id]=$( cut -d' ' -f4)
 }
 
@@ -55,7 +55,7 @@ run_scontrol() {
 }
 
 parse_job() {
-    assert_array_var PARSE_RESULT
+    assert_assoc_array_var PARSE_RESULT
     local working_dir job_name parse_input submission_id
 
     parse_input="$(cat)"
@@ -92,7 +92,7 @@ main() {
     declare -A PARSE_RESULT
     local exit_status output
 
-    check_progs jq scontrol sbatch
+    assert_progs jq scontrol sbatch
 
     output="$(submit_job "$1" | tee >(log_command "sbatch wrapper" 1>&2))"
     exit_status=$?

@@ -26,13 +26,10 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-source "${DIR}/functions.sh"
-
 # ==============================================================================
 # sacct parsers
 #
-# NOTE: All sacct parsers are designed for a single row with:
+# All sacct parsers are designed for a single row with:
 #       --format State,Reason,START,END,AllocTRES,JobID,JobIDRaw
 # ==============================================================================
 
