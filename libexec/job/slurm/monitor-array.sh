@@ -127,21 +127,23 @@ parse_scontrol_output() {
     tasks='{}'
 
     while read -r line; do
-      line=$(echo "$line" | tr ' ' '\n')
-      index=$(parse_task_index <<< "${line}")
-      if echo "${index}" | grep -P '^\d+$' >/dev/null; then
-          parse_task <<< "${line}"
-          # declare -p PARSE_RESULT >&2
-          tasks="$(json_object_insert "$tasks" "$index" "$(generate_task_json)")"
-      else
-        # The Slurm ARRAY_JOB has not yet been turned into a Slurm ARRAY_TASK.
-        # New tasks could still be created.
-        JOB_RESULT[lazy]="true"
-      fi
+        unset PARSE_RESULT
+        declare -A PARSE_RESULT
+        line=$(echo "$line" | tr ' ' '\n')
+        index=$(parse_task_index <<< "${line}")
+        if echo "${index}" | grep -P '^\d+$' >/dev/null; then
+            parse_task <<< "${line}"
+            # declare -p PARSE_RESULT >&2
+            tasks="$(json_object_insert "$tasks" "$index" "$(generate_task_json)")"
+        else
+          # The Slurm ARRAY_JOB has not yet been turned into a Slurm ARRAY_TASK.
+          # New tasks could still be created.
+          JOB_RESULT[lazy]="true"
+        fi
   
-      if [ "$(parse_job_id <<< "${line}")" == "${JOB_ID}" ] ; then
-          ARRAY_JOB_STATE=$(parse_state <<< "${line}")
-      fi
+        if [ "$(parse_job_id <<< "${line}")" == "${JOB_ID}" ] ; then
+            ARRAY_JOB_STATE=$(parse_state <<< "${line}")
+        fi
     done
 
     JOB_RESULT[tasks]="$tasks"
@@ -156,6 +158,8 @@ parse_sacct_output() {
     tasks='{}'
 
     while IFS= read -r line; do
+        unset PARSE_RESULT
+        declare -A PARSE_RESULT
         index=$(parse_task_index <<< "$line")
         parse_task <<< "${line}"
         # declare -p PARSE_RESULT >&2
