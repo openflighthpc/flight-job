@@ -36,16 +36,7 @@
 parse_field() {
     local field
     field="$1"
-    shift
-    if (( $# == 0 )) ; then
-        cat       | cut -d'|' -f${field}
-    else
-        echo "$1" | cut -d'|' -f${field}
-    fi
-}
-
-parse_state() {
-    _parse_state "$(parse_scheduler_state)"
+    cat | cut -d'|' -f${field}
 }
 
 parse_scheduler_state() {
@@ -74,28 +65,28 @@ parse_start_time() {
     fi
 
     time=$(parse_field 3 <<< "$input")
-    _parse_start_time "$time" "$state"
+    start_time_if_valid_state "$time" "$state"
 }
 
 parse_end_time() {
     local state time
     state="$1"
     time=$(parse_field 4)
-    _parse_end_time "$time" "$state"
+    end_time_if_valid_state "$time" "$state"
 }
 
 parse_estimated_start_time() {
     local state time
     state="$1"
     time=$(parse_field 3)
-    _parse_estimated_start_time "$time" "$state"
+    estimated_start_time_if_valid_state "$time" "$state"
 }
 
 parse_estimated_end_time() {
     local state time
     state="$1"
     time=$(parse_field 4)
-    _parse_estimated_end_time "$time" "$state"
+    estimated_end_time_if_valid_state "$time" "$state"
 }
 
 parse_task_index() {

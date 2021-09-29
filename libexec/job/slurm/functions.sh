@@ -59,40 +59,60 @@ json_object_insert() {
 # scheduler integration.
 # ------------------------------------------------------------------------------
 
-_parse_time() {
-    if [[ "$1" != "Unknown" ]]; then
-        printf "$1"
+time_if_known() {
+    local time
+    time="$1"
+    if [[ "$time" != "Unknown" ]]; then
+        printf "$time"
     fi
 }
 
-_parse_start_time() {
-    if echo "RUNNING COMPLETED FAILED CANCELLED" | grep -q "$2"; then
-        _parse_time "$1"
+start_time_if_valid_state() {
+    local time state
+    time="$1"
+    state="$2"
+    if echo "RUNNING COMPLETED FAILED CANCELLED" | grep -q "$state"; then
+        time_if_known "$time"
     fi
 }
 
-_parse_end_time() {
-    if echo "COMPLETED FAILED CANCELLED" | grep -q "$2"; then
-        _parse_time "$1"
+end_time_if_valid_state() {
+    local time state
+    time="$1"
+    state="$2"
+    if echo "COMPLETED FAILED CANCELLED" | grep -q "$state"; then
+        time_if_known "$time"
     fi
 }
 
-_parse_estimated_start_time() {
+estimated_start_time_if_valid_state() {
+    local time state
+    time="$1"
+    state="$2"
     if [ "PENDING" == "$2" ]; then
-        _parse_time "$1"
+        time_if_known "$time"
     fi
 }
 
-_parse_estimated_end_time() {
-    if echo "RUNNING PENDING" | grep -q "$2"; then
-        _parse_time "$1"
+estimated_end_time_if_valid_state() {
+    local time state
+    time="$1"
+    state="$2"
+    if echo "RUNNING PENDING" | grep -q "$state"; then
+        time_if_known "$time"
     fi
 }
 
-_parse_state() {
+# Determine the job's Flight Job state from the given state and print to
+# stdout.
+#
+# lookup_flight_job_state "$scheduler_state"
+lookup_flight_job_state() {
+    local state
+    state="$1"
     assert_assoc_array_var STATE_MAP
-    if [ -n "${STATE_MAP["$1"]}" ]; then
-        printf "${STATE_MAP["$1"]}"
+    if [ -n "${STATE_MAP["$state"]}" ]; then
+        printf "${STATE_MAP["$state"]}"
     else
         printf "UNKNOWN"
     fi
@@ -117,6 +137,75 @@ parse_task() {
     PARSE_RESULT[estimated_end_time]=$(parse_estimated_end_time "$state" <<< "${parse_input}")
     PARSE_RESULT[stdout_path]=$(parse_stdout <<< "${parse_input}")
     PARSE_RESULT[stderr_path]=$(parse_stderr <<< "${parse_input}")
+}
+
+# ------------------------------------------------------------------------------
+# The following parser stubs are used by `parse_task` and exist here to
+# document their signatures.
+# ------------------------------------------------------------------------------
+
+# Print the Flight Job state for the job to stdout.
+#
+# cat "$input" | parse_state
+parse_state() {
+    lookup_flight_job_state "$(parse_scheduler_state)"
+}
+
+
+# Print the scheduler state for the job to stdout.
+#
+# cat "$input" | parse_scheduler_state
+parse_scheduler_state() {
+    fail_with "Stubbed parser called"
+}
+
+# Print the reason, if any, for the job's state to stdout.
+#
+# cat "$input" | parse_reason
+parse_reason() {
+    fail_with "Stubbed parser called"
+}
+
+# Print the start time, if any, to stdout.
+#
+# cat "$input" | parse_start_time "$state"
+parse_start_time() {
+    fail_with "Stubbed parser called"
+}
+
+# Print the end time, if any, to stdout.
+#
+# cat "$input" | parse_end_time "$state"
+parse_end_time() {
+    fail_with "Stubbed parser called"
+}
+
+# Print the estimated start time, if any, to stdout.
+#
+# cat "$input" | parse_estimated_start_time "$state"
+parse_estimated_start_time() {
+    fail_with "Stubbed parser called"
+}
+
+# Print the estimated end time, if any, to stdout.
+#
+# cat "$input" | parse_estimated_end_time "$state"
+parse_estimated_end_time() {
+    fail_with "Stubbed parser called"
+}
+
+# Print the job's standard output path to stdout.
+#
+# cat "$input" | parse_stdout
+parse_stdout() {
+    fail_with "Stubbed parser called"
+}
+
+# Print the job's standard error path to stdout.
+#
+# cat "$input" | parse_stderr
+parse_stderr() {
+    fail_with "Stubbed parser called"
 }
 
 # ------------------------------------------------------------------------------

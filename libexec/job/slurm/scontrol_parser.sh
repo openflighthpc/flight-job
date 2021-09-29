@@ -43,12 +43,7 @@
 parse_field() {
     local key_name
     key_name="$1"
-    shift
-    if (( $# == 0 )) ; then
-        cat       | grep "^${key_name}=" | cut -d= -f2
-    else
-        echo "$1" | grep "^${key_name}=" | cut -d= -f2
-    fi
+    cat | grep "^${key_name}=" | cut -d= -f2
 }
 
 # Returns 0 if the scontrol input contains the given key.  The value of the
@@ -58,12 +53,7 @@ parse_field() {
 _scontrol_contains_key() {
     local key_name
     key_name="$1"
-    shift
-    if (( $# == 0 )) ; then
-        cat       | grep -q "^${key_name}="
-    else
-        echo "$1" | grep -q "^${key_name}="
-    fi
+    cat | grep -q "^${key_name}="
 }
 
 parse_job_type() {
@@ -98,10 +88,6 @@ parse_task_index() {
     parse_field ArrayTaskId
 }
 
-parse_state() {
-    _parse_state "$(parse_scheduler_state)"
-}
-
 parse_scheduler_state() {
     parse_field JobState
 }
@@ -129,32 +115,32 @@ parse_start_time() {
 
     # Check if CANCELLED jobs actually started
     if [ "$state" == "CANCELLED" ]; then
-        if [[ "$(parse_field NodeList "$control")" == "(null)" ]] ; then
+        if [[ "$(parse_field NodeList <<< "$control")" == "(null)" ]] ; then
             return 0
         fi
     fi
 
-    time=$(parse_field StartTime "$control")
-    _parse_start_time "$time" "$state"
+    time=$(parse_field StartTime <<< "$control")
+    start_time_if_valid_state "$time" "$state"
 }
 
 parse_end_time() {
     local state time
     state="$1"
     time=$(parse_field EndTime)
-    _parse_end_time "$time" "$state"
+    end_time_if_valid_state "$time" "$state"
 }
 
 parse_estimated_start_time() {
     local state time
     state="$1"
     time=$(parse_field StartTime)
-    _parse_estimated_start_time "$time" "$state"
+    estimated_start_time_if_valid_state "$time" "$state"
 }
 
 parse_estimated_end_time() {
     local state time
     state="$1"
     time=$(parse_field EndTime)
-    _parse_estimated_end_time "$time" "$state"
+    estimated_end_time_if_valid_state "$time" "$state"
 }
