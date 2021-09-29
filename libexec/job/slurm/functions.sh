@@ -43,14 +43,14 @@ json_array_append() {
     jq --argjson item "$item" '. += [$item]' <<< "$array"
 }
 
-# Add the $3 to the JSON object given in $1 with index $2.
+# Add the $3 to the JSON object given in $1 with key $2.
 json_object_insert() {
-    local object index item
+    local object key item
     object="$1"
-    index="$2"
+    key="$2"
     item="$3"
-    jq --arg index "$index" --argjson item "$item" \
-        '. + {($index): $item}' \
+    jq --arg key "$key" --argjson item "$item" \
+        '. + {($key): $item}' \
         <<< "$object"
 }
 
@@ -124,7 +124,7 @@ parse_task() {
 # debugging.
 # ------------------------------------------------------------------------------
 
-# Fail unless arguments $* is an associative array.
+# Fail unless arguments $* are all executable programs.
 assert_progs() {
     local progs p r
     progs="$*"
@@ -155,7 +155,7 @@ assert_var() {
 fail_with() {
     local msg code
     msg="$1"
-    code=${2:-1}
+    code=${2:255}
     emit "${msg}" >&2
     exit ${code}
 }
