@@ -57,7 +57,7 @@ module FlightJob
           elsif states.empty? && cancelling
             'CANCELLED'
           elsif lazy
-            'HOLD'
+            'WAITING'
           elsif states == ['COMPLETED']
             'COMPLETED'
           else
