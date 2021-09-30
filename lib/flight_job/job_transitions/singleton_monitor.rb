@@ -27,7 +27,7 @@
 
 module FlightJob
   module JobTransitions
-    class MonitorSingletonTransition < SimpleDelegator
+    class SingletonMonitor < SimpleDelegator
       include JobTransitions::JobTransitionHelper
 
       SHARED_KEYS = ["version", "state", "stdout_path", "stderr_path", "scheduler_state"]

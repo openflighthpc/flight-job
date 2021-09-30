@@ -27,7 +27,7 @@
 
 module FlightJob
   module JobTransitions
-    class CancelTransition
+    class Canceller
       def initialize(job)
         @job = job
       end

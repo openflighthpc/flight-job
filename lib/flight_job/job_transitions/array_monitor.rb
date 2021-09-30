@@ -27,7 +27,7 @@
 
 module FlightJob
   module JobTransitions
-    class MonitorArrayTransition < SimpleDelegator
+    class ArrayMonitor < SimpleDelegator
       include JobTransitions::JobTransitionHelper
 
       SCHEMA = JSONSchemer.schema({
@@ -48,7 +48,7 @@ module FlightJob
           }
         }
       })
-      TASK_SCHEMAS = MonitorSingletonTransition::SCHEMAS
+      TASK_SCHEMAS = SingletonMonitor::SCHEMAS
 
       def run
         FlightJob.logger.info("Monitoring Job: #{id}")

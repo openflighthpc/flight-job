@@ -27,7 +27,7 @@
 
 module FlightJob
   module JobTransitions
-    class FailedSubmissionTransition < SimpleDelegator
+    class FailedSubmitter < SimpleDelegator
       def run
         # Check if the maximum pending submission time has elapsed
         start = DateTime.rfc3339(created_at).to_time.to_i
