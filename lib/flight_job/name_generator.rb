@@ -43,7 +43,7 @@ module FlightJob
         Flight.logger.debug("The base name '#{base}' has already been taken")
         nil
       elsif base.length > FlightJob.config.max_id_length
-        Flight.logger.warn("Reject base name '#{base}' as it is too long")
+        Flight.logger.info("Reject base name '#{base}' as it is too long")
         nil
       else
         Flight.logger.info("Selecting base name '#{base}'")
@@ -54,7 +54,7 @@ module FlightJob
     def next_name
       candidate = "#{base}-#{next_index}"
       if candidate.length > FlightJob.config.max_id_length
-        Flight.logger.warn("Rejecting generated name '#{candidate}' as it is too long")
+        Flight.logger.info("Rejecting generated name '#{candidate}' as it is too long")
         new_generator(candidate)&.next_name || random_name
       else
         Flight.logger.info("Selecting next name '#{candidate}'")
@@ -65,7 +65,7 @@ module FlightJob
     def backfill_name
       candidate = "#{base}-#{backfill_index}"
       if candidate.length > FlightJob.config.max_id_length
-        Flight.logger.warn("Rejecting generated name '#{candidate}' as it is too long")
+        Flight.logger.info("Rejecting generated name '#{candidate}' as it is too long")
         new_generator(candidate)&.backfill_name || random_name
       else
         Flight.logger.info("Selecting backfilled name '#{candidate}'")
@@ -98,7 +98,7 @@ module FlightJob
     private
 
     def random_name
-      Flight.logger.warn "Falling back on random name generation"
+      Flight.logger.info "Falling back on random name generation"
       (1..FlightJob.config.max_ids).each do
         candidate = SecureRandom.urlsafe_base64(6)
         return candidate unless File.exists? metadata_path(candidate)
