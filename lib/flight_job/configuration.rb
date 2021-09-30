@@ -87,7 +87,7 @@ module FlightJob
               default: ->(config) { File.join("usr/share/job/adapter.#{config.scheduler}.erb") },
               transform: relative_to(root_path)
 
-    attribute :submission_period, default: 3600
+    attribute :submission_period, default: 300
     validates :submission_period, numericality: { only_integers: true }
 
     attribute :minimum_terminal_width, default: 80
