@@ -416,7 +416,6 @@ module FlightJob
       end
 
       def render_and_save(name, answers, notes)
-        # Ensure the ID is valid
         verify_id(name) if name
 
         # Create the script object
@@ -511,7 +510,7 @@ module FlightJob
       end
 
       # Checks if the script's ID is valid
-      def verify_id(id, raise_on_error: true)
+      def verify_id(id)
         # Run the verification
         script = Script.new(id: id)
         return true if script.valid?(:id_check)
@@ -520,9 +519,6 @@ module FlightJob
         FlightJob.logger.error("The script ID is invalid:\n") do
           script.errors.full_messages.join("\n")
         end
-
-        # Exit fast unless erroring
-        return false unless raise_on_error
 
         # Find the first error related to the ID
         # NOTE: There maybe more than one error, but the first one determines the
