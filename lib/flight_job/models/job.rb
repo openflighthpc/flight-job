@@ -285,22 +285,22 @@ module FlightJob
     end
 
     def submit
-      JobTransitions::SubmitTransition.new(self).run
+      JobTransitions::Submitter.new(self).run
     end
 
     def monitor
       case job_type
-      when 'INITIALIZING'
-        JobTransitions::FailedSubmissionTransition.new(self).run
+      when 'SUBMITTING'
+        JobTransitions::FailedSubmitter.new(self).run
       when 'SINGLETON'
-        JobTransitions::MonitorSingletonTransition.new(self).run
+        JobTransitions::SingletonMonitor.new(self).run
       when 'ARRAY'
-        JobTransitions::MonitorArrayTransition.new(self).run
+        JobTransitions::ArrayMonitor.new(self).run
       end
     end
 
     def cancel
-      JobTransitions::CancelTransition.new(self).run
+      JobTransitions::Canceller.new(self).run
     end
 
     def decorate

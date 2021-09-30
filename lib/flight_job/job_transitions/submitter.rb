@@ -27,7 +27,7 @@
 
 module FlightJob
   module JobTransitions
-    class SubmitTransition < SimpleDelegator
+    class Submitter < SimpleDelegator
       include JobTransitionHelper
       include ActiveModel::Validations
 
@@ -49,9 +49,6 @@ module FlightJob
       end
 
       validate do
-        if submitted?
-          errors.add(:submitted, 'the job has already been submitted')
-        end
         unless load_script.valid?(:load)
           errors.add(:script, 'is missing or invalid')
         end
@@ -60,8 +57,8 @@ module FlightJob
       def run
         # Validate and load the script
         unless valid?
-          FlightJob.config.logger("The script is not in a valid submission state: #{id}\n") do
-            errors.full_messages
+          Flight.logger.error("The job is not in a valid submission state: #{id}\n") do
+            errors.full_messages.join("\n")
           end
           raise InternalError, 'Unexpectedly failed to submit the job'
         end
@@ -113,10 +110,10 @@ module FlightJob
           case data['job_type']
           when 'SINGLETON'
             metadata['state'] = 'PENDING'
-            MonitorSingletonTransition.new(__getobj__).run
+            SingletonMonitor.new(__getobj__).run
           when 'ARRAY'
             metadata['cancelled'] = false
-            MonitorArrayTransition.new(__getobj__).run
+            ArrayMonitor.new(__getobj__).run
           end
         end
       end
