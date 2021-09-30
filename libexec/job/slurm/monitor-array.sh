@@ -138,10 +138,6 @@ parse_scontrol_output() {
           # New tasks could still be created.
           ARRAY_JOB[lazy]="true"
         fi
-  
-        if [ "$(parse_job_id <<< "${line}")" == "${JOB_ID}" ] ; then
-            ARRAY_JOB[state]=$(parse_state <<< "${line}")
-        fi
     done
 
     ARRAY_JOB[tasks]="$tasks"
@@ -152,18 +148,22 @@ parse_sacct_output() {
     declare -A TASK
     local tasks
 
-    tasks='{}'
+    tasks="${ARRAY_JOB[tasks]}"
+    if [ -z "$tasks" ]; then
+      tasks="{}"
+    fi
 
     while IFS= read -r line; do
-        unset TASK
-        declare -A TASK
         index=$(parse_task_index <<< "$line")
-        parse_task <<< "${line}"
-        # declare -p TASK >&2
-        tasks="$(json_object_insert "$tasks" "$index" "$(generate_task_json)")"
+        existing_task=$(printf "$tasks" | jq ".[\"$index\"]")
+        numeric_id=$(echo "${index}" | grep -P '^\d+$')
 
-        if [ "$(parse_job_id <<< "$line")" == "${JOB_ID}" ] ; then
-            ARRAY_JOB[state]=$(parse_state <<< "$line")
+        if [ "$existing_task" == "null" ] && [ -n "$numeric_id" ]; then
+          unset TASK
+          declare -A TASK
+          parse_task <<< "${line}"
+          # declare -p TASK >&2
+          tasks="$(json_object_insert "$tasks" "$index" "$(generate_task_json)")"
         fi
     done
 
@@ -178,36 +178,32 @@ main() {
     assert_progs jq scontrol sacct
 
     ARRAY_JOB[lazy]="false"
-    ARRAY_JOB[state]="UNKNOWN"
 
+    # First attempt to get the data from scontrol
     output=$(run_scontrol "${JOB_ID}" | tee >(log_command "scontrol" 1>&2))
-    exit_status=$?
-
-    if [[ $exit_status -eq 0 ]] ; then
+    scontrol_exit_status=$?
+    if [[ $scontrol_exit_status -eq 0 ]] ; then
         source_parsers "scontrol"
         parse_scontrol_output <<< "$output"
-    elif [[ "${output}" == "slurm_load_jobs error: Invalid job id specified" ]] ; then
-        output=$(run_sacct "$JOB_ID" | tee >(log_command "sacct" 1>&2))
-        exit_status=$?
-        # XXX Replace with -X / --allocations
-        output=$(echo "$output" | awk 'FNR%2')
-        if [[ $exit_status -eq 0 ]] && [ -z "$output" ]; then
-            echo "No Tasks Found!" >&2
-        elif [[ $exit_status -eq 0 ]]; then
-            source_parsers "sacct"
-            parse_sacct_output <<< "${output}"
-        else
-            exit $exit_status
-        fi
-    else
-        exit $exit_status
     fi
 
-    # XXX: Confirm if this is still required
-    if [ "${ARRAY_JOB[state]}" == "CANCELLED" ] ; then
-        ARRAY_JOB[lazy]="false"
+    # Second, attempt to load additional data from sacct
+    # NOTE: The earliest tasks may move here before the last finishes
+    # XXX Replace with -X / --allocations
+    output=$(run_sacct "$JOB_ID" | tee >(log_command "sacct" 1>&2))
+    output=$(echo "$output" | awk 'FNR%2')
+    sacct_exit_status=$?
+    if [[ $sacct_exit_status -eq 0 ]] && [ -z "$output" ]; then
+        echo "No Tasks Found!" >&2
+    elif [[ $sacct_exit_status -eq 0 ]]; then
+        source_parsers "sacct"
+        parse_sacct_output <<< "${output}"
     fi
-    # declare -p ARRAY_JOB >&2
+
+    # Exit if both commands failed
+    if [ $scontrol_exit_status -ne 0 ] && [ $sacct_exit_status -ne 0 ]; then
+        exit $sacct_exit_status
+    fi
 
     generate_template | report_metadata
 }
