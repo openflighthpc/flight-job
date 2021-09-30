@@ -285,7 +285,7 @@ module FlightJob
     end
 
     def monitor
-      original_metadata = @metadata.deep_dup
+      original_metadata = metadata.deep_dup
       success = case job_type
       when 'SUBMITTING'
         JobTransitions::FailedSubmitter.new(self).run
@@ -297,6 +297,7 @@ module FlightJob
         JobTransitions::ArrayMonitor.new(self).run
       end
       unless success
+        Flight.logger.warn "Resetting metadata for job '#{id}'"
         @metadata = original_metadata
       end
     end
@@ -326,6 +327,8 @@ module FlightJob
     def terminal?
       case job_type
       when 'SUBMITTING'
+        false
+      when 'MONITORING'
         false
       when 'FAILED_SUBMISSION'
         true
