@@ -46,8 +46,8 @@ submit_job() {
 }
 
 parse_submission_id() {
-    assert_assoc_array_var PARSE_RESULT
-    PARSE_RESULT[submission_id]=$( cut -d' ' -f4)
+    assert_assoc_array_var JOB
+    JOB[submission_id]=$( cut -d' ' -f4)
 }
 
 # There are multiple definitions of run_scontrol in the Slurm integration.
@@ -59,21 +59,22 @@ run_scontrol() {
 }
 
 parse_job() {
-    assert_assoc_array_var PARSE_RESULT
+    assert_assoc_array_var JOB
     local working_dir job_name parse_input submission_id
 
     parse_input="$(cat)"
-    submission_id="${PARSE_RESULT[submission_id]}"
+    submission_id="${JOB[submission_id]}"
     working_dir=$(parse_field WorkDir <<< "${parse_input}")
     job_name=$(parse_field JobName <<< "${parse_input}")
 
-    PARSE_RESULT[job_type]=$(parse_job_type <<< "${parse_input}")
-    PARSE_RESULT[scheduler_id]=$(parse_scheduler_id <<< "${parse_input}")
-    PARSE_RESULT[results_dir]="${working_dir}/${job_name}-outputs/${submission_id}" 
+    JOB[job_type]=$(parse_job_type <<< "${parse_input}")
+    JOB[scheduler_id]=$(parse_scheduler_id <<< "${parse_input}")
+    JOB[results_dir]="${working_dir}/${job_name}-outputs/${submission_id}" 
 }
 
 # Print to stdout the JSON template to be returned to flight job.
 generate_template() {
+    assert_assoc_array_var JOB
     local template
 
     read -r -d '' template <<'TEMPLATE' || true
@@ -86,14 +87,14 @@ generate_template() {
 TEMPLATE
 
   echo '{}' | jq  \
-    --arg id          "${PARSE_RESULT[scheduler_id]}" \
-    --arg results_dir "${PARSE_RESULT[results_dir]}"  \
-    --arg job_type    "${PARSE_RESULT[job_type]}"     \
+    --arg id          "${JOB[scheduler_id]}" \
+    --arg results_dir "${JOB[results_dir]}"  \
+    --arg job_type    "${JOB[job_type]}"     \
     "$template"
 }
 
 main() {
-    declare -A PARSE_RESULT
+    declare -A JOB
     local exit_status output
 
     assert_progs jq scontrol sbatch
@@ -105,7 +106,7 @@ main() {
     fi
     parse_submission_id <<< "${output}"
 
-    output=$(run_scontrol "${PARSE_RESULT[submission_id]}" | tee >(log_command "scontrol" 1>&2))
+    output=$(run_scontrol "${JOB[submission_id]}" | tee >(log_command "scontrol" 1>&2))
     exit_status=$?
     if [[ $exit_status -ne 0 ]]; then
         exit $exit_status
@@ -113,7 +114,7 @@ main() {
 
     source_parsers "scontrol"
     parse_job <<< "${output}"
-    declare -A | grep PARSE_RESULT >&2
+    # declare -A | grep JOB >&2
 
     generate_template | report_metadata
 }

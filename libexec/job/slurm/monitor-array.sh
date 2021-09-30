@@ -42,7 +42,7 @@ source "${DIR}/functions.sh"
 source "${DIR}/parser.sh"
 
 generate_task_json() {
-    assert_assoc_array_var PARSE_RESULT
+    assert_assoc_array_var TASK
 
     read -r -d '' task_template <<'TEMPLATE' || true
 {
@@ -76,19 +76,20 @@ generate_task_json() {
 TEMPLATE
 
     echo '{}' | jq  \
-      --arg state "${PARSE_RESULT[state]}" \
-      --arg scheduler_state "${PARSE_RESULT[scheduler_state]}" \
-      --arg reason "${PARSE_RESULT[reason]}" \
-      --arg stdout_path "${PARSE_RESULT[stdout_path]}" \
-      --arg stderr_path "${PARSE_RESULT[stderr_path]}" \
-      --arg estimated_start_time "${PARSE_RESULT[estimated_start_time]}" \
-      --arg estimated_end_time "${PARSE_RESULT[estimated_end_time]}" \
-      --arg start_time "${PARSE_RESULT[start_time]}" \
-      --arg end_time "${PARSE_RESULT[end_time]}" \
+      --arg state "${TASK[state]}" \
+      --arg scheduler_state "${TASK[scheduler_state]}" \
+      --arg reason "${TASK[reason]}" \
+      --arg stdout_path "${TASK[stdout_path]}" \
+      --arg stderr_path "${TASK[stderr_path]}" \
+      --arg estimated_start_time "${TASK[estimated_start_time]}" \
+      --arg estimated_end_time "${TASK[estimated_end_time]}" \
+      --arg start_time "${TASK[start_time]}" \
+      --arg end_time "${TASK[end_time]}" \
       "$task_template"
 }
 
 generate_template() {
+    assert_assoc_array_var ARRAY_JOB
     local template
     read -r -d '' template <<'TEMPLATE' || true
 {
@@ -100,9 +101,9 @@ generate_template() {
 TEMPLATE
 
     echo '{}' | jq  \
-      --arg cancelled "${JOB_RESULT[cancelled]}" \
-      --arg lazy "${JOB_RESULT[lazy]}" \
-      --argjson tasks "${JOB_RESULT[tasks]}" \
+      --arg cancelled "${ARRAY_JOB[cancelled]}" \
+      --arg lazy "${ARRAY_JOB[lazy]}" \
+      --argjson tasks "${ARRAY_JOB[tasks]}" \
       "$template"
 }
 
@@ -119,70 +120,68 @@ run_sacct() {
 }
 
 parse_scontrol_output() {
-    assert_assoc_array_var JOB_RESULT
-    assert_var ARRAY_JOB_STATE
-    declare -A PARSE_RESULT
+    assert_assoc_array_var ARRAY_JOB
+    declare -A TASK
     local tasks
 
     tasks='{}'
 
     while read -r line; do
-        unset PARSE_RESULT
-        declare -A PARSE_RESULT
+        unset TASK
+        declare -A TASK
         line=$(echo "$line" | tr ' ' '\n')
         index=$(parse_task_index <<< "${line}")
         if echo "${index}" | grep -P '^\d+$' >/dev/null; then
             parse_task <<< "${line}"
-            # declare -p PARSE_RESULT >&2
+            # declare -p TASK >&2
             tasks="$(json_object_insert "$tasks" "$index" "$(generate_task_json)")"
         else
           # The Slurm ARRAY_JOB has not yet been turned into a Slurm ARRAY_TASK.
           # New tasks could still be created.
-          JOB_RESULT[lazy]="true"
+          ARRAY_JOB[lazy]="true"
         fi
   
         if [ "$(parse_job_id <<< "${line}")" == "${JOB_ID}" ] ; then
-            ARRAY_JOB_STATE=$(parse_state <<< "${line}")
+            ARRAY_JOB[state]=$(parse_state <<< "${line}")
         fi
     done
 
-    JOB_RESULT[tasks]="$tasks"
+    ARRAY_JOB[tasks]="$tasks"
 }
 
 parse_sacct_output() {
-    assert_assoc_array_var JOB_RESULT
-    assert_var ARRAY_JOB_STATE
-    declare -A PARSE_RESULT
+    assert_assoc_array_var ARRAY_JOB
+    declare -A TASK
     local tasks
 
     tasks='{}'
 
     while IFS= read -r line; do
-        unset PARSE_RESULT
-        declare -A PARSE_RESULT
+        unset TASK
+        declare -A TASK
         index=$(parse_task_index <<< "$line")
         parse_task <<< "${line}"
-        # declare -p PARSE_RESULT >&2
+        # declare -p TASK >&2
         tasks="$(json_object_insert "$tasks" "$index" "$(generate_task_json)")"
 
         if [ "$(parse_job_id <<< "$line")" == "${JOB_ID}" ] ; then
-            ARRAY_JOB_STATE=$(parse_state <<< "$line")
+            ARRAY_JOB[state]=$(parse_state <<< "$line")
         fi
     done
 
-    JOB_RESULT[tasks]="${tasks}"
+    ARRAY_JOB[tasks]="${tasks}"
 }
 
 main() {
     JOB_ID="$1"
-    declare -A JOB_RESULT
-    local ARRAY_JOB_STATE exit_status output
+    declare -A ARRAY_JOB
+    local exit_status output
 
     assert_progs jq scontrol sacct
 
-    ARRAY_JOB_STATE="UNKNOWN"
-    JOB_RESULT[cancelled]="false"
-    JOB_RESULT[lazy]="false"
+    ARRAY_JOB[cancelled]="false"
+    ARRAY_JOB[lazy]="false"
+    ARRAY_JOB[state]="UNKNOWN"
 
     output=$(run_scontrol "${JOB_ID}" | tee >(log_command "scontrol" 1>&2))
     exit_status=$?
@@ -207,11 +206,11 @@ main() {
         exit $exit_status
     fi
 
-    if [ "$ARRAY_JOB_STATE" == "CANCELLED" ] ; then
-        JOB_RESULT[cancelled]="true"
-        JOB_RESULT[lazy]="false"
+    if [ "${ARRAY_JOB[state]}" == "CANCELLED" ] ; then
+        ARRAY_JOB[cancelled]="true"
+        ARRAY_JOB[lazy]="false"
     fi
-    # declare -p JOB_RESULT >&2
+    # declare -p ARRAY_JOB >&2
 
     generate_template | report_metadata
 }

@@ -54,6 +54,7 @@ run_sacct() {
 }
 
 generate_template() {
+    assert_assoc_array_var TASK
     local template
     read -r -d '' template <<'TEMPLATE' || true
 {
@@ -86,20 +87,20 @@ generate_template() {
 }
 TEMPLATE
 
-    echo '{}' | jq  --arg state "${PARSE_RESULT[state]}" \
-        --arg scheduler_state "${PARSE_RESULT[scheduler_state]}" \
-        --arg reason "${PARSE_RESULT[reason]}" \
-        --arg estimated_start_time "${PARSE_RESULT[estimated_start_time]}" \
-        --arg estimated_end_time "${PARSE_RESULT[estimated_end_time]}" \
-        --arg start_time "${PARSE_RESULT[start_time]}" \
-        --arg end_time "${PARSE_RESULT[end_time]}" \
-        --arg stdout_path "${PARSE_RESULT[stdout_path]}" \
-        --arg stderr_path "${PARSE_RESULT[stderr_path]}" \
+    echo '{}' | jq  --arg state "${TASK[state]}" \
+        --arg scheduler_state "${TASK[scheduler_state]}" \
+        --arg reason "${TASK[reason]}" \
+        --arg estimated_start_time "${TASK[estimated_start_time]}" \
+        --arg estimated_end_time "${TASK[estimated_end_time]}" \
+        --arg start_time "${TASK[start_time]}" \
+        --arg end_time "${TASK[end_time]}" \
+        --arg stdout_path "${TASK[stdout_path]}" \
+        --arg stderr_path "${TASK[stderr_path]}" \
         "$template"
 }
 
 main() {
-    declare -A PARSE_RESULT
+    declare -A TASK
     local exit_status
     local output
 
@@ -117,7 +118,7 @@ main() {
         exit_status=$?
         output=$(echo "$output" | head -n1)
         if [[ $exit_status -eq 0 ]] && [ -z "$output" ]; then
-            PARSE_RESULT[state]="UNKNOWN"
+            TASK[state]="UNKNOWN"
         elif [[ $exit_status -eq 0 ]]; then
             source_parsers "sacct"
             parse_task <<< "${output}"
@@ -128,7 +129,7 @@ main() {
         exit $exit_status
     fi
 
-    declare -p PARSE_RESULT >&2
+    # declare -p TASK >&2
 
     generate_template | report_metadata
 }

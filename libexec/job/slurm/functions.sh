@@ -118,25 +118,25 @@ lookup_flight_job_state() {
     fi
 }
 
-# Parse stdin to a PARSE_RESULT.
+# Parse stdin to the TASK associative array.
 #
 # Requires suitable parser primitives to be available for the given stdin.
 parse_task() {
-    assert_assoc_array_var PARSE_RESULT
+    assert_assoc_array_var TASK
     local parse_input state
 
     parse_input="$(cat)"
     state="$(parse_state <<< "${parse_input}")"
 
-    PARSE_RESULT[state]="${state}"
-    PARSE_RESULT[scheduler_state]=$(parse_scheduler_state <<< "${parse_input}")
-    PARSE_RESULT[reason]=$(parse_reason <<< "${parse_input}")
-    PARSE_RESULT[start_time]=$(parse_start_time "${state}" <<< "${parse_input}")
-    PARSE_RESULT[end_time]=$(parse_end_time "${state}" <<< "${parse_input}")
-    PARSE_RESULT[estimated_start_time]=$(parse_estimated_start_time "$state" <<< "${parse_input}")
-    PARSE_RESULT[estimated_end_time]=$(parse_estimated_end_time "$state" <<< "${parse_input}")
-    PARSE_RESULT[stdout_path]=$(parse_stdout <<< "${parse_input}")
-    PARSE_RESULT[stderr_path]=$(parse_stderr <<< "${parse_input}")
+    TASK[state]="${state}"
+    TASK[scheduler_state]=$(parse_scheduler_state <<< "${parse_input}")
+    TASK[reason]=$(parse_reason <<< "${parse_input}")
+    TASK[start_time]=$(parse_start_time "${state}" <<< "${parse_input}")
+    TASK[end_time]=$(parse_end_time "${state}" <<< "${parse_input}")
+    TASK[estimated_start_time]=$(parse_estimated_start_time "$state" <<< "${parse_input}")
+    TASK[estimated_end_time]=$(parse_estimated_end_time "$state" <<< "${parse_input}")
+    TASK[stdout_path]=$(parse_stdout <<< "${parse_input}")
+    TASK[stderr_path]=$(parse_stderr <<< "${parse_input}")
 }
 
 # ------------------------------------------------------------------------------
