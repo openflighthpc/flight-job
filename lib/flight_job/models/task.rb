@@ -100,7 +100,7 @@ module FlightJob
       Dir.glob(new(job_id: job_id, index: '*').metadata_path).map do |path|
         index = File.basename(path).split('.')[1]
         self.load(job_id, index)
-      end.sort_by(&:index)
+      end.sort_by { |t| t.index.to_i }
     end
 
     def self.load(job_id, index)
@@ -124,10 +124,11 @@ module FlightJob
     end
 
     def self.load_first_pending(job_id)
-      path = Dir.glob(state_index_path(job_id, '*', 'PENDING'))
-                .sort.first
-      return nil unless path
-      self.load(job_id, File.extname(path).sub(/\A\./, ''))
+      index = Dir.glob(state_index_path(job_id, '*', 'PENDING'))
+                 .map { |p| File.extname(p).sub(/\A\./, '').to_i }
+                 .sort.first
+      return nil unless index
+      self.load(job_id, index)
     end
 
     def self.load_last_non_terminal(job_id)
@@ -135,7 +136,7 @@ module FlightJob
         new_paths = Dir.glob(state_index_path(job_id, '*', state))
         [*memo, *new_paths]
       end
-      index = paths.map { |path| File.extname(path).sub(/\A\./, '') }.sort.last
+      index = paths.map { |path| File.extname(path).sub(/\A\./, '').to_i }.sort.last
       return nil unless index
       self.load(job_id, index)
     end
@@ -167,7 +168,7 @@ module FlightJob
     def self.task_indices(job_id)
       Dir.glob(new(job_id: job_id, index: '*').metadata_path).map do |path|
         name = File.basename(path)
-        /\Ametadata\.(?<index>.*)\.yaml\Z/.match(name).named_captures['index']
+        /\Ametadata\.(?<index>.*)\.yaml\Z/.match(name).named_captures['index'].to_i
       end.sort
     end
 
