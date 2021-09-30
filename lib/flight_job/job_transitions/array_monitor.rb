@@ -101,9 +101,9 @@ module FlightJob
       end
 
       def update_job(data)
-        metadata["cancelled"] = data["cancelled"]
-        metadata["lazy"] = data["lazy"]
-        save_metadata
+        job.metadata["cancelled"] = data["cancelled"]
+        job.metadata["lazy"] = data["lazy"]
+        job.save_metadata
       end
 
       def build_tasks(data)

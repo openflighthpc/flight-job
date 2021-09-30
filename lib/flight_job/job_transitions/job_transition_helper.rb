@@ -30,20 +30,11 @@ require 'open3'
 module FlightJob
   module JobTransitions
     module JobTransitionHelper
-      # TODO: Remove me!
-      def method_missing(s, *args)
-        if respond_to? :job
-          job.send(s, *args)
-        else
-          __getobj__.send(s, *args)
-        end
-      end
-
       def execute_command(*cmd, tag:)
         # NOTE: Should the PATH be configurable instead of inherited from the environment?
         # This could lead to differences when executed via the CLI or the webapp
         env = ENV.slice('PATH', 'HOME', 'USER', 'LOGNAME').tap do |h|
-          h['CONTROLS_DIR'] = controls_dir.path
+          h['CONTROLS_DIR'] = job.controls_dir.path
         end
         cmd_stdout, cmd_stderr, status = Open3.capture3(env, *cmd, unsetenv_others: true, close_others: true)
 
