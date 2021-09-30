@@ -97,7 +97,7 @@ module FlightJob
     validates :max_id_length, numericality: { only_integers: true, greater_than: 5 }
 
     attribute :id_generation_attempts, default: 1_000_000
-    validates :id_generation_attempts, numericality: { only_integers: true }
+    validates :id_generation_attempts, numericality: { only_integers: true, greater_than: 0 }
 
     attribute :max_stdin_size, default: 1048576
     validates :max_stdin_size, numericality: { only_integers: true }
