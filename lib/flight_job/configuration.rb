@@ -96,8 +96,8 @@ module FlightJob
     attribute :max_id_length, default: 16
     validates :max_id_length, numericality: { only_integers: true, greater_than: 5 }
 
-    attribute :max_ids, default: 1000000
-    validates :max_ids, numericality: { only_integers: true }
+    attribute :id_generation_attempts, default: 1_000_000
+    validates :id_generation_attempts, numericality: { only_integers: true }
 
     attribute :max_stdin_size, default: 1048576
     validates :max_stdin_size, numericality: { only_integers: true }

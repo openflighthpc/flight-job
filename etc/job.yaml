@@ -167,17 +167,14 @@
 # max_stdin_size: 1048576 # (1 MB)
 
 # ==============================================================================
-# Max IDs
+# ID generation attempts
 #
 # The number of times flight-job will attempt to generate a random identifier
-# before triggering an internal error.
+# before failing.
 #
-# The total number of attempts should exceed this number, when accounting for
-# the "nice ID" generation algorithm.
-#
-# The environment variable flight_JOB_max_ids takes precedence.
+# The environment variable flight_JOB_id_generation_attempts takes precedence.
 # ==============================================================================
-# max_ids: 1000000
+# id_generation_attempts: 1000000
 
 # ==============================================================================
 # Submission Period
