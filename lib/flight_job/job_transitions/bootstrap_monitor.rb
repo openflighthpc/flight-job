@@ -79,7 +79,6 @@ module FlightJob
           job.metadata['state'] = 'PENDING'
           SingletonMonitor.new(job).run!
         when 'ARRAY'
-          job.metadata['cancelled'] = false
           job.metadata['lazy'] = true
           ArrayMonitor.new(job).run!
         end

@@ -116,7 +116,9 @@ oneOf:
       <<: *SCHED_ID_PROPERTIES
       job_type: { "const" : "ARRAY" }
       lazy: { "type" : "boolean" }
-      cancelled: { "type" : "boolean" }
       # Optional
       estimated_start_time: { "type" : ['date-time', 'null'] }
       estimated_end_time: { "type" : ['date-time', 'null'] }
+
+      # XXX: Defunct field, TBC if it can be removed
+      cancelled: { "type" : "boolean" }

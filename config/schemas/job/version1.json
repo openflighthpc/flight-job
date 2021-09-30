@@ -366,9 +366,6 @@
         "lazy": {
           "type": "boolean"
         },
-        "cancelled": {
-          "type": "boolean"
-        },
         "estimated_start_time": {
           "type": [
             "date-time",
@@ -380,6 +377,9 @@
             "date-time",
             "null"
           ]
+        },
+        "cancelled": {
+          "type": "boolean"
         }
       }
     }

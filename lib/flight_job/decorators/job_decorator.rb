@@ -64,7 +64,7 @@ module FlightJob
             'RUNNING'
           elsif states.include?('PENDING')
             'PENDING'
-          elsif object.metadata['cancelled']
+          elsif states.include?('CANCELLED')
             'CANCELLED'
           elsif object.metadata['lazy']
             'WAITING'
