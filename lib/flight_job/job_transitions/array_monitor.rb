@@ -63,6 +63,7 @@ module FlightJob
       end
 
       def run!
+        # Skip jobs that have terminated, this allows the method to be called liberally
         if job.terminal?
           FlightJob.logger.debug "Skipping monitor for terminated job: #{job.id}"
           return
