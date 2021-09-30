@@ -57,6 +57,8 @@ module FlightJob
           # * If the job is non-terminal (it may have changed)
           @job.monitor if status.success? || @job.terminal?
           if status.success?
+            @job.metadata['cancelling'] = true
+            @job.save_metadata
             true
           elsif @job.terminal?
             false
