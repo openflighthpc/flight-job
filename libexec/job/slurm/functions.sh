@@ -244,7 +244,7 @@ assert_var() {
 fail_with() {
     local msg code
     msg="$1"
-    code=${2:255}
+    code=${2:-255}
     emit "${msg}" >&2
     exit ${code}
 }
