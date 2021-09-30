@@ -36,7 +36,6 @@ module FlightJob
       "properties" => {
         "version" => { "const" => 1 },
         "lazy" => { "type" => "boolean" },
-        "cancelled" => { "type" => "boolean" },
         "tasks" => {
           "type" => "object",
           "additionalProperties" => false, # Redundant, probably ...
@@ -44,7 +43,9 @@ module FlightJob
             # Tasks are validated against the singleton jobs schemas
             ".*" => { "type" => "object" }
           }
-        }
+        },
+        # XXX: Defunct fields, TBC when it can be removed
+        "cancelled" => { "type" => "boolean" }
       }
     })
 
@@ -101,7 +102,6 @@ module FlightJob
       end
 
       def update_job(data)
-        metadata["cancelled"] = data["cancelled"]
         metadata["lazy"] = data["lazy"]
         save_metadata
       end
