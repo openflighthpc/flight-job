@@ -39,7 +39,7 @@ module FlightJob
 
     PENDING_STATES = ['PENDING']
     TERMINAL_STATES = ['FAILED', 'COMPLETED', 'CANCELLED', 'UNKNOWN']
-    RUNNING_STATES = ['RUNNING']
+    RUNNING_STATES = ['RUNNING', 'COMPLETING']
     NON_TERMINAL_STATES = [*PENDING_STATES, *RUNNING_STATES]
     STATES = [*NON_TERMINAL_STATES, *TERMINAL_STATES]
 
@@ -279,7 +279,7 @@ module FlightJob
     end
 
     def monitor
-      original_metadata = @metadata.deep_dup
+      original_metadata = metadata.deep_dup
       success = case job_type
       when 'SUBMITTING'
         JobTransitions::FailedSubmitter.new(self).run
@@ -291,6 +291,7 @@ module FlightJob
         JobTransitions::ArrayMonitor.new(self).run
       end
       unless success
+        Flight.logger.warn "Resetting metadata for job '#{id}'"
         @metadata = original_metadata
       end
       success

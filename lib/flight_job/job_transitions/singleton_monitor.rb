@@ -66,7 +66,7 @@ module FlightJob
         "required" => [*SINGLETON_SHARED_KEYS, "start_time"],
         "properties" => {
           **SINGLETON_SHARED_PROPS,
-          "state" => { "const" => "RUNNING" },
+          "state" => { "enum" => ["RUNNING", "COMPLETING"] },
           "scheduler_state" => { "type" => "string", "minLength": 1 },
           "reason" => { "type" => ["string", "null"] },
           "start_time" => { "type" => "string", "minLength": 1 },
@@ -123,7 +123,10 @@ module FlightJob
           "estimated_end_time" => { "type" => "null" }
         }
       })
-    }.tap { |h| h["FAILED"] = h["COMPLETED"] }
+    }.tap do |h|
+      h["FAILED"] = h["COMPLETED"]
+      h["COMPLETING"] = h["RUNNING"]
+    end
 
     SingletonMonitor = Struct.new(:job) do
       include JobTransitions::JobTransitionHelper

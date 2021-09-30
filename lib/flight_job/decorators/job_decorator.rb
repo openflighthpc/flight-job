@@ -28,6 +28,44 @@
 module FlightJob
   module Decorators
     class JobDecorator
+      StateResolver = Struct.new(:states, :cancelling, :lazy) do
+        def self.singleton(job)
+          new([job.state], job.metadata['cancelling'], false)
+        end
+
+        def self.array(job)
+          states = Dir.glob(Task.state_index_path(job.id, '*', '*'))
+                      .map { |p| File.basename(p).split('.').first }
+                      .uniq
+          new(states, job.metadata['cancelling'], job.metadata['lazy'])
+        end
+
+        def state
+          if states.include?('RUNNING')
+            'RUNNING'
+          elsif states.include?('PENDING')
+            'PENDING'
+          elsif states.empty? && lazy
+            'PENDING'
+          elsif states.include?('COMPLETING')
+            # COMPLETING is a psuedo state which is hidden from the end user
+            # It is either resolved to RUNNING or CANCELLING depending if
+            # flight-job has a record of it being cancelled
+            cancelling ? 'CANCELLING' : 'RUNNING'
+          elsif states.include?('CANCELLED')
+            'CANCELLED'
+          elsif states.empty? && cancelling
+            'CANCELLED'
+          elsif lazy
+            'WAITING'
+          elsif states == ['COMPLETED']
+            'COMPLETED'
+          else
+            'FAILED'
+          end
+        end
+      end
+
       include ActiveModel::Serializers::JSON
 
       def self.delegate_metadata(*keys)
@@ -55,24 +93,9 @@ module FlightJob
         when 'FAILED_SUBMISSION'
           'FAILED'
         when 'SINGLETON'
-          object.metadata['state']
+          StateResolver.singleton(object).state
         when 'ARRAY'
-          states = Dir.glob(Task.state_index_path(id, '*', '*'))
-                      .map { |p| File.basename(p).split('.').first }
-                      .uniq
-          if states.include?('RUNNING')
-            'RUNNING'
-          elsif states.include?('PENDING')
-            'PENDING'
-          elsif states.include?('CANCELLED')
-            'CANCELLED'
-          elsif object.metadata['lazy']
-            'WAITING'
-          elsif states == ['COMPLETED']
-            'COMPLETED'
-          else
-            'FAILED'
-          end
+          StateResolver.array(object).state
         end
       end
 
