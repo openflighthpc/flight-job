@@ -264,7 +264,7 @@ module FlightJob
     end
 
     def submit
-      JobTransitions::Submitter.new(self).run
+      JobTransitions::Submitter.new(self).run!
     end
 
     def monitor
@@ -279,7 +279,7 @@ module FlightJob
     end
 
     def cancel
-      JobTransitions::Canceller.new(self).run
+      JobTransitions::Canceller.new(self).run!
     end
 
     def decorate

@@ -129,6 +129,15 @@ module FlightJob
       }.tap { |h| h["FAILED"] = h["COMPLETED"] }
 
       def run
+        run!
+        return true
+      rescue
+        Flight.logger.error "Failed to monitor singleton job '#{id}'"
+        Flight.logger.warn $!
+        return false
+      end
+
+      def run!
         # Skip jobs that have terminated, this allows the method to be called liberally
         if Job::STATES_LOOKUP[state] == :terminal
           FlightJob.logger.debug "Skipping monitor for terminated job: #{id}"
@@ -159,6 +168,8 @@ module FlightJob
 
             # Remove the indexing file in terminal state
             FileUtils.rm_f active_index_path if terminal?
+          else
+            raise_command_error
           end
         end
       end

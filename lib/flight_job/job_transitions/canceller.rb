@@ -33,6 +33,15 @@ module FlightJob
       end
 
       def run
+        run!
+        return true
+      rescue
+        Flight.logger.error "Failed to submit job '#{id}'"
+        Flight.logger.warn $!
+        return false
+      end
+
+      def run!
         if @job.terminal?
           # In practice, this condition shouldn't be reached. However preventing it
           # is up to the CLI's implementation

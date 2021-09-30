@@ -55,6 +55,15 @@ module FlightJob
       end
 
       def run
+        run!
+        return true
+      rescue
+        Flight.logger.error "Failed to submit job '#{id}'"
+        Flight.logger.warn $!
+        return false
+      end
+
+      def run!
         # Validate and load the script
         unless valid?
           Flight.logger.error("The job is not in a valid submission state: #{id}\n") do
@@ -110,10 +119,10 @@ module FlightJob
           case data['job_type']
           when 'SINGLETON'
             metadata['state'] = 'PENDING'
-            SingletonMonitor.new(__getobj__).run
+            SingletonMonitor.new(__getobj__).run!
           when 'ARRAY'
             metadata['cancelled'] = false
-            ArrayMonitor.new(__getobj__).run
+            ArrayMonitor.new(__getobj__).run!
           end
         end
       end

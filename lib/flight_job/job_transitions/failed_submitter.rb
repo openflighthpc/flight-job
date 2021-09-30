@@ -29,6 +29,15 @@ module FlightJob
   module JobTransitions
     class FailedSubmitter < SimpleDelegator
       def run
+        run!
+        return true
+      rescue
+        Flight.logger.error "Failed to transition job '#{id}'"
+        Flight.logger.warn $!
+        return false
+      end
+
+      def run!
         # Check if the maximum pending submission time has elapsed
         start = DateTime.rfc3339(created_at).to_time.to_i
         now = Time.now.to_i

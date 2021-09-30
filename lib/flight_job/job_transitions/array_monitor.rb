@@ -51,6 +51,15 @@ module FlightJob
       TASK_SCHEMAS = SingletonMonitor::SCHEMAS
 
       def run
+        run!
+        return true
+      rescue
+        Flight.logger.error "Failed to monitor array job '#{id}'"
+        Flight.logger.warn $!
+        return false
+      end
+
+      def run!
         FlightJob.logger.info("Monitoring Job: #{id}")
         cmd = [FlightJob.config.monitor_array_script_path, scheduler_id]
         execute_command(*cmd, tag: 'monitor') do |status, stdout, stderr, data|
@@ -58,9 +67,8 @@ module FlightJob
             validate_response(data)
             update_tasks(data)
             update_job(data)
-
-            # Remove the indexing file in terminal state
-            # FileUtils.rm_f active_index_path if terminal?
+          else
+            raise_command_error
           end
         end
       end
