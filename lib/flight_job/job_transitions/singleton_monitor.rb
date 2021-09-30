@@ -139,7 +139,7 @@ module FlightJob
 
       def run!
         # Skip jobs that have terminated, this allows the method to be called liberally
-        if Job::STATES_LOOKUP[job.state] == :terminal
+        if job.terminal?
           FlightJob.logger.debug "Skipping monitor for terminated job: #{job.id}"
           return
         end

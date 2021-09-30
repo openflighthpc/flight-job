@@ -63,11 +63,6 @@ module FlightJob
         else
           FileUtils.touch job.active_index_path
         end
-
-        # TODO: Properly do this
-        if (job.metadata || {}).to_h['job_type'] == 'ARRAY'
-          FileUtils.touch job.active_index_path
-        end
       end
 
       # This isn't really validation, but we want to run it every time a job

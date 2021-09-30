@@ -289,13 +289,17 @@ module FlightJob
     end
 
     def monitor
-      case job_type
+      original_metadata = @metadata.deep_dup
+      success = case job_type
       when 'SUBMITTING'
         JobTransitions::FailedSubmitter.new(self).run
       when 'SINGLETON'
         JobTransitions::SingletonMonitor.new(self).run
       when 'ARRAY'
         JobTransitions::ArrayMonitor.new(self).run
+      end
+      unless success
+        @metadata = original_metadata
       end
     end
 
