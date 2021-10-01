@@ -29,14 +29,18 @@ require 'tty-prompt'
 require 'tempfile'
 
 module FlightJob
-  # Prompt the user for answers to the given questions.
+
+  # Used for interactive creation of scripts.
   #
-  # When the user has answered the questions they are shown a summary and
-  # given a chance to accept or go round again.
+  # It prompts the user for:
+  #
+  # 1. Answers to the given questions.
+  # 2. An identifier for the script
+  # 3. Notes for the script.
   #
   # NOTE: The questions must be topologically sorted on their dependencies
   # otherwise these prompts will not function correctly
-  QuestionPrompter = Struct.new(:pastel, :pager, :questions, :notes, :id) do
+  class QuestionPrompter
     MULTI_HELP = "(Press ↑/↓/←/→ arrow to scroll, Space/Ctrl+A|R to select (all|rev) and Enter to finish)"
 
     SUMMARY = ERB.new(<<~'TEMPLATE', nil, '-')
@@ -84,19 +88,24 @@ module FlightJob
       <%  end -%>
     TEMPLATE
 
-    def initialize(*a)
-      super
-      if self.id
+    attr_accessor :id, :answers, :notes
+
+    def initialize(pastel, pager, questions, notes, id)
+      @pastel = pastel
+      @pager = pager
+      @questions = questions
+      @notes = notes
+      @id = id
+
+      @answers = {}
+
+      if @id
         @prompt_for_id = false
       else
-        self.id ||= Script.new.id
+        @id ||= Script.new.id
         @prompt_for_id = true
       end
       @prompt_for_notes = true
-    end
-
-    def answers
-      @answers ||= {}
     end
 
     def prompt_loop
@@ -150,10 +159,12 @@ module FlightJob
         You will need to provide a new id. Press any key to continue...
       WARN
       @prompt_for_id = true
-      self.id = Script.new.id
+      @id = Script.new.id
     end
 
     private
+
+    attr_reader :pastel, :pager, :questions
 
     def prompt_id
       opts = id ? { default: id } : { required: true }
@@ -161,7 +172,7 @@ module FlightJob
       script = Script.new(id: candidate)
       if script.valid?(:id_check)
         @prompt_for_id = false
-        self.id = candidate
+        @id = candidate
       elsif script.errors.any? { |e| e.type == :already_exists }
         $stderr.puts pastel.red(<<~ERROR.chomp)
           The selected identifier is already taken, please try again...
