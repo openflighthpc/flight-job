@@ -53,8 +53,15 @@ module FlightJob
         error.dup.tap do |copy|
           copy.delete('root_schema')
           schema = copy['schema']
+
+          # Remove the schema if it has been flagged
           if schema.is_a?(Hash) && schema['$comment'] == 'strip-schema'
             copy.delete('schema')
+          end
+
+          # Remove the data if there is no data_pointer
+          if error["data_pointer"] == ""
+            copy.delete("data")
           end
         end
       end
