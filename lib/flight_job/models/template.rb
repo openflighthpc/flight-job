@@ -385,7 +385,7 @@ module FlightJob
           end
 
           FlightJob.logger.error("The following metadata file is invalid: #{metadata_path}")
-          LogJSONSchemaErrors.new(schema_errors, levels).log
+          JSONSchemaErrorLogger.new(schema_errors, levels).log
           errors.add(:metadata, 'is not valid')
         end
       end

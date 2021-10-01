@@ -47,7 +47,7 @@ module FlightJob
       def add_and_log_errors(job)
         unless @schema_errors.empty?
           Flight.logger.info "Job '#{job.id.to_s}' metadata is invalid"
-          LogJSONSchemaErrors.new(@schema_errors, :info).log
+          JSONSchemaErrorLogger.new(@schema_errors, :info).log
           job.errors.add(:metadata, 'is invalid')
         end
       end

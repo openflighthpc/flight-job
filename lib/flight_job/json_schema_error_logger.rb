@@ -26,7 +26,7 @@
 #==============================================================================
 
 module FlightJob
-  LogJSONSchemaErrors = Struct.new(:raw_errors, :levels) do
+  JSONSchemaErrorLogger = Struct.new(:raw_errors, :levels) do
     def log
       FlightJob.logger.debug("Schema:\n") { JSON.pretty_generate root_schema }
       FlightJob.logger.debug("\n-------------------------------------------------")

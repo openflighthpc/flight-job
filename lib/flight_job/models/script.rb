@@ -85,7 +85,7 @@ module FlightJob
       unless (schema_errors = SCHEMA.validate(metadata).to_a).empty?
         path_tag = File.exists?(metadata_path) ? metadata_path : id
         FlightJob.logger.info("Invalid metadata: #{path_tag}\n")
-        LogJSONSchemaErrors.new(schema_errors, :info).log
+        JSONSchemaErrorLogger.new(schema_errors, :info).log
         errors.add(:metadata, 'is not valid')
       end
     end
