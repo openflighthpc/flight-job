@@ -93,24 +93,13 @@ module FlightJob
       def render_and_save(name, answers, notes)
         # Ensure the ID is valid
         verify_id(name) if name
-
-        # Create the script object
-        opts = ( name ? { id: name } : {} )
-        script = Script.new(
-          template_id: template.id,
-          script_name: template.script_template_name,
+        ScriptCreator.new(
+          id: name,
           answers: answers,
           notes: notes,
-          **opts
+          template: template
         )
-
-        script.tags = template.tags
-
-        # Save the script
-        script.render_and_save
-
-        # Return the script
-        script
+          .call
       end
 
       def template
