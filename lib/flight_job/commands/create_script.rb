@@ -102,6 +102,21 @@ module FlightJob
       private
 
       def run_question_prompter(script_id, notes)
+        # XXX BUG ALERT.  Creating the script via the question prompter has
+        # the following bug.
+        #
+        # If the user provides questions, the question prompter does not
+        # automatically ask any questions.  It displays a summary and gives
+        # the user the option to answer the questions.  However, it uses the
+        # default answers not those provided by the user.
+        #
+        # Once the QuestionPrompter has completed, we use the answers it has,
+        # not those provided by the user.
+        #
+        # This effectively requires the user to provide the answers twice. For
+        # this particular code path.
+        #
+        # The fix is to populate QuestionPrompter with the given answers.
         prompter = QuestionPrompter.new(
           pastel,
           pager,
