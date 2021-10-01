@@ -42,7 +42,6 @@ module FlightJob
   end
 
   autoload 'QuestionPrompter', File.expand_path('flight_job/question_prompter.rb', __dir__)
-  autoload 'ScriptCreator', File.expand_path('flight_job/script_creator.rb', __dir__)
 
   # Setup the autoloads for the commands
   module Commands

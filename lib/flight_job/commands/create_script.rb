@@ -132,13 +132,17 @@ module FlightJob
 
       def create_script(script_id, answers, notes)
         verify_id(script_id) if script_id
-        ScriptCreator.new(
-          id: script_id,
+        opts = ( script_id ? { id: script_id } : {} )
+        script = Script.new(
+          template_id: template.id,
+          script_name: template.script_template_name,
           answers: answers,
           notes: notes,
-          template: template
+          **opts
         )
-          .call
+        script.tags = template.tags
+        script.render_and_save
+        script
       end
 
       def template
