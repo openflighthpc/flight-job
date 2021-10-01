@@ -41,8 +41,11 @@ module FlightJob
     sym.to_s.dup.split(/[-_]/).each { |c| c[0] = c[0].upcase }.join
   end
 
-  autoload 'OneOfParser', File.expand_path('flight_job/one_of_parser.rb', __dir__)
+  autoload 'FancyIdOrdering', File.expand_path('flight_job/fancy_id_ordering', __dir__)
   autoload 'LogJSONSchemaErrors', File.expand_path('flight_job/log_json_schema_errors.rb', __dir__)
+  autoload 'NameGenerator', File.expand_path('flight_job/name_generator', __dir__)
+  autoload 'OneOfParser', File.expand_path('flight_job/one_of_parser.rb', __dir__)
+  autoload 'QuestionPrompter', File.expand_path('flight_job/question_prompter', __dir__)
 
   # Setup the autoloads for the commands
   module Commands
