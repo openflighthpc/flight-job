@@ -36,13 +36,13 @@ module FlightJob
   #
   # NOTE: The questions must be topologically sorted on their dependencies
   # otherwise these prompts will not function correctly
-  QuestionPrompter = Struct.new(:pastel, :pager, :questions, :notes, :name) do
+  QuestionPrompter = Struct.new(:pastel, :pager, :questions, :notes, :id) do
     MULTI_HELP = "(Press ↑/↓/←/→ arrow to scroll, Space/Ctrl+A|R to select (all|rev) and Enter to finish)"
 
     SUMMARY = ERB.new(<<~'TEMPLATE', nil, '-')
       <%= pastel.bold.underline 'SUMMARY' %>
 
-      <%= pastel.bold 'Name: ' -%><%= pastel.green(name) %>
+      <%= pastel.bold 'ID: ' -%><%= pastel.green(id) %>
 
       <%= pastel.bold 'Answers:' %>
       <%
@@ -86,11 +86,11 @@ module FlightJob
 
     def initialize(*a)
       super
-      if self.name
-        @prompt_for_name = false
+      if self.id
+        @prompt_for_id = false
       else
-        self.name ||= Script.new.id
-        @prompt_for_name = true
+        self.id ||= Script.new.id
+        @prompt_for_id = true
       end
       @prompt_for_notes = true
     end
@@ -131,11 +131,13 @@ module FlightJob
       end
     end
 
-    # Used to prompt the user that the provided name is invalid
-    # It is intended to be called up-front so it can unset default to the 'prompt_name' method
-    def prompt_invalid_name
-      return unless name
-      script = Script.new(id: name)
+    # Warn user that the provided id is invalid.
+    #
+    # It is intended to be called up-front so it can unset default to the
+    # 'prompt_id' method.
+    def prompt_invalid_id
+      return unless id
+      script = Script.new(id: id)
       return if script.valid?(:id_check)
       error = script.errors.first
       msg = if error.type == :already_exists
@@ -144,25 +146,27 @@ module FlightJob
               "is invalid as it #{error.message}"
             end
       prompt.keypress(pastel.red.bold <<~WARN.chomp)
-        The provided script name #{msg}
-        You will need to provide a new name. Press any key to continue...
+        The provided script id #{msg}
+        You will need to provide a new id. Press any key to continue...
       WARN
-      @prompt_for_name = true
-      self.name = Script.new.id
+      @prompt_for_id = true
+      self.id = Script.new.id
     end
 
-    def prompt_name
-      opts = name ? { default: name } : { required: true }
+    private
+
+    def prompt_id
+      opts = id ? { default: id } : { required: true }
       candidate = prompt.ask("What is the script's identifier?", **opts)
       script = Script.new(id: candidate)
       if script.valid?(:id_check)
-        @prompt_for_name = false
-        self.name = candidate
+        @prompt_for_id = false
+        self.id = candidate
       elsif script.errors.any? { |e| e.type == :already_exists }
         $stderr.puts pastel.red(<<~ERROR.chomp)
           The selected identifier is already taken, please try again...
         ERROR
-        prompt_name
+        prompt_id
       else
         # NOTE: Technically there maybe multiple errors, but the prompt is nicer
         # when only the first is emitted. This should be sufficient for must error conditions
@@ -170,11 +174,9 @@ module FlightJob
           The selected identifier is invalid as it #{script.errors.first.message}
           Please try again...
         ERROR
-        prompt_name
+        prompt_id
       end
     end
-
-    private
 
     # Return true if the question should be asked of the user.
     def prompt?(question)
@@ -204,7 +206,7 @@ module FlightJob
         default: if @prompt_for_selected
                    @prompt_for_selected = false
                    3
-                 elsif @prompt_for_name
+                 elsif @prompt_for_id
                    1
                  elsif @prompt_for_notes
                    2
@@ -213,7 +215,7 @@ module FlightJob
                  end,
         show_help: :always }
       choices = {
-        'Change the script identifier.' => :name,
+        'Change the script identifier.' => :id,
         "#{notes.empty? ? 'Add' : 'Edit the'} notes about the script." => :notes,
         'Change the answers to selected questions.' => :selected,
         'Re-ask all the questions.' => :all,
@@ -250,8 +252,8 @@ module FlightJob
           prompt_questions(*selected)
         end
         true
-      when :name
-        prompt_name
+      when :id
+        prompt_id
         true
       when :notes
         open_notes

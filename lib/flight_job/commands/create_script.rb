@@ -124,10 +124,10 @@ module FlightJob
           notes,
           script_id
         )
-        prompter.prompt_invalid_name
+        prompter.prompt_invalid_id
         prompter.prompt_all unless answers_provided?
         prompter.prompt_loop
-        create_script(prompter.name, prompter.answers, prompter.notes)
+        create_script(prompter.id, prompter.answers, prompter.notes)
       end
 
       def create_script(script_id, answers, notes)
