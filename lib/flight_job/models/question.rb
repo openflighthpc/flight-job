@@ -38,9 +38,9 @@ module FlightJob
       validate['required']
     end
 
-    def validate_value(value)
-      @validate_value ||= JSONSchemer.schema(validate_schema )
-      @validate_value.validate(value).map do |error|
+    def validate_answer(value)
+      @validate_validator ||= JSONSchemer.schema(validate_schema )
+      @validate_validator.validate(value).map do |error|
         FlightJob.logger.debug("Validation Error '#{id}'") do
           JSON.pretty_generate(error.tap { |e| e.delete('root_schema') })
         end

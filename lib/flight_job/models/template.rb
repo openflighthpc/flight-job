@@ -521,7 +521,7 @@ module FlightJob
         if hash.is_a?(Hash)
           generation_questions.each do |q|
             value = hash[q.id]
-            all_errors[q.id] = q.validate_value(value).map { |_, m| m }
+            all_errors[q.id] = q.validate_answer(value).map { |_, m| m }
           end
         end
       end

@@ -353,7 +353,7 @@ module FlightJob
       end
 
       # Returns if the validation passed
-      errors = question.validate_value(value)
+      errors = question.validate_answer(value)
       if errors.empty?
         answers[question.id] = value
         return value
