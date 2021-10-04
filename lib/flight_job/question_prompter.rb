@@ -79,6 +79,12 @@ module FlightJob
       <%  end -%>
     TEMPLATE
 
+    def self.bulletify(msg)
+      first, rest = msg.split("\n", 2)
+      lines = rest.to_s.chomp.split("\n").map { |l| "   #{l}" }.join("\n")
+      " * #{first}#{ "\n" + lines unless lines.empty? }"
+    end
+
     attr_accessor :id, :answers, :notes
 
     def initialize(pastel, pager, questions, id, answers, notes)
@@ -314,8 +320,12 @@ module FlightJob
     end
 
     def prompt_question(question)
+      # Flags if a select was used
+      # Enum errors are un-recoverable on select
+      error_on_enum_select = false
+
       default = answers.key?(question.id) ? answers[question.id] : question.default
-      answers[question.id] =
+      answer =
         case question.format['type']
         when 'text'
           prompt.ask(question_label(question), default: default)
@@ -325,6 +335,7 @@ module FlightJob
           lines = prompt.multiline(question_label(question))
           lines.empty? ? answers[question.id] : lines.join('')
         when 'select'
+          error_on_enum_select = true
           opts = { show_help: :always }
           choices = question.format['options'].each_with_index.map do |opt, idx|
             opts[:default] = idx + 1 if opt['value'] == default
@@ -343,9 +354,55 @@ module FlightJob
             q.default default
             q.validate(/\A24:00|([0-1]\d|2[0-3]):[0-5]\d\Z/, "Times must be in HH:MM format")
           end
+        when 'number'
+          # NOTE: The 'number' input has parity with HTML <input type="number"/>
+          # By default, this only allows integers. This behaviour has been replicated here
+          #
+          # Consider refactoring to allow floating points
+          prompt.ask(question_label(question), convert: :integer, default: default)
         else
           raise InternalError, "Unexpectedly reached question type: #{question.format['type']}"
         end
+
+      # Returns if the validation passed
+      errors = question.validate_answer(answer)
+      if errors.empty?
+        answers[question.id] = answer
+        return answer
+      end
+
+      # Checks for an unrecoverable error
+      unexpected_errors = []
+      unexpected_errors << errors.select { |t, _| t == :type }.map(&:last)
+      if error_on_enum_select
+        unexpected_errors <<  errors.select { |t, _| t == :enum }.map(&:last)
+      end
+      unexpected_errors.flatten!
+
+      # Raise the unrecoverable if applicable
+      unless unexpected_errors.empty?
+        FlightJob.logger.error <<~ERROR.chomp
+          Recieved the following unexpected error when asking question '#{question.id}':
+          #{unexpected_errors.map { |msg| " * #{msg}" }.join("\n")}
+        ERROR
+        FlightJob.logger.error <<~ERROR.squish
+          This is most likely because of a mismatch between the 'format'/'options'
+          keys and the 'validate' specification. The template needs updating to be
+          consistent.
+        ERROR
+        raise InternalError, <<~ERROR.chomp
+          Failed to coerce the anwer to '#{question.id}'!
+          Pleasse contact your system administrator for further assistance.
+        ERROR
+      end
+
+      # Generate the warnings and prompt again
+      $stderr.puts pastel.red.bold "The given answer is invalid as it:"
+      errors.each do |_, msg|
+        $stderr.puts pastel.red(self.class.bulletify(msg))
+      end
+      $stderr.puts pastel.yellow "Please try again..."
+      prompt_question(question)
     end
 
     def question_label(question)

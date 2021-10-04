@@ -42,8 +42,10 @@ module FlightJob
   end
 
   autoload 'FancyIdOrdering', File.expand_path('flight_job/fancy_id_ordering', __dir__)
+  autoload 'JSONSchemaErrorLogger', File.expand_path('flight_job/json_schema_error_logger.rb', __dir__)
   autoload 'NameGenerator', File.expand_path('flight_job/name_generator', __dir__)
-  autoload 'QuestionPrompter', File.expand_path('flight_job/question_prompter.rb', __dir__)
+  autoload 'OneOfParser', File.expand_path('flight_job/one_of_parser.rb', __dir__)
+  autoload 'QuestionPrompter', File.expand_path('flight_job/question_prompter', __dir__)
 
   # Setup the autoloads for the commands
   module Commands

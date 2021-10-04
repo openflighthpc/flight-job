@@ -34,6 +34,7 @@ require_relative '../renderer'
 module FlightJob
   class Script < ApplicationModel
     SCHEMA = JSONSchemer.schema({
+      "$comment" => "strip-schema",
       "type" => "object",
       "additionalProperties" => false,
       "required" => ['created_at', 'script_name'],
@@ -82,11 +83,10 @@ module FlightJob
       next if validation_context == :id_check
 
       unless (schema_errors = SCHEMA.validate(metadata).to_a).empty?
-        errors.add(:metadata, 'is not valid')
         path_tag = File.exists?(metadata_path) ? metadata_path : id
-        FlightJob.logger.debug("Invalid metadata: #{path_tag}\n") do
-          JSON.pretty_generate(schema_errors)
-        end
+        FlightJob.logger.info("Invalid metadata: #{path_tag}\n")
+        JSONSchemaErrorLogger.new(schema_errors, :info).log
+        errors.add(:metadata, 'is not valid')
       end
     end
 
@@ -125,7 +125,7 @@ module FlightJob
         errors.add(:template, 'could not be resolved')
       elsif ! template.valid?(:verbose)
         errors.add(:template, 'is not valid')
-        FlightJob.logger.debug("Template errors: #{template_id}\n") do
+        FlightJob.logger.info("Template errors: #{template_id}\n") do
           template.errors.full_messages.join("\n")
         end
       end

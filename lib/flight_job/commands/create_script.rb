@@ -200,7 +200,23 @@ module FlightJob
                    opts.answers
                  end
         JSON.parse(string).tap do |hash|
-          raise InputError, 'The answers are not a JSON hash' unless hash.is_a?(Hash)
+          # Inject the defaults if possible
+          if hash.is_a?(Hash)
+            template.generation_questions.each do |question|
+              next if question.default.nil?
+              next if hash.key? question.id
+              hash[question.id] = question.default
+            end
+          end
+
+          # Validate the answers
+          errors = template.validate_generation_questions_values(hash)
+          next if errors.all? { |_, msgs| msgs.empty? }
+
+          # Raise the validation error
+          bind = OpenStruct.new(errors).instance_exec { binding }
+          msg = VALIDATION_ERROR.result(bind)
+          raise InputError, msg.chomp
         end
       rescue JSON::ParserError
         raise InputError, <<~ERROR.chomp

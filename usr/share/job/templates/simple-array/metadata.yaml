@@ -14,6 +14,19 @@ description: |
   variables to differentiate each job. This method should not be used for
   multi-threaded, SMP or MPI jobs.
 
+__meta__:
+  SLURM_TIME: &SLURM_TIME "^\
+\\d+|\
+\\d+:\\d+|\
+\\d+:\\d+:\\d+|\
+\\d+-\\d+|\
+\\d+-\\d+:\\d+|\
+\\d+-\\d+:\\d+:\\d+\
+$"
+  SLURM_TIME_ERROR: &SLURM_TIME_ERROR |-
+    Must be one of the following time formats:
+    MM, MM:SS, HH:MM:SS, DD-HH, DD-HH:MM, DD-HH:MM:SS
+
 generation_questions:
   - id: working_dir
     text: "Working directory"
@@ -23,6 +36,9 @@ generation_questions:
     default: '~'
     format:
       type: text
+    validate:
+      type: 'string'
+      required: true
 
   - id: stdout_file
     text: "Set an output file for STDOUT"
@@ -32,6 +48,9 @@ generation_questions:
     default: job-%A.%a.output
     format:
       type: text
+    validate:
+      type: 'string'
+      required: true
 
   - id: merge_stderr_with_stdout
     text: "Merge STDERR into STDOUT"
@@ -47,6 +66,9 @@ generation_questions:
           value: 'yes'
         - text: 'No'
           value: 'no'
+    validate:
+      type: 'string'
+      enum: ["yes", "no"]
 
   - id: stderr_file
     text: "Set an output file for STDERR"
@@ -59,6 +81,9 @@ generation_questions:
     ask_when:
       value: question.merge_stderr_with_stdout.answer
       eq: 'no'
+    validate:
+      type: 'string'
+      required: true
 
   - id: job_name
     text: "Set the name of your job"
@@ -68,6 +93,9 @@ generation_questions:
     default: 'simple-array.sh'
     format:
       type: text
+    validate:
+      type: 'string'
+      required: true
 
   - id: notification_wanted
     text: Do you want email notifications for this job?
@@ -82,6 +110,9 @@ generation_questions:
           value: 'yes'
         - text: 'No'
           value: 'no'
+    validate:
+      type: 'string'
+      enum: ["yes", "no"]
 
   - id: notification_address
     text: Notification email address.
@@ -90,6 +121,9 @@ generation_questions:
     default: 'your.email@example.com'
     format:
       type: text
+    validate:
+      type: 'string'
+      required: true
     ask_when:
       value: question.notification_wanted.answer
       eq: 'yes'
@@ -110,6 +144,11 @@ generation_questions:
           value: 'FAIL'
         - text: 'All'
           value: 'ALL'
+    validate:
+      type: array
+      items:
+        type: 'string'
+        enum: ['BEGIN', 'END', 'FAIL', 'ALL']
     ask_when:
       value: question.notification_wanted.answer
       eq: 'yes'
@@ -129,6 +168,10 @@ generation_questions:
     default: '3-0'
     format:
       type: text
+    validate:
+      type: 'string'
+      pattern: *SLURM_TIME
+      pattern_error: *SLURM_TIME_ERROR
 
   - id: memory_limit
     text: Expected hard memory limit
@@ -141,6 +184,9 @@ generation_questions:
       Note that this setting is specified in megabytes.  e.g. specify `1024`
       for 1 gigabyte.
     default: '1024'
+    validate:
+      type: 'string'
+      pattern: '^\d+$'
     format:
       type: text
 
@@ -161,6 +207,9 @@ generation_questions:
     default: '1-10%4'
     format:
       type: text
+    validate:
+      type: 'string'
+      required: true
 
   - id: workload
     text: "Who, or what, should we greet"
@@ -169,3 +218,5 @@ generation_questions:
     default: "World"
     format:
       type: text
+    validate:
+      type: 'string'

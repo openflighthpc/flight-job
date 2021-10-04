@@ -31,29 +31,89 @@ require_relative '../questions_sort'
 
 module FlightJob
   class Template < ApplicationModel
-    FORMAT_SPEC = {
-      "type" => "object",
-      "additionalProperties" => false,
-      "required" => ['type'],
-      "properties" => {
-        # The following are field called "type" and "options" not settings within "properties"
-        'type' => { "type" => "string" , "enum" => [
-          "text", "time", "select", "multiselect", 'multiline_text'
-        ] },
-        'options' => {
-          "type" => "array",
-          "items" => {
+    VALIDATOR_DEF = {
+      "validator_def" => {
+        "$comment" => "strip-schema",
+        "type" => "object",
+        "additionalProperties" => true,
+        "required" => ["type"],
+        "properties" => {
+          # The following keys are properties, however they deliberately partially
+          # shadows the JSON:Schema type
+          # NOTE: All the types must have a oneOf entry!
+          #
+          # NOTE: array must be last
+          "type" => { "enum" => ["string", "number", "integer", "boolean", "array"] },
+        },
+        "oneOf" => [
+          # String validators
+          {
             "type" => "object",
             "additionalProperties" => false,
-            "required" => ['text', 'value'],
             "properties" => {
-              'text' => { "type" => "string" },
-              'value' => { "type" => "string" },
+              "type" => { "const" => "string" },
+              "required" => { "type" => "boolean" },
+              "pattern" => { "type" => "string", "format" => "regex" },
+              "pattern_error" => { "type" => "string" },
+              "enum" => { "type" => "array", "items" => { "type" => "string" }, "minItems" => 1 }
+            },
+          },
+          # Number validators
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => {
+              "type" => { "const" => "number" },
+              "required" => { "type" => "boolean" },
+              "enum" => { "type" => "array", "items" => { "type" => ["number", "integer"], "minItems" => 1 } },
+              "minimum" => { "type" => ["number", "integer"] },
+              "maximum" => { "type" => ["number", "integer"] },
+              "exclusive_minimum" => { "type" => ["number", "integer"] },
+              "exclusive_maximum" => { "type" => ["number", "integer"] }
+            }
+          },
+          # Integer validators
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => {
+              "type" => { "const" => "integer" },
+              "required" => { "type" => "boolean" },
+              "enum" => { "type" => "array", "items" => { "type" => "integer", "minItems" => 1 } },
+              "minimum" => { "type" => "integer" },
+              "maximum" => { "type" => "integer" },
+              "exclusive_minimum" => { "type" => "integer" },
+              "exclusive_maximum" => { "type" => "integer" }
+            }
+          },
+          # Boolean validator
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => {
+              "type" => { "const" => "boolean" },
+              "required" => { "type" => "boolean" }
+            }
+          },
+          # Array validator
+          # NOTE: Must be last
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => {
+              "type" => { "const" => "array" },
+              "required" => { "type" => "boolean" },
+              "items" => { "$ref" => "#/$defs/array_validator_def" }
             }
           }
-        }
+        ]
       }
     }
+
+    # Prevent deeply nested arrays
+    VALIDATOR_DEF["array_validator_def"] = VALIDATOR_DEF["validator_def"].deep_dup
+    VALIDATOR_DEF["array_validator_def"]["properties"]["type"]["enum"].delete("array")
+    VALIDATOR_DEF["array_validator_def"]["oneOf"].delete_if { |s| s["properties"]["type"]["const"] == "array" }
 
     ASK_WHEN_SPEC = {
       "type" => "object",
@@ -67,45 +127,186 @@ module FlightJob
       }
     }
 
-    QUESTIONS_SPEC = {
-      "type" => "array",
-      "items" => {
+    QUESTION_PROPS_STUB = {
+      "id" => {}, "text" => {}, "description" => {},
+      "validate" => {}, "ask_when" => {}
+    }
+    QUESTION_DEF = {
+      "question_def" => {
+        # Generic top level definition of each format
+        "$comment" => "strip-schema",
         "type" => "object",
-        "additionalProperties" => false,
-        "required" => ['id', 'text'],
+        "additionalProperties" => true,
+        "required" => ["id", "text", "format"],
         "properties" => {
           'id' => { 'type' => 'string' },
           'text' => { 'type' => 'string' },
-          'description' => { 'type' => 'string' },
-          # NOTE' => Forcing the default to be a string is a stop-gap measure
-          # It keeps the initial implementation simple as everything is a strings
-          # Eventually multiple formats will be supported
-          'default' => {},
-          'format' => FORMAT_SPEC,
-          'ask_when' => ASK_WHEN_SPEC
+          "description" => { "type" => "string" },
+          'validate' => { "$ref" => "#/$defs/validator_def" },
+          'ask_when' => ASK_WHEN_SPEC,
+          "format" => {
+            "type" => "object",
+            "required" => ["type"],
+            "additionalProperties" => true,
+            "properties" => {
+              'type' => {
+                "enum" => [
+                  "text", "time", "select", "multiselect", 'multiline_text', 'number'
+                ]
+              }
+            }
+          }
         },
-        "if" => { "properties" => { "format" => {
-          "type" => "object",
-          # NOTE: The following "type" is the name of the property NOT a declaration
-          "properties" => { "type" => { "const" => "multiselect" } }
-        } } },
-        "then" => { "properties" => {
-          "default" => { "type" => "array", "items" => { "type" => "string" } }
-        } },
-        "else" => { "properties" => {
-          "default" => { "type" => "string" }
-        } }
+
+        "oneOf" => [
+          # (Multi) Text format questions
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => {
+              **QUESTION_PROPS_STUB,
+              "default" => { "type" => "string" },
+              "format" => {
+                "type" => "object",
+                "additionalProperties" => false,
+                "properties" => {
+                  "type" => { "const" => "text" }
+                }
+              }
+            }
+          },
+
+          # Multi Text format questions
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => {
+              **QUESTION_PROPS_STUB,
+              "default" => { "type" => "string" },
+              "format" => {
+                "type" => "object",
+                "additionalProperties" => false,
+                "properties" => {
+                  "type" => { "const" => "multiline_text" }
+                }
+              }
+            }
+          },
+
+          # Time format questions
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => {
+              **QUESTION_PROPS_STUB,
+              # XXX: The default needs to be hardened for this
+              "default" => {},
+              "format" => {
+                "type" => "object",
+                "additionalProperties" => false,
+                "properties" => {
+                  "type" => { "const" => "time" }
+                }
+              }
+            }
+          },
+
+          # Number format questions
+          # NOTE: By default, HTML <number> only supports integers
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => {
+              **QUESTION_PROPS_STUB,
+              "default" => { "type" => "integer" },
+              "format" => {
+                "type" => "object",
+                "additionalProperties" => false,
+                "properties" => {
+                  "type" => { "const" => "number" }
+                }
+              }
+            }
+          },
+
+          # Select format questions
+          # NOTE: Consider allowing integer/boolean defaults
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => {
+              **QUESTION_PROPS_STUB,
+              "default" => { "type" => "string" },
+              "format" => {
+                "type" => "object",
+                "additionalProperties" => false,
+                "properties" => {
+                  "type" => { "const" => "select" },
+                  "options" => {
+                    "type" => "array",
+                    "items" => {
+                      "type" => "object",
+                      "additionalProperties" => false,
+                      "required" => ["text", "value"],
+                      "properties" => {
+                        "text" => { "type" => "string" },
+                        "value" => { "type" => "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+
+          # Multi-select format questions
+          # NOTE: Consider allowing integer/boolean defaults
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => {
+              **QUESTION_PROPS_STUB,
+              "default" => {
+                "type" => "array",
+                "items" => { "type" => "string" }
+              },
+              "format" => {
+                "type" => "object",
+                "additionalProperties" => false,
+                "properties" => {
+                  "type" => { "const" => "multiselect" },
+                  "options" => {
+                    "type" => "array",
+                    "items" => {
+                      "type" => "object",
+                      "additionalProperties" => false,
+                      "required" => ["text", "value"],
+                      "properties" => {
+                        "text" => { "type" => "string" },
+                        "value" => { "type" => "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
       }
     }
 
     SCHEMA = JSONSchemer.schema({
       "type" => "object",
+      "$comment" => "strip-schema",
       "additionalProperties" => false,
       "required" => ['synopsis', 'version', 'generation_questions', 'name', 'copyright', 'license'],
       "properties" => {
         'copyright' => { "type" => "string" },
         'description' => { "type" => 'string' },
-        'generation_questions' => QUESTIONS_SPEC,
+        'generation_questions' => {
+          "type" => "array",
+          "items" => { "$ref" => "#/$defs/question_def" }
+        },
         'license' => { "type" => "string" },
         'name' => { "type" => 'string' },
         'priority' => { "type" => 'integer' },
@@ -113,7 +314,10 @@ module FlightJob
         'synopsis' => { "type" => 'string' },
         'tags' => { "type" => 'array', 'items' => { 'type' => 'string' }},
         'version' => { "type" => 'integer', 'enum' => [0] },
-      }
+        '__meta__' => {}
+      },
+      "$defs" => {}.merge!(VALIDATOR_DEF)
+                   .merge!(QUESTION_DEF)
     })
 
     def self.load_all(validate: true)
@@ -125,8 +329,8 @@ module FlightJob
       if validate
         templates.select do |template|
           next true if template.valid?
-          FlightJob.logger.error("Failed to load missing/invalid template: #{id}")
-          FlightJob.logger.info(template.errors.full_messages.join("\n"))
+          FlightJob.logger.error("Failed to load missing/invalid template: #{template.id}")
+          FlightJob.logger.warn(template.errors.full_messages.join("\n"))
           false
         end
 
@@ -144,16 +348,44 @@ module FlightJob
 
     attr_accessor :id, :index
 
+    ONE_OF_VALIDATOR = /\A\/\$defs\/validator_def\/oneOf\/(?<index>\d+)/
+
     # Validates the metadata and questions file
     validate do
       if metadata
         unless (schema_errors = SCHEMA.validate(metadata).to_a).empty?
-          FlightJob.logger.error("The following metadata file is invalid: #{metadata_path}")
-          FlightJob.logger.debug "Errors:\n" do
-            schema_errors.each_with_index.map do |error, index|
-              "Error #{index + 1}:\n#{JSON.pretty_generate(error)}"
-            end.join("\n")
+          # # Parsers the errors for those with the correct oneOf match
+          top_flags = OneOfParser.new(
+            'validator_def', 'properties/type',
+            /\A\/generation_questions\/\d+\/validate/,
+            schema_errors
+          ).flags
+
+          # # Re-run the parser for the array validators
+          array_flags = OneOfParser.new(
+            'array_validator_def', 'properties/type',
+            /\A\/generation_questions\/\d+\/validate\/items/,
+            schema_errors
+          ).flags
+
+          # Re-run the parser for the question format validators
+          format_flags = OneOfParser.new(
+            'question_def', 'properties/format/properties/type',
+            /\A\/generation_questions\/\d+/,
+            schema_errors
+          ).flags
+
+          # Generate the log levels from the flags:
+          # * warn: Errors unrelated to a oneOf
+          # * warn: Errors which match a oneOf with the correct type
+          # * debug: Errors which failed a oneOf on the wrong type
+          levels = top_flags.each_with_index.map do |_, idx|
+            flags = [top_flags[idx], array_flags[idx], format_flags[idx]]
+            flags.include?(false) ? :debug : :warn
           end
+
+          FlightJob.logger.error("The following metadata file is invalid: #{metadata_path}")
+          JSONSchemaErrorLogger.new(schema_errors, levels).log
           errors.add(:metadata, 'is not valid')
         end
       end
@@ -190,7 +422,7 @@ module FlightJob
         errors.add(:questions, "could not locate referenced question: #{$!.message}")
       rescue
         FlightJob.logger.error "Failed to validate the template questions due to another error: #{id}"
-        FlightJob.logger.debug("Error:\n") { $!.messages }
+        FlightJob.logger.debug("Error:\n") { $!.message }
         errors.add(:questions, 'could not be validated')
       end
     end
@@ -219,15 +451,14 @@ module FlightJob
     # This allows it to be directly passed to the API layer.
     # Consider refactoring when introducing a non-backwards compatible change
     def metadata
-      @metadata ||= begin
-        YAML.load(File.read(metadata_path)).to_h
-      end
+      return @metadata unless @metadata.nil?
+      @metadata = YAML.load(File.read(metadata_path)).to_h
     rescue Errno::ENOENT
       errors.add(:metadata, "has not been saved")
-      {}
+      @metadata = false
     rescue Psych::SyntaxError
       errors.add(:metadata, "is not valid YAML")
-      {}
+      @metadata = false
     end
 
     def serializable_hash(opts = nil)
@@ -240,6 +471,12 @@ module FlightJob
           # NOTE: Consider using a file registry instead
           hash['scripts'] = Script.load_all.select { |s| s.template_id == id }
         end
+
+        # Replace the 'validate' key with the JSON:Schema specification
+        hash['generation_questions'] = hash['generation_questions'].map(&:dup)
+        hash['generation_questions'].each_with_index do |data, index|
+          data['validate'] = generation_questions[index].validate_schema
+        end
       end
     end
 
@@ -251,6 +488,42 @@ module FlightJob
     def generation_questions
       @questions ||= questions_data.map do |datum|
         Question.new(**datum.symbolize_keys)
+      end
+    end
+
+    def validate_generation_questions_values(hash)
+      @validate_generation_questions_values ||= JSONSchemer.schema({
+        "type" => "object",
+        "additionalProperties" => false,
+        "properties" => generation_questions.map { |q| [q.id, {}] }.to_h
+      })
+      errors = @validate_generation_questions_values.validate(hash).to_a
+      {}.tap do |all_errors|
+        unless errors.empty?
+          all_errors[:root] = []
+          errors.each do |error|
+            FlightJob.logger.warn("Validation Error 'root-value'") do
+              JSON.pretty_generate(error.tap { |e| e.delete('root_schema') })
+            end
+
+            if error['schema_pointer'] == '/additionalProperties'
+              all_errors[:root] << "Contains an unrecognized key: #{error["data_pointer"][1..-1]}"
+            elsif error['type'] == 'object'
+              all_errors[:root] << "Must be an object"
+            else
+              FlightJob.logger.error("Could not humanize the following error") do
+                JSON.pretty_generate error.tap { |e| e.delete('root_schema') }
+              end
+              all_errors[:root] << 'Could not process error, please check the logs'
+            end
+          end
+        end
+        if hash.is_a?(Hash)
+          generation_questions.each do |q|
+            value = hash[q.id]
+            all_errors[q.id] = q.validate_answer(value).map { |_, m| m }
+          end
+        end
       end
     end
 
