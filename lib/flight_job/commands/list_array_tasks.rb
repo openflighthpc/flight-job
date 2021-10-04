@@ -37,7 +37,13 @@ module FlightJob
       end
 
       def tasks
-        @tasks ||= Task.load_job_tasks(args.first)
+        @tasks ||=
+          begin
+            # Load the job so as to cause it to be monitored and the list of tasks
+            # updated as a side-effect.
+            load_job(args.first)
+            Task.load_job_tasks(args.first)
+          end
       end
     end
   end

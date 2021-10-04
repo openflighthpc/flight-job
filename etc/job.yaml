@@ -183,7 +183,7 @@
 #
 # The environment variable flight_JOB_submission_period takes precedence.
 # ==============================================================================
-# submission_period: 3600
+# submission_period: 300
 
 # ==============================================================================
 # Log Path

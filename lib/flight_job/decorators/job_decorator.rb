@@ -67,7 +67,7 @@ module FlightJob
           elsif object.metadata['cancelled']
             'CANCELLED'
           elsif object.metadata['lazy']
-            'HOLD'
+            'WAITING'
           elsif states == ['COMPLETED']
             'COMPLETED'
           else
