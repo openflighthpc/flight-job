@@ -52,16 +52,7 @@ module FlightJob
       <%
           questions.each do |question|
             next unless prompt?(question) -%>
-      <%
-            if /[[:alnum:]]/.match?(question.text[-1])
-              text = question.text
-              delim = ':'
-            else
-              text = question.text[0..-2]
-              delim = question.text[-1]
-            end
-      -%>
-      <%=   pastel.blue.bold(text) -%><%= pastel.bold(delim) -%>
+      <%=   question_label(question) -%>
       <%    value = answers[question.id]
             value = question.default if value.nil?
             value = (value.is_a?(Array) ? value.join(',') : value.to_s)
@@ -327,11 +318,11 @@ module FlightJob
       answers[question.id] =
         case question.format['type']
         when 'text'
-          prompt.ask(question.text, default: default)
+          prompt.ask(question_label(question), default: default)
         when 'multiline_text'
           # NOTE: The 'default' field does not work particularly well for multiline inputs
           # Consider replacing with $EDITOR
-          lines = prompt.multiline(question.text)
+          lines = prompt.multiline(question_label(question))
           lines.empty? ? answers[question.id] : lines.join('')
         when 'select'
           opts = { show_help: :always }
@@ -339,22 +330,33 @@ module FlightJob
             opts[:default] = idx + 1 if opt['value'] == default
             { name: opt['text'], value: opt['value'] }
           end
-          prompt.select(question.text, choices, **opts)
+          prompt.select(question_label(question), choices, **opts)
         when 'multiselect'
           opts = { show_help: :always, echo: false, help: MULTI_HELP, default: [] }
           choices = question.format['options'].each_with_index.map do |opt, idx|
             opts[:default] << idx + 1 if default.is_a?(Array) && default.include?(opt['value'])
             { name: opt['text'], value: opt['value'] }
           end
-          prompt.multi_select(question.text, choices, **opts)
+          prompt.multi_select(question_label(question), choices, **opts)
         when 'time'
-          prompt.ask(question.text) do |q|
+          prompt.ask(question_label(question)) do |q|
             q.default default
             q.validate(/\A24:00|([0-1]\d|2[0-3]):[0-5]\d\Z/, "Times must be in HH:MM format")
           end
         else
           raise InternalError, "Unexpectedly reached question type: #{question.format['type']}"
         end
+    end
+
+    def question_label(question)
+      if /[[:alnum:]]/.match?(question.text[-1])
+        text = question.text
+        delim = ':'
+      else
+        text = question.text[0..-2]
+        delim = question.text[-1]
+      end
+      "#{pastel.blue.bold(text)}#{pastel.bold(delim)}"
     end
 
     # Checks if any of the questions have dependencies
