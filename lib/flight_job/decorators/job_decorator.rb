@@ -45,8 +45,6 @@ module FlightJob
             'RUNNING'
           elsif states.include?('PENDING')
             'PENDING'
-          elsif states.empty? && lazy
-            'PENDING'
           elsif states.include?('COMPLETING')
             # COMPLETING is a psuedo state which is hidden from the end user
             # It is either resolved to RUNNING or CANCELLING depending if
@@ -56,6 +54,8 @@ module FlightJob
             'CANCELLED'
           elsif states.empty? && cancelling
             'CANCELLED'
+          elsif states.empty? && lazy
+            'PENDING'
           elsif lazy
             'WAITING'
           elsif states == ['COMPLETED']
