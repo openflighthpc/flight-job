@@ -27,56 +27,57 @@
 #==============================================================================
 
 #-------------------------------------------------------------------------------
-# WARNING - README
+# WARNING do not modify this file.
 #
-# This is an internally managed file, any changes maybe lost on the next update!
-# Please make any installation specific changes within the provided 'sbatch.sh'
-# script or clone the entire 'slurm' directory.
+# If this file is not suitable for your cluster environment, please follow the
+# instructions at
+# https://github.com/openflighthpc/flight-job/blob/master/docs/scheduler-integration.md
+# to create a custom scheduler integration.
 #-------------------------------------------------------------------------------
 
+set -o pipefail
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+source "${DIR}/functions.sh"
 source "${DIR}/parser.sh"
 
-# Ensure jq is on the path
-set -e
-which "jq" >/dev/null
+submit_job() {
+    $DIR/sbatch-wrapper.sh "$1"
+}
 
-# Submit the job to the scheduler
-output=$($DIR/sbatch-wrapper.sh "$1")
-cat <<EOF >&2
-sbatch wrapper output:
-$output
-EOF
+parse_submission_id() {
+    assert_assoc_array_var JOB
+    JOB[submission_id]=$( cut -d' ' -f4)
+}
 
-if [[ $? -ne 0 ]]; then
-  exit $?
-fi
+# There are multiple definitions of run_scontrol in the Slurm integration.
+#
+# XXX Find a mechanism to remove the difference and extract to a common
+# location (scontrol_parser.sh).
+run_scontrol() {
+    scontrol show job "${1}" --oneline | head -n1 | tr ' ' '\n'
+}
 
-# Determine the scheduler's ID
-id=$(echo "$output" | cut -d' ' -f4)
-if [[ $? -ne 0 ]]; then
-  exit $?
-fi
+parse_job() {
+    assert_assoc_array_var JOB
+    local working_dir job_name parse_input submission_id
 
-# Run scontrol
-scontrol_output=$(scontrol show job "$id" --oneline)
-exit_status=$?
-cat <<EOF >&2
-scontrol output:
-$(echo "$scontrol_output" | head -n 1 | tr ' ' '\n')
-EOF
-if [[ $exit_status -ne 0 ]]; then
-  exit $exit_status
-fi
+    parse_input="$(cat)"
+    submission_id="${JOB[submission_id]}"
+    working_dir=$(parse_field WorkDir <<< "${parse_input}")
+    job_name=$(parse_field JobName <<< "${parse_input}")
 
-# Determine the results directory / Job Type
-working=$(parse_scontrol WorkDir <<< "${scontrol_output}")
-name=$(parse_scontrol JobName <<< "${scontrol_output}")
-results_dir="${working}/${name}-outputs/$id"
-job_type=$(parse_scontrol_job_type <<< "$scontrol_output")
+    JOB[job_type]=$(parse_job_type <<< "${parse_input}")
+    JOB[scheduler_id]=$(parse_scheduler_id <<< "${parse_input}")
+    JOB[results_dir]="${working_dir}/${job_name}-outputs/${submission_id}" 
+}
 
-# Create the JSON template
-read -r -d '' template <<'TEMPLATE' || true
+# Print to stdout the JSON template to be returned to flight job.
+generate_template() {
+    assert_assoc_array_var JOB
+    local template
+
+    read -r -d '' template <<'TEMPLATE' || true
 {
   version: 1,
   job_type: ($job_type),
@@ -85,9 +86,37 @@ read -r -d '' template <<'TEMPLATE' || true
 }
 TEMPLATE
 
-# Render and return the JSON payload
-echo '{}' | jq  \
-  --arg id      "$(parse_scontrol_scheduler_id <<< "$scontrol_output")" \
-  --arg results_dir "$results_dir" \
-  --arg job_type "$job_type" \
-  "$template" | tr -d "\n"
+  echo '{}' | jq  \
+    --arg id          "${JOB[scheduler_id]}" \
+    --arg results_dir "${JOB[results_dir]}"  \
+    --arg job_type    "${JOB[job_type]}"     \
+    "$template"
+}
+
+main() {
+    declare -A JOB
+    local exit_status output
+
+    assert_progs jq scontrol sbatch
+
+    output="$(submit_job "$1" | tee >(log_command "sbatch wrapper" 1>&2))"
+    exit_status=$?
+    if [[ $exit_status -ne 0 ]]; then
+        exit $exit_status
+    fi
+    parse_submission_id <<< "${output}"
+
+    output=$(run_scontrol "${JOB[submission_id]}" | tee >(log_command "scontrol" 1>&2))
+    exit_status=$?
+    if [[ $exit_status -ne 0 ]]; then
+        exit $exit_status
+    fi
+
+    source_parsers "scontrol"
+    parse_job <<< "${output}"
+    # declare -A | grep JOB >&2
+
+    generate_template | report_metadata
+}
+
+main "$@"

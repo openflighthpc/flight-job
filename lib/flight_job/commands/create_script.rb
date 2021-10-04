@@ -26,77 +26,97 @@
 #==============================================================================
 
 require 'json'
-require 'tty-prompt'
 require 'tempfile'
 
 module FlightJob
   module Commands
     class CreateScript < Command
       def run
-        # Stashes the preliminary version of the name
-        # NOTE: It is validated latter
-        name = args.length > 1 ? args[1] : nil
+        # The script_id, answers and notes can be provided in a number of
+        # different ways.  Including two that we consider to be user errors.
+        #
+        # First the two error conditions:
+        #
+        # 1. Stdin is being used to provide both the notes and the answers.
+        # 2. Stdin is being used, and the answers have not been provided.
+        #
+        # Now the legitimate ways of providing the inputs.
+        #
+        # 3. They can all be given on the command line.
+        # 4. The answers OR notes but NOT both can be read from stdin.
+        # 5. The user can be interactively prompted for them.  This requires
+        #    stdin to not already be used and for stdout to be a TTY.
+        # 6. The defaults can be used.
+        #
+        # The branches below cover all of these cases.
 
-        # Attempt to get the answers/notes from the input flags
-        answers = answers_input
-        notes = notes_input
+        script =
+          if answers_provided_on_stdin? && notes_provided_on_stdin?
+            # Refuse an attempt to read both the notes and the answers from
+            # stdin.
+            raise InputError, <<~ERROR.chomp
+              Cannot use standard input to provide both the answers and the notes!
+            ERROR
 
-        # Skip this section if all the fields have been provided
-        if answers && notes && name
-          # NOOP
+          elsif stdin_used? && !answers_provided?
+            # Answers have not been provided, but stdin has been used
+            # (presumably to provide the notes).  We could use the defaults
+            # for the answers.  However, we refuse this particular way of
+            # calling Flight Job for legacy reasons.
+            raise InputError, <<~ERROR.chomp
+              Cannot prompt for the answers as standard input is in use!
+              Please provide the answers with the following flag: #{pastel.yellow '--answers'}
+            ERROR
 
-        # Handle STDIN contention (disables the prompts)
-        elsif stdin_answers? || stdin_notes?
-          raise InputError, <<~ERROR.chomp if answers.nil?
-            Cannot prompt for the answers as standard input is in use!
-            Please provide the answers with the following flag: #{pastel.yellow '--answers'}
-          ERROR
-          notes ||= ''
+          elsif answers_provided? && notes_provided? && script_id_provided?
+            # All inputs have been provided either via command line argument or
+            # read from stdin.  There is nothing to prompt for.
+            create_script(script_id, answers, notes)
 
-        # Prompt for this missing answers/notes/name
-        elsif $stdout.tty?
-          prompter = QuestionPrompter.new(pastel, pager, template.generation_questions, notes || '', name)
-          prompter.prompt_invalid_name
-          prompter.prompt_all if answers.nil?
-          prompter.prompt_loop
+          elsif stdin_used? && answers_provided?
+            # We have answers.  We may or may not have the notes, but they can
+            # be provided after the fact.  We may or may not have a script_id,
+            # if not, we will use a generated one.
+            create_script(script_id || default_id, answers, notes || "")
 
-        # Populate missing answers/notes in a non-interactive shell
-        else
-          answers ||= begin
-            msg = "No answers have been provided! Proceeding with the defaults."
-            $stderr.puts pastel.red(msg)
-            FlightJob.logger.warn msg
-            {}
+          elsif $stdout.tty?
+            # We're missing something.  It could be the answers, the notes, or
+            # the script_id.  Either way, stdin is not used and stdout is a
+            # TTY, so we can prompt for what's missing.
+            run_question_prompter(script_id || default_id, answers || {}, notes || "")
+
+          else
+            # We may or may not have answers, a script_id or notes.  We use
+            # the (hopefully) sensible defaults if they are missing.
+            unless answers_provided?
+              msg = "No answers have been provided! Proceeding with the defaults."
+              $stderr.puts pastel.red(msg)
+              FlightJob.logger.warn msg
+            end
+            create_script(script_id || default_id, answers || {}, notes || "")
           end
-          notes ||= ''
-        end
 
-        # Create the script from the prompter
-        script = nil
-        if prompter
-          begin
-            script = render_and_save(prompter.name, prompter.answers, prompter.notes)
-          rescue DuplicateError
-            # Retry if the name was taken before it could be saved
-            prompter.prompt_invalid_name
-            prompter.prompt_loop
-            retry
-          end
-        # Create the script from the manual inputs
-        else
-          script = render_and_save(name, answers, notes)
-        end
-
-        # Render the script output
         puts render_output(Outputs::InfoScript, script)
       end
 
-      def render_and_save(name, answers, notes)
-        # Ensure the ID is valid
-        verify_id(name) if name
+      private
 
-        # Create the script object
-        opts = ( name ? { id: name } : {} )
+      def run_question_prompter(script_id, answers, notes)
+        prompter = QuestionPrompter.new(
+          pastel,
+          pager,
+          template.generation_questions,
+          script_id,
+          answers,
+          notes
+        )
+        prompter.call
+        create_script(prompter.id, prompter.answers, prompter.notes)
+      end
+
+      def create_script(script_id, answers, notes)
+        verify_id(script_id) if script_id
+        opts = ( script_id ? { id: script_id } : {} )
         script = Script.new(
           template_id: template.id,
           script_name: template.script_template_name,
@@ -104,13 +124,8 @@ module FlightJob
           notes: notes,
           **opts
         )
-
         script.tags = template.tags
-
-        # Save the script
         script.render_and_save
-
-        # Return the script
         script
       end
 
@@ -125,11 +140,47 @@ module FlightJob
         end
       end
 
-      def stdin_notes?
+      def stdin_used?
+        notes_provided_on_stdin? || answers_provided_on_stdin?
+      end
+
+      def script_id_provided?
+        !script_id.nil?
+      end
+
+      def script_id
+        args.length > 1 ? args[1] : nil
+      end
+
+      def default_id
+        generator = NameGenerator.new_script(template.id)
+        generator.base_name || generator.backfill_name
+      end
+
+      def notes_provided?
+        !notes.nil?
+      end
+
+      def notes_provided_on_stdin?
         stdin_flag?(opts.notes)
       end
 
-      def stdin_answers?
+      def notes
+        return unless opts.notes
+        if notes_provided_on_stdin?
+          cached_stdin
+        elsif opts.notes[0] == '@'
+          read_file(opts.notes[1..])
+        else
+          opts.notes
+        end
+      end
+
+      def answers_provided?
+        !answers.nil?
+      end
+
+      def answers_provided_on_stdin?
         if opts.stdin
           true
         elsif opts.answers
@@ -139,20 +190,9 @@ module FlightJob
         end
       end
 
-      def notes_input
-        return unless opts.notes
-        if stdin_notes?
-          cached_stdin
-        elsif opts.notes[0] == '@'
-          read_file(opts.notes[1..])
-        else
-          opts.notes
-        end
-      end
-
-      def answers_input
+      def answers
         return unless opts.stdin || opts.answers
-        string = if stdin_answers?
+        string = if answers_provided_on_stdin?
                    cached_stdin
                  elsif opts.answers[0] == '@'
                    read_file(opts.answers[1..])
@@ -185,26 +225,14 @@ module FlightJob
         ERROR
       end
 
-      def prompt
-        @prompt = TTY::Prompt.new(help_color: :yellow)
-      end
-
-      def with_tmp_file
-        file = Tempfile.new('flight-job')
-        yield(file) if block_given?
-      ensure
-        file.close
-        file.unlink
-      end
-
       # Checks if the script's ID is valid
       def verify_id(id)
         script = Script.new(id: id)
         return if script.valid?(:id_check)
 
-        # Find the first error related to the ID
-        # NOTE: There maybe more than one error, but the first one determines the
-        #       exit code. The error log will contain the full list
+        # Find the first error related to the ID.
+        # There may be more than one error, but the first one determines the
+        # exit code. The error log will contain the full list
         error = script.errors.find { |e| e.attribute == :id }
         return unless error
         FlightJob.logger.error("The script is invalid:\n") do

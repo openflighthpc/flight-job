@@ -31,7 +31,9 @@ module FlightJob
   module Commands
     class SubmitJob < Command
       def run
-        job = Job.submit(script)
+        job = Job.new(id: job_id)
+        job.initialize_metadata(script)
+        job.submit
 
         # Patches the submit flag on to output_options
         # NOTE: There is probably a better way to do this in general,
@@ -47,6 +49,12 @@ module FlightJob
 
       def script
         @script ||= load_script(args.first)
+      end
+
+      private
+
+      def job_id
+        NameGenerator.new_job(script.id).next_name
       end
     end
   end

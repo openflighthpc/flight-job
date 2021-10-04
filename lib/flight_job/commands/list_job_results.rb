@@ -33,61 +33,53 @@ module FlightJob
       # The 'ls' command will fail if bad arguments are provided to it. This can
       # not be easily detected as 'ls' will likely exit 2 regardless. Instead a
       # generic error is raised instead.
-      HARD_ERROR = "An error occurred when running the 'ls' command!"
+      LS_ERROR = "An error occurred when running the 'ls' command!"
 
       def run
-        job = load_job(args.first)
-        assert_results_dir_exists(job)
-        FlightJob.logger.debug "Running: ls #{job.results_dir} #{ls_options.join(" ")}"
-        cmd = ['ls', job.results_dir, *ls_options]
+        @job = load_job(args.first)
+        assert_results_dir_exists(@job, allow_empty: advanced?)
 
-        status = if hard_wrap?
-          # When hard wrapping, emit STDOUT/STDERR directly to the terminal
+        FlightJob.logger.debug "Running: ls #{@job.results_dir} #{ls_options.join(" ")}"
+        cmd = ['ls', directory, *ls_options]
+
+        status = if advanced?
+          # When the user has provided options to the `ls` command, emit
+          # STDOUT/STDERR directly to the terminal
           Kernel.system(*cmd)
         else
-          # When soft wrapping, hide the ls error
+          # When we control the `ls` options we provide nicer error messages.
           stdout, status = Open3.capture2(*cmd)
-          if status.success? && stdout.empty?
-            if Job::TERMINAL_STATES.include?(job.state)
-              $stderr.puts pastel.yellow 'No job results found.'
-            else
-              $stderr.puts pastel.yellow 'No job results found, please try again latter...'
-            end
-          elsif status.success?
-            puts stdout
-          end
+          puts stdout if status.success?
           status.success?
         end
 
-        unless status
-          # Assume the directory does not exist, and give an error message according
-          # to the state
-          case job.state
-          when *Job::RUNNING_STATES
-            raise InputError, HARD_ERROR if hard_wrap?
-            raise InputError, 'Your job is currently running, please try again later...'
-          when *Job::TERMINAL_STATES
-            raise MissingError, HARD_ERROR if hard_wrap?
-            raise MissingError, 'Your job did not create the results directory!'
-          else
-            raise InputError, HARD_ERROR if hard_wrap?
-            raise InputError, 'Your job has not started yet, please try again later...'
-          end
-        end
+        # Handle errors
+        raise InternalError, LS_ERROR unless status
       end
 
       private
 
-      def hard_wrap?
-        args.length > 1
+      def directory
+        path = args[1] || ''
+        path = '' if path[0] == '-'
+        File.join(@job.results_dir, path)
+      end
+
+      # Return true if the user has provided options to `ls`.
+      def advanced?
+        !user_ls_options.empty?
+      end
+
+      def user_ls_options
+        args.select { |a| a[0] == '-' }
       end
 
       def ls_options
         @ls_options ||= begin
           base = []
-          base << '-laR' if opts.verbose
+          base << '-lAR' if opts.verbose
           base << '--color' if $stdout.tty?
-          [*base, *args[1..]]
+          [*base, *user_ls_options ]
         end
       end
     end

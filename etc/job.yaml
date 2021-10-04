@@ -167,6 +167,16 @@
 # max_stdin_size: 1048576 # (1 MB)
 
 # ==============================================================================
+# ID generation attempts
+#
+# The number of times flight-job will attempt to generate a random identifier
+# before failing.
+#
+# The environment variable flight_JOB_id_generation_attempts takes precedence.
+# ==============================================================================
+# id_generation_attempts: 1000000
+
+# ==============================================================================
 # Submission Period
 # The minimum amount of time to wait before a job that is "pending submission"
 # is considered failed.

@@ -32,16 +32,15 @@ module FlightJob
         job = load_job(args.first)
         assert_results_dir_exists(job)
         file_path = File.join(job.results_dir, args[1])
-        assert_file_exists(file_path)
-        pager.page(File.read(file_path))
+        unless pager.page(path: file_path)
+          raise_file_missing(file_path)
+        end
       end
 
       private
 
-      def assert_file_exists(path)
-        unless File.exists?(path)
-          raise MissingError, "The file does not exists: #{pastel.yellow path}"
-        end
+      def raise_file_missing(path)
+        raise MissingError, "The file does not exists: #{pastel.yellow path}"
       end
     end
   end

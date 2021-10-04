@@ -52,7 +52,6 @@ module FlightJob
     attribute :templates_dir, default: 'usr/share/job/templates',
               transform: relative_to(root_path)
     validates :templates_dir, presence: true
-
     attribute :scripts_dir, default: '~/.local/share/flight/job/scripts',
               transform: relative_to(root_path)
     validates :scripts_dir, presence: true
@@ -95,7 +94,10 @@ module FlightJob
     validates :minimum_terminal_width, numericality: { only_integers: true }
 
     attribute :max_id_length, default: 16
-    validates :max_id_length, numericality: { only_integers: true }
+    validates :max_id_length, numericality: { only_integers: true, greater_than: 5 }
+
+    attribute :id_generation_attempts, default: 1_000_000
+    validates :id_generation_attempts, numericality: { only_integers: true, greater_than: 0 }
 
     attribute :max_stdin_size, default: 1048576
     validates :max_stdin_size, numericality: { only_integers: true }
