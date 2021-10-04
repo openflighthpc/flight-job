@@ -90,14 +90,14 @@ module FlightJob
 
     attr_accessor :id, :answers, :notes
 
-    def initialize(pastel, pager, questions, notes, id)
+    def initialize(pastel, pager, questions, id, answers, notes)
       @pastel = pastel
       @pager = pager
       @questions = questions
       @notes = notes
       @id = id
 
-      @answers = {}
+      @answers = answers || {}
 
       if @id
         @prompt_for_id = false
@@ -107,6 +107,16 @@ module FlightJob
       end
       @prompt_for_notes = true
     end
+
+    def call
+      prompt_invalid_id
+      prompt_all if answers.empty?
+      prompt_loop
+    end
+
+    private
+
+    attr_reader :pastel, :pager, :questions
 
     def prompt_loop
       reask = true
@@ -161,10 +171,6 @@ module FlightJob
       @prompt_for_id = true
       @id = Script.new.id
     end
-
-    private
-
-    attr_reader :pastel, :pager, :questions
 
     def prompt_id
       opts = id ? { default: id } : { required: true }

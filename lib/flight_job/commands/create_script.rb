@@ -83,7 +83,7 @@ module FlightJob
             # We're missing something.  It could be the answers, the notes, or
             # the script_id.  Either way, stdin is not used and stdout is a
             # TTY, so we can prompt for what's missing.
-            run_question_prompter(script_id, notes || "")
+            run_question_prompter(script_id, answers || {}, notes || "")
 
           else
             # We may or may not have answers, a script_id or notes.  We use
@@ -101,32 +101,16 @@ module FlightJob
 
       private
 
-      def run_question_prompter(script_id, notes)
-        # XXX BUG ALERT.  Creating the script via the question prompter has
-        # the following bug.
-        #
-        # If the user provides questions, the question prompter does not
-        # automatically ask any questions.  It displays a summary and gives
-        # the user the option to answer the questions.  However, it uses the
-        # default answers not those provided by the user.
-        #
-        # Once the QuestionPrompter has completed, we use the answers it has,
-        # not those provided by the user.
-        #
-        # This effectively requires the user to provide the answers twice. For
-        # this particular code path.
-        #
-        # The fix is to populate QuestionPrompter with the given answers.
+      def run_question_prompter(script_id, answers, notes)
         prompter = QuestionPrompter.new(
           pastel,
           pager,
           template.generation_questions,
-          notes,
-          script_id
+          script_id,
+          answers,
+          notes
         )
-        prompter.prompt_invalid_id
-        prompter.prompt_all unless answers_provided?
-        prompter.prompt_loop
+        prompter.call
         create_script(prompter.id, prompter.answers, prompter.notes)
       end
 
