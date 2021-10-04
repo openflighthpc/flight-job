@@ -293,6 +293,7 @@ module FlightJob
       unless success
         @metadata = original_metadata
       end
+      success
     end
 
     def cancel
