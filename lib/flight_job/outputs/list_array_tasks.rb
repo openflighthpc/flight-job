@@ -29,28 +29,26 @@
 require 'output_mode'
 
 module FlightJob
-  module Outputs::ListArrayTasks
-    extend OutputMode::TLDR::Index
+  class Outputs::ListArrayTasks < OutputMode::Formatters::Index
+    constructor do
+      register(header: 'Index', row_color: :yellow, &:index)
+      register(header: 'Job ID', &:job_id)
+      register(header: 'State') { |t| t.metadata['state'] }
 
-    register_column(header: 'Index', row_color: :yellow, &:index)
-    register_column(header: 'Job ID', &:job_id)
-    register_column(header: 'State') { |t| t.metadata['state'] }
+      register(header: 'Started at') do |task|
+        Outputs.format_time(task.metadata['start_time'], verbose?)
+      end
+      register(header: 'Ended at') do |task|
+        Outputs.format_time(task.metadata['end_time'], verbose?)
+      end
 
-    register_column(header: 'Started at') do |task, verbose:|
-      Outputs.format_time(task.metadata['start_time'], verbose)
-    end
-    register_column(header: 'Ended at') do |task, verbose:|
-      Outputs.format_time(task.metadata['end_time'], verbose)
-    end
+      if verbose?
+        register(header: 'Estimated Start') { |t| t.metadata['estimated_start_time'] }
+        register(header: 'Estimated Finish') { |t| t.metadata['estimated_end_time'] }
 
-    register_column(header: 'Estimated Start', verbose: true) { |t| t.metadata['estimated_start_time'] }
-    register_column(header: 'Estimated Finish', verbose: true) { |t| t.metadata['estimated_end_time'] }
-
-    register_column(header: 'StdOut Path', verbose: true) { |t| t.metadata['stdout_path'] }
-    register_column(header: 'StdErr Path', verbose: true) { |t| t.metadata['stderr_path'] }
-
-    def self.build_output(**opts)
-      super(row_color: :cyan, header_color: :bold, **opts)
+        register(header: 'StdOut Path') { |t| t.metadata['stdout_path'] }
+        register(header: 'StdErr Path') { |t| t.metadata['stderr_path'] }
+      end
     end
   end
 end

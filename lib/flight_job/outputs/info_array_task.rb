@@ -28,70 +28,67 @@
 require 'output_mode'
 
 module FlightJob
-  module Outputs::InfoArrayTask
-    extend OutputMode::TLDR::Show
+  class Outputs::InfoArrayTask < OutputMode::Formatters::Show
 
-    TEMPLATE = <<~ERB
-      <% verbose = output.context[:verbose] -%>
-      <% each(:default) do |value, padding:, field:| -%>
-      <%
-          # Apply the colours
-          value = pastel.green value
-          field = pastel.blue.bold field
-      -%>
-      <%= padding -%><%= pastel.blue.bold field -%><%= pastel.bold ':' -%> <%= value %>
-      <% end -%>
-    ERB
+    alias_method :task, :object
 
-    register_attribute(header: 'Index', &:index)
-    register_attribute(header: 'Job ID', &:job_id)
-    register_attribute(header: 'Scheduler ID') { |t| t.job.metadata['scheduler_id'] }
-    register_attribute(header: 'State') { |t| t.metadata['state'] }
-
-    start_header = ->(task, verbose:) do
-      task.metadata['start_time'] || verbose ? 'Started at' : 'Estimated Start'
+    def merged_stderr?
+      task.metadata.slice('stdout_path', 'stderr_path').values.uniq.length == 1
     end
-    register_attribute(header: start_header) do |task, verbose:|
-      if task.metadata['start_time'] || verbose
-        Outputs.format_time(task.metadata['start_time'], verbose)
+
+    constructor do
+      template(<<~ERB) if interactive?
+        <% each(:default) do |value, padding:, field:| -%>
+        <%
+            # Apply the colours
+            value = pastel.green value
+            field = pastel.blue.bold field
+        -%>
+        <%= padding -%><%= pastel.blue.bold field -%><%= pastel.bold ':' -%> <%= value %>
+        <% end -%>
+      ERB
+
+      register(header: 'Index', &:index)
+      register(header: 'Job ID', &:job_id)
+      register(header: 'Scheduler ID') { |t| t.job.metadata['scheduler_id'] }
+      register(header: 'State') { |t| t.metadata['state'] }
+
+      if task.metadata['start_time'] || verbose?
+        register(header: 'Started at') do |task|
+          Outputs.format_time(task.metadata['start_time'], verbose?)
+        end
       else
-        Outputs.format_time(task.metadata['estimated_start_time'], false)
+        register(header: 'Estimated Start') do |task|
+          Outputs.format_time(task.metadata['estimated_start_time'], false)
+        end
       end
-    end
 
-    end_header = ->(task, verbose:) do
-      task.metadata['end_time'] || verbose ? 'Ended at' : 'Estimated Finish'
-    end
-    register_attribute(header: end_header) do |task, verbose:|
-      if task.metadata['end_time'] || verbose
-        Outputs.format_time(task.metadata['end_time'], verbose)
+      if task.metadata['end_time'] || verbose?
+        register(header: 'Ended at') do
+          Outputs.format_time(task.metadata['end_time'], verbose?)
+        end
       else
-        Outputs.format_time(task.metadata['estimated_end_time'], false)
+        register(header: 'Estimated Finish') do
+          Outputs.format_time(task.metadata['estimated_end_time'], false)
+        end
       end
-    end
 
-    register_attribute(verbose: true, header: 'Estimated start') do |task|
-      Outputs.format_time(task.metadata['estimated_start_time'], false)
-    end
-    register_attribute(verbose: true, header: 'Estimated end') do |task|
-      Outputs.format_time(task.metadata['estimated_end_time'], false)
-    end
-
-    path_header = ->(task, verbose:) do
-      if task.metadata.slice('stdout_path', 'stderr_path').values.uniq.length == 1 && !verbose
-        'Output Path'
-      else
-        'Stdout Path'
+      if verbose?
+        register(header: 'Estimated start') do |task|
+          Outputs.format_time(task.metadata['estimated_start_time'], false)
+        end
+        register(header: 'Estimated end') do |task|
+          Outputs.format_time(task.metadata['estimated_end_time'], false)
+        end
       end
-    end
-    register_attribute(header: path_header) { |t| t.metadata['stdout_path'] }
-    register_attribute(header: 'Stderr Path', verbose: true) { |t| t.metadata['stderr_path'] }
 
-    register_attribute(header: 'Results Dir') { |t| t.job.metadata['results_dir'] }
+      path_header = merged_stderr? && !verbose? ? 'Output Path' : 'Stdout Path'
+      register(header: path_header) { |t| t.metadata['stdout_path'] }
+      if verbose?
+        register(header: 'Stderr Path') { |t| t.metadata['stderr_path'] }
+      end
 
-    def self.build_output(**opts)
-      super(template: TEMPLATE, **opts)
+      register(header: 'Results Dir') { |t| t.job.metadata['results_dir'] }
     end
   end
 end
-

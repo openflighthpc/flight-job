@@ -25,47 +25,50 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-
 require 'output_mode'
 
 module FlightJob
-  module Outputs::ListJobs
-    extend OutputMode::TLDR::Index
+  class Outputs::ListJobs < OutputMode::Formatters::Index
+    constructor do
+      register(header: 'ID', row_color: :yellow) { |j| j.id }
+      register(header: 'Script ID') { |j| j.script_id }
 
-    register_column(header: 'ID', row_color: :yellow) { |s| s.id }
-    register_column(header: 'Script ID') { |j| j.script_id }
-    register_column(header: 'Sched. ID', verbose: true) { |j| j.scheduler_id }
-    register_column(header: 'State') { |j| j.state }
-
-    # Show a boolean in the "simplified" output, and the exit code in the verbose
-    # NOTE: The headers are intentionally toggled between outputs
-    register_column(header: 'Submitted', verbose: false) { |j| j.submit_status == 0 }
-    register_column(header: 'Submit Status', verbose: true) { |j| j.submit_status }
-
-    register_column(header: 'Submitted at') do |job, verbose:|
-      if verbose
-        job.created_at
-      else
-        DateTime.rfc3339(job.created_at).strftime('%d/%m/%y %H:%M')
+      if verbose?
+        register(header: 'Sched. ID') { |j| j.scheduler_id }
       end
-    end
+      register(header: 'State') { |j| j.state }
 
-    register_column(header: 'Started at') do |job, verbose:|
-      Outputs.format_time(job.actual_start_time, verbose)
-    end
-    register_column(header: 'Ended at') do |job, verbose:|
-      Outputs.format_time(job.actual_end_time, verbose)
-    end
+      # Show a boolean in the "simplified" output, and the exit code in the verbose
+      # NOTE: The headers are intentionally toggled between outputs
+      if verbose?
+        register(header: 'Submit Status') { |j| j.submit_status }
+      else
+        register(header: 'Submitted') { |j| j.submit_status == 0 }
+      end
 
-    register_column(header: 'StdOut Path', verbose: true) { |j| j.stdout_path }
-    register_column(header: 'StdErr Path', verbose: true) { |j| j.stderr_path }
-    register_column(header: 'Results Dir', verbose: true) { |j| j.results_dir }
+      register(header: 'Submitted at') do |job|
+        if verbose?
+          job.created_at
+        else
+          DateTime.rfc3339(job.created_at).strftime('%d/%m/%y %H:%M')
+        end
+      end
 
-    register_column(header: 'Estimated Start', verbose: true, &:estimated_start_time)
-    register_column(header: 'Estimated Finish', verbose: true, &:estimated_end_time)
+      register(header: 'Started at') do |job|
+        Outputs.format_time(job.actual_start_time, verbose?)
+      end
+      register(header: 'Ended at') do |job|
+        Outputs.format_time(job.actual_end_time, verbose?)
+      end
 
-    def self.build_output(**opts)
-      super(row_color: :cyan, header_color: :bold, **opts)
+      if verbose?
+        register(header: 'StdOut Path', &:stdout_path)
+        register(header: 'StdErr Path', &:stderr_path)
+        register(header: 'Results Dir', &:results_dir)
+
+        register(header: 'Estimated Start',  &:estimated_start_time)
+        register(header: 'Estimated Finish', &:estimated_end_time)
+      end
     end
   end
 end

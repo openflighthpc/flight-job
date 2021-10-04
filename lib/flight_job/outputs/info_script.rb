@@ -28,38 +28,34 @@
 require 'output_mode'
 
 module FlightJob
-  module Outputs::InfoScript
-    extend OutputMode::TLDR::Show
+  class Outputs::InfoScript < OutputMode::Formatters::Show
+    constructor do
+      template(<<~ERB) if interactive?
+        <% each(:main) do |value, field:, padding:, **_| -%>
+        <%= padding -%><%= pastel.blue.bold field -%><%= pastel.bold ':' -%> <%= pastel.green value %>
+        <% end -%>
 
-    TEMPLATE = <<~ERB
-      <% each(:main) do |value, field:, padding:, **_| -%>
-      <%= padding -%><%= pastel.blue.bold field -%><%= pastel.bold ':' -%> <%= pastel.green value %>
-      <% end -%>
+        <%= pastel.blue.bold 'NOTES' -%><%= pastel.bold ':' %>
+        <% each(:notes) do |value, **_| -%>
+        <%= pastel.green value.chomp %>
+        <% end -%>
+      ERB
 
-      <%= pastel.blue.bold 'NOTES' -%><%= pastel.bold ':' %>
-      <% each(:notes) do |value, **_| -%>
-      <%= pastel.green value.chomp %>
-      <% end -%>
-    ERB
+      register(section: :main, header: 'ID') { |s| s.id }
+      # NOTE: The verbose output is at the end to avoid the order changing
+      register(section: :main, header: 'Template ID') { |s| s.template_id }
+      register(section: :main, header: 'File Name') { |s| s.script_name }
+      register(section: :main, header: 'Path') { |s| s.script_path }
 
-    register_attribute(section: :main, header: 'ID') { |s| s.id }
-    # NOTE: The verbose output is at the end to avoid the order changing
-    register_attribute(section: :main, header: 'Template ID') { |s| s.template_id }
-    register_attribute(section: :main, header: 'File Name') { |s| s.script_name }
-    register_attribute(section: :main, header: 'Path') { |s| s.script_path }
-
-    register_attribute(section: :main, header: 'Created at') do |script, verbose:|
-      if verbose
-        script.created_at
-      else
-        DateTime.rfc3339(script.created_at).strftime('%d/%m/%y %H:%M')
+      register(section: :main, header: 'Created at') do |script|
+        if verbose?
+          script.created_at
+        else
+          DateTime.rfc3339(script.created_at).strftime('%d/%m/%y %H:%M')
+        end
       end
-    end
 
-    register_attribute(section: :notes, header: 'Notes') { |s| s.notes }
-
-    def self.build_output(**opts)
-      super(template: TEMPLATE, **opts)
+      register(section: :notes, header: 'Notes') { |s| s.notes }
     end
   end
 end

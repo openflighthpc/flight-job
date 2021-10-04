@@ -166,7 +166,7 @@ module FlightJob
         json = data.as_json
         output_options[:interactive] ? JSON.pretty_generate(json) : JSON.dump(json)
       else
-        klass.build_output(**output_options).render(*data)
+        klass.render(*data, **output_options)
       end
     end
 

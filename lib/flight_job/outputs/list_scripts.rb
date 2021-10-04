@@ -28,25 +28,23 @@
 require 'output_mode'
 
 module FlightJob
-  module Outputs::ListScripts
-    extend OutputMode::TLDR::Index
+  class Outputs::ListScripts < OutputMode::Formatters::Index
+    constructor do
+      register(header: 'ID', row_color: :yellow) { |s| s.id }
+      register(header: 'Template ID') { |s| s.template_id }
+      register(header: 'File Name') { |s| s.script_name }
 
-    register_column(header: 'ID', row_color: :yellow) { |s| s.id }
-    register_column(header: 'Template ID') { |s| s.template_id }
-    register_column(header: 'File Name') { |s| s.script_name }
-
-    register_column(header: 'Created at') do |script, verbose:|
-      if verbose
-        script.created_at
-      else
-        DateTime.rfc3339(script.created_at).strftime('%d/%m/%y %H:%M')
+      register(header: 'Created at') do |script|
+        if verbose?
+          script.created_at
+        else
+          DateTime.rfc3339(script.created_at).strftime('%d/%m/%y %H:%M')
+        end
       end
-    end
 
-    register_column(header: 'Path', verbose: true) { |s| s.script_path }
-
-    def self.build_output(**opts)
-      super(row_color: :cyan, header_color: :bold, **opts)
+      if verbose?
+        register(header: 'Path') { |s| s.script_path }
+      end
     end
   end
 end
