@@ -43,6 +43,7 @@ module FlightJob
 
   autoload 'FancyIdOrdering', File.expand_path('flight_job/fancy_id_ordering', __dir__)
   autoload 'NameGenerator', File.expand_path('flight_job/name_generator', __dir__)
+  autoload 'QuestionPrompter', File.expand_path('flight_job/question_prompter.rb', __dir__)
 
   # Setup the autoloads for the commands
   module Commands
