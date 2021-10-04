@@ -384,9 +384,6 @@
         },
         "cancelling": {
           "type": "boolean"
-        },
-        "cancelled": {
-          "type": "boolean"
         }
       }
     }

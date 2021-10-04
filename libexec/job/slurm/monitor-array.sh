@@ -203,7 +203,6 @@ main() {
         exit $exit_status
     fi
 
-    # XXX: Confirm if this is still required
     if [ "${ARRAY_JOB[state]}" == "CANCELLED" ] ; then
         ARRAY_JOB[lazy]="false"
     fi

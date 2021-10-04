@@ -44,8 +44,6 @@ module FlightJob
             ".*" => { "type" => "object" }
           }
         },
-        # XXX: Defunct fields, TBC when it can be removed
-        "cancelled" => { "type" => "boolean" }
       }
     })
 
