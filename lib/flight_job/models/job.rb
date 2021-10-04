@@ -95,56 +95,19 @@ module FlightJob
       end
     end
 
-    def self.submit(script)
-      new(submit_script: script).tap(&:submit)
-    end
-
     validates_with Job::Validator, on: :load,
       adjust_active_index: true,
       migrate_metadata: true
     validates_with Job::Validator, on: :save_metadata
 
     attr_writer :id
-
-    # Implicitly generates an ID by trying to create a randomised directory
-    # This handles ID collisions if and when they occur
     def id
-      @id ||= begin
-        candidate = '-'
-        while candidate[0] == '-' do
-          # Generate a 8 byte base64 string that does not start with: '-'
-          # NOTE: 6 bytes of randomness becomes 8 base64-chars
-          candidate = SecureRandom.urlsafe_base64(6)
-        end
-        # Ensures the parent directory exists with mkdir -p
-        FileUtils.mkdir_p FlightJob.config.jobs_dir
-        # Attempt to create the directory with errors: mkdir
-        FileUtils.mkdir File.join(FlightJob.config.jobs_dir, candidate)
-        # Return the candidate
-        candidate
-      rescue Errno::EEXIST
-        FlightJob.logger.debug "Retrying after job ID collision: #{candidate}"
-        retry
-      end
+      return @id if @id
+      raise InternalError, "Job#id was called before being set"
     end
 
     def script_id
       metadata['script_id']
-    end
-
-    def submit_script=(script)
-      # Initialize the job with the script
-      if metadata.empty?
-        metadata["created_at"] = Time.now.rfc3339
-        metadata["job_type"] = "INITIALIZING"
-        metadata["rendered_path"] = File.join(job_dir, script.script_name)
-        metadata["script_id"] = script.id
-        metadata["version"] = SCHEMA_VERSION
-
-      # Error has the job already exists
-      else
-        raise InternalError, "Cannot set the 'script' as the metadata is already loaded"
-      end
     end
 
     def submitted?
@@ -173,6 +136,22 @@ module FlightJob
         # to the validation to handle it. New jobs should use the submit
         # method
         {}
+      end
+    end
+
+    def initialize_metadata(script)
+      if @metadata
+        raise InternalError, <<~ERROR
+          Cannot initialize metadata for job '#{id.to_s}' as it has already been loaded
+        ERROR
+      else
+        @metadata = {
+          "created_at" => Time.now.rfc3339,
+          "job_type" => "INITIALIZING",
+          "script_id" => script.id,
+          "rendered_path" => File.join(job_dir, script.script_name),
+          "version" => SCHEMA_VERSION,
+        }
       end
     end
 

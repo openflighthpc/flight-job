@@ -77,13 +77,13 @@ module FlightJob
             # We have answers.  We may or may not have the notes, but they can
             # be provided after the fact.  We may or may not have a script_id,
             # if not, we will use a generated one.
-            create_script(script_id, answers, notes || "")
+            create_script(script_id || default_id, answers, notes || "")
 
           elsif $stdout.tty?
             # We're missing something.  It could be the answers, the notes, or
             # the script_id.  Either way, stdin is not used and stdout is a
             # TTY, so we can prompt for what's missing.
-            run_question_prompter(script_id, answers || {}, notes || "")
+            run_question_prompter(script_id || default_id, answers || {}, notes || "")
 
           else
             # We may or may not have answers, a script_id or notes.  We use
@@ -93,7 +93,7 @@ module FlightJob
               $stderr.puts pastel.red(msg)
               FlightJob.logger.warn msg
             end
-            create_script(script_id, answers || {}, notes || "")
+            create_script(script_id || default_id, answers || {}, notes || "")
           end
 
         puts render_output(Outputs::InfoScript, script)
@@ -150,6 +150,11 @@ module FlightJob
 
       def script_id
         args.length > 1 ? args[1] : nil
+      end
+
+      def default_id
+        generator = NameGenerator.new_script(template.id)
+        generator.base_name || generator.backfill_name
       end
 
       def notes_provided?
