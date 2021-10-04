@@ -168,7 +168,9 @@ module FlightJob
     def self.task_indices(job_id)
       Dir.glob(new(job_id: job_id, index: '*').metadata_path).map do |path|
         name = File.basename(path)
-        /\Ametadata\.(?<index>.*)\.yaml\Z/.match(name).named_captures['index'].to_i
+        re = /\Ametadata\.(?<index>\d+)\.yaml\Z/
+        md = re.match(name)
+        md.nil? ? nil : md.named_captures['index'].to_i
       end.sort
     end
 
