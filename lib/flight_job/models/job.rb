@@ -158,7 +158,7 @@ module FlightJob
       else
         @metadata = {
           "created_at" => Time.now.rfc3339,
-          "job_type" => "INITIALIZING",
+          "job_type" => "SUBMITTING",
           "script_id" => script.id,
           "rendered_path" => File.join(job_dir, script.script_name),
           "version" => SCHEMA_VERSION,
