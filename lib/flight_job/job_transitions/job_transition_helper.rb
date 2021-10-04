@@ -34,12 +34,12 @@ module FlightJob
         # NOTE: Should the PATH be configurable instead of inherited from the environment?
         # This could lead to differences when executed via the CLI or the webapp
         env = ENV.slice('PATH', 'HOME', 'USER', 'LOGNAME').tap do |h|
-          h['CONTROLS_DIR'] = controls_dir.path
+          h['CONTROLS_DIR'] = job.controls_dir.path
         end
         cmd_stdout, cmd_stderr, status = Open3.capture3(env, *cmd, unsetenv_others: true, close_others: true)
 
         unless status.success?
-          FlightJob.logger.error("Failed to #{tag} job: #{id}")
+          FlightJob.logger.error("Failed to #{tag} job: #{job.id}")
         end
 
         FlightJob.logger.debug <<~DEBUG
@@ -65,6 +65,14 @@ module FlightJob
         yield(status, cmd_stdout, cmd_stderr, data)
       end
 
+      def parse_stdout_json(stdout, tag:)
+        JSON.parse(stdout.split("\n").last.to_s)
+      rescue JSON::ParserError
+        FlightJob.logger.error("Failed to parse #{tag} JSON for job: #{job.id}")
+        FlightJob.logger.debug($!.message)
+        raise_command_error
+      end
+
       def raise_command_error
         raise CommandError, <<~ERROR.chomp
           An error occurred when integrating with the external scheduler service!
@@ -75,7 +83,7 @@ module FlightJob
       def validate_data(schema, data, tag:)
         errors = schema.validate(data).to_a
         unless errors.empty?
-          FlightJob.logger.error("Invalid #{tag} response for job: #{id}")
+          FlightJob.logger.error("Invalid #{tag} response for job: #{job.id}")
           FlightJob.logger.debug(JSON.pretty_generate(errors))
           raise_command_error
         end

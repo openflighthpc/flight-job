@@ -27,22 +27,31 @@
 
 module FlightJob
   module JobTransitions
-    class FailedSubmissionTransition < SimpleDelegator
+    FailedSubmitter = Struct.new(:job) do
       def run
+        run!
+        return true
+      rescue
+        Flight.logger.error "Failed to transition job '#{job.id}'"
+        Flight.logger.warn $!
+        return false
+      end
+
+      def run!
         # Check if the maximum pending submission time has elapsed
-        start = DateTime.rfc3339(created_at).to_time.to_i
+        start = DateTime.rfc3339(job.created_at).to_time.to_i
         now = Time.now.to_i
         if now - start > FlightJob.config.submission_period
           FlightJob.logger.error <<~ERROR
-            The following job is being flagged as FAILED as it has not been submitted: #{id}
+            The following job is being flagged as FAILED as it has not been submitted: #{job.id}
           ERROR
-          metadata['job_type'] = "FAILED_SUBMISSION"
-          metadata['submit_status'] = 126
-          metadata['submit_stdout'] = ''
-          metadata['submit_stderr'] = 'Failed to run the submission command for an unknown reason'
-          save_metadata
+          job.metadata['job_type'] = "FAILED_SUBMISSION"
+          job.metadata['submit_status'] = 128
+          job.metadata['submit_stdout'] = ''
+          job.metadata['submit_stderr'] = 'Failed to run the submission command for an unknown reason'
+          job.save_metadata
         else
-          FlightJob.logger.info "Ignoring the following job as it is pending submission: #{id}"
+          FlightJob.logger.info "Ignoring the following job as it is pending submission: #{job.id}"
         end
       end
     end

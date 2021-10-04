@@ -27,96 +27,103 @@
 
 module FlightJob
   module JobTransitions
-    class SubmitTransition < SimpleDelegator
+    SUBMITTER_SCHEMA = JSONSchemer.schema({
+      "type" => "object",
+      "additionalProperties" => false,
+      "required" => ["job_type", "version", "id", "results_dir"],
+      "properties" => {
+        "version" => { "const" => 1 },
+        "id" => { "type" => "string", "minLength" => 1 },
+        "results_dir" => { "type" => "string", "minLength" => 1 },
+        "job_type" => { "enum" => ["SINGLETON", "ARRAY"] }
+      }
+    })
+
+    Submitter = Struct.new(:job) do
       include JobTransitionHelper
       include ActiveModel::Validations
 
-      SCHEMA = JSONSchemer.schema({
-        "type" => "object",
-        "additionalProperties" => false,
-        "required" => ["job_type", "version", "id", "results_dir"],
-        "properties" => {
-          "version" => { "const" => 1 },
-          "id" => { "type" => "string", "minLength" => 1 },
-          "results_dir" => { "type" => "string", "minLength" => 1 },
-          "job_type" => { "enum" => ["SINGLETON", "ARRAY"] }
-        }
-      })
-
       validate do
-        __getobj__.valid?
-        __getobj__.errors.each { |e| @errors << e }
+        job.valid?
+        job.errors.each { |e| @errors << e }
       end
 
       validate do
-        if submitted?
-          errors.add(:submitted, 'the job has already been submitted')
-        end
-        unless load_script.valid?(:load)
-          errors.add(:script, 'is missing or invalid')
+        unless job.load_script.valid?(:load)
+          job.errors.add(:script, 'is missing or invalid')
         end
       end
 
       def run
+        run!
+        return true
+      rescue
+        Flight.logger.error "Failed to submit job '#{job.id}'"
+        Flight.logger.warn $!
+        return false
+      end
+
+      def run!
         # Validate and load the script
-        unless valid?
-          FlightJob.config.logger("The script is not in a valid submission state: #{id}\n") do
-            errors.full_messages
+        unless job.valid?
+          Flight.logger.error("The job is not in a valid submission state: #{job.id}\n") do
+            job.errors.full_messages.join("\n")
           end
           raise InternalError, 'Unexpectedly failed to submit the job'
         end
-        script = load_script
+        script = job.load_script
 
         # Write the initial metadata
-        save_metadata
-        FileUtils.touch active_index_path
+        job.save_metadata
+        FileUtils.touch job.active_index_path
 
         # Duplicate the script into the job's directory
-        FileUtils.cp script.script_path, metadata["rendered_path"]
+        FileUtils.cp script.script_path, job.metadata["rendered_path"]
 
         # Run the submission command
-        FlightJob.logger.info("Submitting Job: #{id}")
-        cmd = [FlightJob.config.submit_script_path, metadata["rendered_path"]]
+        FlightJob.logger.info("Submitting Job: #{job.id}")
+        cmd = [FlightJob.config.submit_script_path, job.metadata["rendered_path"]]
         execute_command(*cmd, tag: 'submit') do |status, out, err, data|
           # set the status/stdout/stderr
-          metadata['submit_status'] = status.exitstatus
-          metadata['submit_stdout'] = out
-          metadata['submit_stderr'] = err
+          job.metadata['submit_status'] = status.exitstatus
+          job.metadata['submit_stdout'] = out
+          job.metadata['submit_stderr'] = err
 
           # Return early if the submission failed
           unless status.success?
-            metadata['job_type'] = 'FAILED_SUBMISSION'
-            save_metadata
-            FileUtils.rm_f active_index_path
+            job.metadata['job_type'] = 'FAILED_SUBMISSION'
+            job.save_metadata
+            FileUtils.rm_f job.active_index_path
             return
           end
 
           # Validate the payload format
           begin
-            validate_data(SCHEMA, data, tag: 'submit')
+            validate_data(SUBMITTER_SCHEMA, data, tag: 'submit')
           rescue CommandError
             # The command lied about exiting 0! It did not report the json payload
             # correctly. Changing the status to 126
-            metadata['job_type'] = 'FAILED_SUBMISSION'
-            metadata['submit_status'] = 126
-            metadata["submit_stderr"] << "\nFailed to parse JSON response"
-            save_metadata
+            job.metadata['job_type'] = 'FAILED_SUBMISSION'
+            job.metadata['submit_status'] = 126
+            job.metadata["submit_stderr"] << "\nFailed to parse JSON response"
+            job.save_metadata
             raise $!
           end
 
           # The job was submitted correctly and is now pending
-          metadata['results_dir'] = data['results_dir']
-          metadata['scheduler_id'] = data['id']
-          metadata['job_type'] = data['job_type']
+          job.metadata['results_dir'] = data['results_dir']
+          job.metadata['scheduler_id'] = data['id']
+          job.metadata['job_type'] = data['job_type']
 
           # Run the monitor
           case data['job_type']
           when 'SINGLETON'
-            metadata['state'] = 'PENDING'
-            MonitorSingletonTransition.new(__getobj__).run
+            job.metadata['state'] = 'PENDING'
+            SingletonMonitor.new(job).run!
           when 'ARRAY'
-            metadata['cancelled'] = false
-            MonitorArrayTransition.new(__getobj__).run
+            job.metadata['cancelled'] = false
+            job.metadata['lazy'] = true
+            ArrayMonitor.new(job).run!
           end
         end
       end
