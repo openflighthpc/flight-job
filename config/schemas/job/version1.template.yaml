@@ -31,7 +31,7 @@ additionalProperties: true
 properties:
   <<: *SHARED_PROPERTIES
   job_type:
-    enum: ["SUBMITTING", "MONITORING", "SINGLETON", "ARRAY", "FAILED_SUBMISSION"]
+    enum: ["SUBMITTING", "BOOTSTRAPPING", "SINGLETON", "ARRAY", "FAILED_SUBMISSION"]
 
 oneOf:
   # SUBMITTING Jobs
@@ -43,7 +43,7 @@ oneOf:
       <<: *SHARED_PROPERTIES
       job_type: { "const" : "SUBMITTING" }
 
-  # MONITORING Jobs
+  # BOOTSTRAPPING Jobs
   # NOTE: This represents jobs which where succesfully submitted but have
   # not been monitored for the first time
   - type: "object"
@@ -54,7 +54,7 @@ oneOf:
     properties:
       <<: *SHARED_PROPERTIES
       <<: *SUBMITTED_PROPERTIES
-      job_type: { "const" : "MONITORING" }
+      job_type: { "const" : "BOOTSTRAPPING" }
 
   # FAILED_SUBMISSION Jobs
   - type: "object"

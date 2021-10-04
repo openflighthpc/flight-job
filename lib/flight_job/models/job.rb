@@ -246,7 +246,7 @@ module FlightJob
     end
 
     def initializing?
-      ['SUBMITTING', 'MONITORING'].include? job_type
+      ['SUBMITTING', 'BOOTSTARPPING'].include? job_type
     end
 
     def scheduler_id
@@ -283,7 +283,7 @@ module FlightJob
       success = case job_type
       when 'SUBMITTING'
         JobTransitions::FailedSubmitter.new(self).run
-      when 'MONITORING'
+      when 'BOOTSTARPPING'
         JobTransitions::BootstrapMonitor.new(self).run
       when 'SINGLETON'
         JobTransitions::SingletonMonitor.new(self).run

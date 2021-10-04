@@ -85,8 +85,8 @@ module FlightJob
             return
           end
 
-          # Save the job into the monitoring state
-          job.metadata["job_type"] = "MONITORING"
+          # Save the job into the bootstrapping state.
+          job.metadata["job_type"] = "BOOTSTRAPPING"
           job.save_metadata
 
           # Bootstrap the monitor

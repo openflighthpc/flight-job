@@ -27,7 +27,7 @@
     "job_type": {
       "enum": [
         "SUBMITTING",
-        "MONITORING",
+        "BOOTSTRAPPING",
         "SINGLETON",
         "ARRAY",
         "FAILED_SUBMISSION"
@@ -117,7 +117,7 @@
           "minLength": 1
         },
         "job_type": {
-          "const": "MONITORING"
+          "const": "BOOTSTRAPPING"
         }
       }
     },
