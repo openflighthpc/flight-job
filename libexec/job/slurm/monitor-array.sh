@@ -94,14 +94,12 @@ generate_template() {
     read -r -d '' template <<'TEMPLATE' || true
 {
   version: 1,
-  cancelled: (if $cancelled == "true" then true else false end),
   lazy: (if $lazy == "true" then true else false end),
   tasks: ($tasks)
 }
 TEMPLATE
 
     echo '{}' | jq  \
-      --arg cancelled "${ARRAY_JOB[cancelled]}" \
       --arg lazy "${ARRAY_JOB[lazy]}" \
       --argjson tasks "${ARRAY_JOB[tasks]}" \
       "$template"
@@ -179,7 +177,6 @@ main() {
 
     assert_progs jq scontrol sacct
 
-    ARRAY_JOB[cancelled]="false"
     ARRAY_JOB[lazy]="false"
     ARRAY_JOB[state]="UNKNOWN"
 
@@ -207,7 +204,6 @@ main() {
     fi
 
     if [ "${ARRAY_JOB[state]}" == "CANCELLED" ] ; then
-        ARRAY_JOB[cancelled]="true"
         ARRAY_JOB[lazy]="false"
     fi
     # declare -p ARRAY_JOB >&2

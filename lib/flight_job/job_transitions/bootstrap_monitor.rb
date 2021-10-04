@@ -72,6 +72,7 @@ module FlightJob
         job.metadata['results_dir'] = data['results_dir']
         job.metadata['scheduler_id'] = data['id']
         job.metadata['job_type'] = data['job_type']
+        job.metadata['cancelling'] = false
 
         # Run the monitor
         case data['job_type']
@@ -79,7 +80,6 @@ module FlightJob
           job.metadata['state'] = 'PENDING'
           SingletonMonitor.new(job).run!
         when 'ARRAY'
-          job.metadata['cancelled'] = false
           job.metadata['lazy'] = true
           ArrayMonitor.new(job).run!
         end

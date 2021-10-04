@@ -71,7 +71,7 @@ start_time_if_valid_state() {
     local time state
     time="$1"
     state="$2"
-    if echo "RUNNING COMPLETED FAILED CANCELLED" | grep -q "$state"; then
+    if echo "RUNNING COMPLETING COMPLETED FAILED CANCELLED" | grep -q "$state"; then
         time_if_known "$time"
     fi
 }
@@ -98,7 +98,7 @@ estimated_end_time_if_valid_state() {
     local time state
     time="$1"
     state="$2"
-    if echo "RUNNING PENDING" | grep -q "$state"; then
+    if echo "RUNNING COMPLETING PENDING" | grep -q "$state"; then
         time_if_known "$time"
     fi
 }

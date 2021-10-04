@@ -246,6 +246,7 @@
           "enum": [
             "PENDING",
             "RUNNING",
+            "COMPLETING",
             "FAILED",
             "COMPLETED",
             "CANCELLED",
@@ -285,6 +286,9 @@
             "string",
             "null"
           ]
+        },
+        "cancelling": {
+          "type": "boolean"
         },
         "stdout_path": {
           "type": "string",
@@ -366,9 +370,6 @@
         "lazy": {
           "type": "boolean"
         },
-        "cancelled": {
-          "type": "boolean"
-        },
         "estimated_start_time": {
           "type": [
             "date-time",
@@ -380,6 +381,9 @@
             "date-time",
             "null"
           ]
+        },
+        "cancelling": {
+          "type": "boolean"
         }
       }
     }
