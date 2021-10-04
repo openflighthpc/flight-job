@@ -76,7 +76,7 @@ module FlightJob
 
       def ls_options
         @ls_options ||= begin
-          base = []
+          base = ['-v']
           base << '-lAR' if opts.verbose
           base << '--color' if $stdout.tty?
           [*base, *user_ls_options ]
