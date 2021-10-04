@@ -42,9 +42,9 @@ module FlightJobMigration
     SCHEMA_V1_RAW = JSON.parse(
       File.read Flight.config.join_schema_path("version1.json")
     )
-    SCHEMA_V1_INITIALIZING = JSONSchemer.schema(
+    SCHEMA_V1_SUBMITTING = JSONSchemer.schema(
       SCHEMA_V1_RAW["oneOf"].find do |schema|
-        schema["properties"]["job_type"]["const"] == "INITIALIZING"
+        schema["properties"]["job_type"]["const"] == "SUBMITTING"
       end
     )
     SCHEMA_V1_SINGLETON = JSONSchemer.schema(
@@ -122,8 +122,8 @@ module FlightJobMigration
         schema = case metadata["job_type"]
                  when 'SINGLETON'
                    SCHEMA_V1_SINGLETON
-                 when 'INITIALIZING'
-                   SCHEMA_V1_INITIALIZING
+                 when 'SUBMITTING'
+                   SCHEMA_V1_SUBMITTING
                  else
                    SCHEMA_V1_FAILED_SUBMISSION
                  end
@@ -175,7 +175,7 @@ module FlightJobMigration
       def migrate_initializing
         validate_initial
         metadata["version"] = 1
-        metadata["job_type"] = "INITIALIZING"
+        metadata["job_type"] = "SUBMITTING"
         metadata.merge! initial.slice("created_at", "script_id")
         metadata["rendered_path"] = generate_rendered_path
         validate_metadata

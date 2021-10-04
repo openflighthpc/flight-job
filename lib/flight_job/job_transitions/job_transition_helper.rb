@@ -30,6 +30,15 @@ require 'open3'
 module FlightJob
   module JobTransitions
     module JobTransitionHelper
+      # TODO: Remove me!
+      def method_missing(s, *args)
+        if respond_to? :job
+          job.send(s, *args)
+        else
+          __getobj__.send(s, *args)
+        end
+      end
+
       def execute_command(*cmd, tag:)
         # NOTE: Should the PATH be configurable instead of inherited from the environment?
         # This could lead to differences when executed via the CLI or the webapp
@@ -53,13 +62,8 @@ module FlightJob
 
         data = nil
         if status.success?
-          begin
-            data = JSON.parse(cmd_stdout.split("\n").last.to_s)
-          rescue JSON::ParserError
-            FlightJob.logger.error("Failed to parse #{tag} JSON for job: #{id}")
-            FlightJob.logger.debug($!.message)
-            raise_command_error
-          end
+          # TODO: Remove this, bad JSON needs to be handled higher up
+          data = parse_stdout_json(cmd_stdout, tag: tag)
         end
 
         yield(status, cmd_stdout, cmd_stderr, data)

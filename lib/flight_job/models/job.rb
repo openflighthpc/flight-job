@@ -63,8 +63,8 @@ module FlightJob
         job = new(id: id)
         if job.valid?(:load)
           job.tap(&:monitor)
-          if job.job_type == 'INITIALIZING'
-            FlightJob.logger.debug("Skipping initializing job: #{job.id}")
+          if job.initializing?
+            FlightJob.logger.debug("Skipping #{job.job_type} job: #{job.id}")
             nil
           else
             job
@@ -110,8 +110,19 @@ module FlightJob
       metadata['script_id']
     end
 
-    def submitted?
-      File.exists? metadata_path
+    def submit_script=(script)
+      # Initialize the job with the script
+      if metadata.empty?
+        metadata["created_at"] = Time.now.rfc3339
+        metadata["job_type"] = "SUBMITTING"
+        metadata["rendered_path"] = File.join(job_dir, script.script_name)
+        metadata["script_id"] = script.id
+        metadata["version"] = SCHEMA_VERSION
+
+      # Error has the job already exists
+      else
+        raise InternalError, "Cannot set the 'script' as the metadata is already loaded"
+      end
     end
 
     def failed_migration_path
@@ -147,7 +158,7 @@ module FlightJob
       else
         @metadata = {
           "created_at" => Time.now.rfc3339,
-          "job_type" => "INITIALIZING",
+          "job_type" => "SUBMITTING",
           "script_id" => script.id,
           "rendered_path" => File.join(job_dir, script.script_name),
           "version" => SCHEMA_VERSION,
@@ -185,7 +196,7 @@ module FlightJob
     def state
       Flight.logger.warn "DEPRECATED: Job#state does not function correctly for array tasks"
       case job_type
-      when 'INITIALIZING'
+      when 'SUBMITTING'
         'PENDING'
       when 'FAILED_SUBMISSION'
         'FAILED'
@@ -234,8 +245,8 @@ module FlightJob
       end
     end
 
-    def submitted?
-      job_type != 'INITIALIZING'
+    def initializing?
+      ['SUBMITTING', 'BOOTSTARPPING'].include? job_type
     end
 
     def scheduler_id
@@ -272,6 +283,8 @@ module FlightJob
       success = case job_type
       when 'SUBMITTING'
         JobTransitions::FailedSubmitter.new(self).run
+      when 'BOOTSTARPPING'
+        JobTransitions::BootstrapMonitor.new(self).run
       when 'SINGLETON'
         JobTransitions::SingletonMonitor.new(self).run
       when 'ARRAY'
@@ -280,6 +293,7 @@ module FlightJob
       unless success
         @metadata = original_metadata
       end
+      success
     end
 
     def cancel
@@ -306,8 +320,6 @@ module FlightJob
 
     def terminal?
       case job_type
-      when 'INITIALIZING'
-        false
       when 'FAILED_SUBMISSION'
         true
       when 'SINGLETON'
@@ -318,6 +330,8 @@ module FlightJob
         else
           !Task.load_last_non_terminal(id)
         end
+      else
+        false
       end
     end
 
@@ -367,7 +381,7 @@ module FlightJob
                   "for '#{id}' as it is an individual job."
                 when 'ARRAY'
                   "for '#{id}' as it is an array job."
-                when 'INITIALIZING'
+                when 'SUBMITTING'
                   "for job '#{id}' as it is pending submission."
                 when 'FAILED_SUBMISSION'
                   "for job '#{id}' as it did not succesfully submit."

@@ -40,8 +40,8 @@ module FlightJob
 
       def initialize(object)
         @object = object
-        if object.job_type == 'INITIALIZING'
-          raise InternalError, "Can not decorate an INITIALIZING job"
+        if object.initializing?
+          raise InternalError, "Can not decorate job #{object.job_type}"
         end
       end
 
