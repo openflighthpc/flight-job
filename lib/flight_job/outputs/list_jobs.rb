@@ -29,6 +29,42 @@ require 'output_mode'
 
 module FlightJob
   class Outputs::ListJobs < OutputMode::Formatters::Index
+    # Used to dynamically format the time based
+    def format_dynamic_time(time, long_date: false)
+      # Modify the time to be local
+      time.localtime
+
+      # Display the time if the same day
+      if same_day?(time)
+        time.strftime("%H:%M")
+      # Display the date
+      elsif long_date
+        time.strftime("%d/%m/%y")
+      else
+        time.strftime("%d/%m")
+      end
+    end
+
+    # Checks if a given time is the same day
+    # NOTE: Must have the same offset
+    def same_day?(time)
+      [:day, :mon, :year].all? { |m| [time_now, time].map(&m).uniq.length == 1 }
+    end
+
+    # Used to determine the current day
+    def time_now
+      @time_now ||= Time.now
+    end
+
+    # Override the "format" to allow for dynamic times
+    def format(value, **config)
+      if value.is_a?(Time) && !verbose?
+        format_dynamic_time(value, long_date: config[:long_date])
+      else
+        super
+      end
+    end
+
     def register_ids
       register(header: 'ID', row_color: :yellow) { |j| j.id }
       register(header: 'Script ID') { |j| j.script_id }
@@ -42,8 +78,8 @@ module FlightJob
     # NOTE: The estimated time *may* be displayed in an interactive shell
     # This must not affect the non-interactive output
     def register_shared_times
-      register(header: 'Submitted at', &:created_at)
-      register(header: 'Started at') do |job|
+      register(header: 'Submitted', long_date: true, &:created_at)
+      register(header: 'Started') do |job|
         if job.actual_start_time || !interactive?
           job.actual_start_time
         elsif job.estimated_start_time
@@ -51,7 +87,7 @@ module FlightJob
           "#{time} (Est.)"
         end
       end
-      register(header: 'Ended at') do |job|
+      register(header: 'Ended') do |job|
         if job.actual_end_time || !interactive?
           job.actual_end_time
         elsif job.estimated_end_time
