@@ -133,10 +133,10 @@ parse_scontrol_output() {
             parse_task <<< "${line}"
             # declare -p TASK >&2
             tasks="$(json_object_insert "$tasks" "$index" "$(generate_task_json)")"
-        else
-          # The Slurm ARRAY_JOB has not yet been turned into a Slurm ARRAY_TASK.
-          # New tasks could still be created.
-          ARRAY_JOB[lazy]="true"
+        fi
+
+        if [ "$(parse_job_id <<< "${line}")" == "${JOB_ID}" ] ; then
+            ARRAY_JOB[state]=$(parse_state <<< "${line}")
         fi
     done
 
@@ -165,6 +165,10 @@ parse_sacct_output() {
           # declare -p TASK >&2
           tasks="$(json_object_insert "$tasks" "$index" "$(generate_task_json)")"
         fi
+
+        if [ "$(parse_job_id <<< "$line")" == "${JOB_ID}" ] ; then
+            ARRAY_JOB[state]=$(parse_state <<< "$line")
+        fi
     done
 
     ARRAY_JOB[tasks]="${tasks}"
@@ -178,6 +182,7 @@ main() {
     assert_progs jq scontrol sacct
 
     ARRAY_JOB[lazy]="false"
+    ARRAY_JOB[state]="UNKNOWN"
 
     # First attempt to get the data from scontrol
     output=$(run_scontrol "${JOB_ID}" | tee >(log_command "scontrol" 1>&2))
@@ -205,7 +210,9 @@ main() {
         exit $sacct_exit_status
     fi
 
-    if [ "${ARRAY_JOB[state]}" == "CANCELLED" ] ; then
+    if echo "RUNNING" "PENDING" | grep -q "${ARRAY_JOB[state]}" ; then
+        ARRAY_JOB[lazy]="true"
+    else
         ARRAY_JOB[lazy]="false"
     fi
 
