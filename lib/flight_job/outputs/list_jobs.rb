@@ -65,6 +65,16 @@ module FlightJob
       end
     end
 
+    # Override the "render" method to add the estimated time footnote
+    def render(*a, **o)
+      super.tap do |txt|
+        next unless interactive?
+        next unless @estimated_time
+        txt << "\n"
+        txt << pastel.yellow(" * Estimated start/finish time(s)")
+      end
+    end
+
     def register_ids
       register(header: 'ID', row_color: :yellow) { |j| j.id }
       register(header: 'Script ID') { |j| j.script_id }
@@ -83,16 +93,18 @@ module FlightJob
         if job.actual_start_time || !interactive?
           job.actual_start_time
         elsif job.estimated_start_time
+          @estimated_time = true
           time = format(job.estimated_start_time)
-          "#{time} (Est.)"
+          pastel.yellow "#{time}*"
         end
       end
       register(header: 'Ended') do |job|
         if job.actual_end_time || !interactive?
           job.actual_end_time
         elsif job.estimated_end_time
+          @estimated_time = true
           time = format(job.estimated_end_time)
-          "#{time} (Est.)"
+          pastel.yellow "#{time}*"
         end
       end
     end
@@ -101,6 +113,11 @@ module FlightJob
       register(header: 'StdOut Path', &:stdout_path)
       register(header: 'StdErr Path', &:stderr_path)
       register(header: 'Results Dir', &:results_dir)
+    end
+
+
+    def pastel
+      @pastel ||= Pastel.new(enabled: color?)
     end
 
     constructor do
