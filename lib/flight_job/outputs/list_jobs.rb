@@ -57,33 +57,34 @@ module FlightJob
       register(header: 'Results Dir', &:results_dir)
     end
 
-    def register_estimated_times
-      register(header: 'Estimated Start',  &:estimated_start_time)
-      register(header: 'Estimated Finish', &:estimated_end_time)
-    end
-
     constructor do
-      register_id
-      register_script_id
-
-      if verbose?
+      if interactive?
+        register_id
         register_sched_id
-      end
-      register_state
+        register_script_id
 
-      # Show a boolean in the "simplified" output, and the exit code in the verbose
-      # NOTE: The headers are intentionally toggled between outputs
-      if verbose?
-        register(header: 'Submit Status') { |j| j.submit_status }
+        register_state
+
+        register_shared_times
+
+        if verbose?
+          register_paths
+        end
       else
-        register(header: 'Submitted') { |j| j.submit_status == 0 }
-      end
+        # NOTE The following cannot be re-ordered without introducing a breaking change
+        register_id
+        register_script_id
 
-      register_shared_times
+        register_sched_id
+        register_state
 
-      if verbose?
+        register(header: 'Submit Status') { |j| j.submit_status }
+
+        register_shared_times
+
         register_paths
-        register_estimated_times
+        register(header: 'Estimated Start',  &:estimated_start_time)
+        register(header: 'Estimated Finish', &:estimated_end_time)
       end
     end
   end
