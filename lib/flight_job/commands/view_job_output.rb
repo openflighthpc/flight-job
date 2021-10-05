@@ -31,6 +31,7 @@ module FlightJob
       def run
         assert_output_type_valid
         assert_stderr_not_merged if viewing_stderr?
+        assert_file_path_known
         unless pager.page(path: file_path)
           raise_file_missing(file_path)
         end
@@ -53,6 +54,15 @@ module FlightJob
             Please run the following instead:
             #{pastel.yellow "#{prog_name} #{cmd} #{args.join(" ")}"}
           ERROR
+        end
+      end
+
+      def assert_file_path_known
+        if file_path.nil?
+          output_type = viewing_stderr? ? 'error' : 'output'
+          object_name = viewing_job? ? 'job' : 'task'
+          raise MissingError, "The #{object_name}'s standard " \
+            "#{output_type} file is not known"
         end
       end
 

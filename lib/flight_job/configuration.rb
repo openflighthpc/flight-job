@@ -68,6 +68,11 @@ module FlightJob
               transform: relative_to(root_path)
     validates :submit_script_path, presence: true
 
+    attribute :bootstrap_script_path,
+              default: ->(config) { File.join('libexec/job', config.scheduler, 'bootstrap.sh') },
+              transform: relative_to(root_path)
+    validates :bootstrap_script_path, presence: true
+
     attribute :cancel_script_path,
               default: ->(config) { File.join('libexec/job', config.scheduler, 'cancel.sh') },
               transform: relative_to(root_path)

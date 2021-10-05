@@ -40,8 +40,9 @@ module FlightJob
       end
 
       def execute_command(*cmd, tag:)
-        # NOTE: Should the PATH be configurable instead of inherited from the environment?
-        # This could lead to differences when executed via the CLI or the webapp
+        # XXX Should the PATH be configurable instead of inherited from the
+        # environment?  This could lead to differences when executed via the
+        # CLI or the webapp
         env = ENV.slice('PATH', 'HOME', 'USER', 'LOGNAME').tap do |h|
           h['CONTROLS_DIR'] = job.controls_dir.path
         end

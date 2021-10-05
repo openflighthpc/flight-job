@@ -43,8 +43,6 @@ module FlightJob
 
       def run!
         if @job.terminal?
-          # In practice, this condition shouldn't be reached. However preventing it
-          # is up to the CLI's implementation
           FlightJob.logger.info "Cancelling Terminated Job: #{@job.id}"
         else
           FlightJob.logger.info "Cancelling Job: #{@job.id}"
@@ -53,15 +51,12 @@ module FlightJob
         cmd = [Flight.config.cancel_script_path, @job.scheduler_id]
         execute_command(*cmd, tag: 'cancel') do |status, _o, _e|
           # Run the monitor when:
-          # * Cancel runs successful, or
+          # * Cancel runs successfully, or
           # * If the job is non-terminal (it may have changed)
-          @job.monitor if status.success? || @job.terminal?
+          @job.monitor if status.success? || !@job.terminal?
           if status.success?
             @job.metadata['cancelling'] = true
             @job.save_metadata
-            true
-          elsif @job.terminal?
-            false
           else
             raise CommandError, <<~ERROR.chomp
             Unexpectedly failed to cancel job '#{@job.id}'!

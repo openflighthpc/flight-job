@@ -64,16 +64,6 @@ parse_job_type() {
     fi
 }
 
-parse_scheduler_id() {
-    local input
-    input=$(cat)
-    if [ "$(parse_job_type <<< "${input}")" == "ARRAY" ] ; then
-        parse_field "ArrayJobId" <<< "${input}"
-    else
-        parse_field "JobId" <<< "${input}"
-    fi
-}
-
 # Return the JobID.
 #
 # For non ARRAY_TASKs the meaning of JobID is clear.

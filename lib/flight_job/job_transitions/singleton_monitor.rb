@@ -151,7 +151,7 @@ module FlightJob
         # an error condition if they are
         unless job.scheduler_id
           FlightJob.logger.error <<~ERROR
-            Can not monitor job '#{job.id}' as it did not report its scheduler_id
+            Cannot monitor job '#{job.id}' as it did not report its scheduler_id
           ERROR
           job.metadata['reason'] = "Did not report it's scheduler ID"
           job.metadata['state'] = "FAILED"

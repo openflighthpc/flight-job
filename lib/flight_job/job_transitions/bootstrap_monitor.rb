@@ -27,13 +27,12 @@
 
 module FlightJob
   module JobTransitions
-    SUBMITTER_SCHEMA = JSONSchemer.schema({
+    BOOTSTRAP_SCHEMA = JSONSchemer.schema({
       "type" => "object",
       "additionalProperties" => false,
-      "required" => ["job_type", "version", "id", "results_dir"],
+      "required" => ["job_type", "version", "results_dir"],
       "properties" => {
         "version" => { "const" => 1 },
-        "id" => { "type" => "string", "minLength" => 1 },
         "results_dir" => { "type" => "string", "minLength" => 1 },
         "job_type" => { "enum" => ["SINGLETON", "ARRAY"] }
       }
@@ -52,36 +51,24 @@ module FlightJob
       end
 
       def run!
-        # Attempt to parse the stdout for the data
-        begin
-          data = parse_stdout_json(job.metadata['submit_stdout'], tag: 'submit')
-          validate_data(SUBMITTER_SCHEMA, data, tag: 'submit')
-        rescue CommandError
-          # The command lied about exiting 0! It did not report the json payload
-          # correctly. Changing the status to 128
-          job.metadata['job_type'] = 'FAILED_SUBMISSION'
-          job.metadata['submit_status'] = 128
-          job.metadata["submit_stderr"] << <<~MSG.chomp
-            Failed to parse JSON response after the command original exited 0!
-          MSG
-          job.save_metadata
-          raise $!
-        end
+        FlightJob.logger.info("Bootstrapping Job: #{job.id}")
+        cmd = [FlightJob.config.bootstrap_script_path, job.scheduler_id]
+        execute_command(*cmd, tag: 'bootstrap') do |status, stdout, stderr, data|
+          raise_command_error unless status.success?
 
-        # The job was submitted correctly and is now pending
-        job.metadata['results_dir'] = data['results_dir']
-        job.metadata['scheduler_id'] = data['id']
-        job.metadata['job_type'] = data['job_type']
-        job.metadata['cancelling'] = false
+          validate_data(BOOTSTRAP_SCHEMA, data, tag: "bootstrap")
+          job.metadata['results_dir'] = data['results_dir']
+          job.metadata['job_type'] = data['job_type']
+          job.metadata['cancelling'] = false
 
-        # Run the monitor
-        case data['job_type']
-        when 'SINGLETON'
-          job.metadata['state'] = 'PENDING'
-          SingletonMonitor.new(job).run!
-        when 'ARRAY'
-          job.metadata['lazy'] = true
-          ArrayMonitor.new(job).run!
+          case data['job_type']
+          when 'SINGLETON'
+            job.metadata['state'] = 'PENDING'
+            SingletonMonitor.new(job).run!
+          when 'ARRAY'
+            job.metadata['lazy'] = true
+            ArrayMonitor.new(job).run!
+          end
         end
       end
     end
