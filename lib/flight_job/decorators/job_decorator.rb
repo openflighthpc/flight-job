@@ -135,7 +135,7 @@ module FlightJob
       def actual_end_time(stringify: false)
         time = case job_type
         when 'SINGLETON'
-          object.metadata['actual_end_time']
+          object.metadata['end_time']
         when 'ARRAY'
           if last_non_terminal_task
             # NOOP
