@@ -114,7 +114,7 @@ run_scontrol() {
 }
 
 run_sacct() {
-  sacct --noheader --parsable --jobs "$1" --format State,Reason,START,END,AllocTRES,JobID,JobIDRaw
+  sacct --noheader --parsable -X --jobs "$1" --format State,Reason,START,END,AllocTRES,JobID,JobIDRaw
 }
 
 parse_scontrol_output() {
@@ -133,12 +133,8 @@ parse_scontrol_output() {
             parse_task <<< "${line}"
             # declare -p TASK >&2
             tasks="$(json_object_insert "$tasks" "$index" "$(generate_task_json)")"
-        else
-          # The Slurm ARRAY_JOB has not yet been turned into a Slurm ARRAY_TASK.
-          # New tasks could still be created.
-          ARRAY_JOB[lazy]="true"
         fi
-  
+
         if [ "$(parse_job_id <<< "${line}")" == "${JOB_ID}" ] ; then
             ARRAY_JOB[state]=$(parse_state <<< "${line}")
         fi
@@ -152,15 +148,23 @@ parse_sacct_output() {
     declare -A TASK
     local tasks
 
-    tasks='{}'
+    tasks="${ARRAY_JOB[tasks]}"
+    if [ -z "$tasks" ]; then
+      tasks="{}"
+    fi
 
     while IFS= read -r line; do
-        unset TASK
-        declare -A TASK
         index=$(parse_task_index <<< "$line")
-        parse_task <<< "${line}"
-        # declare -p TASK >&2
-        tasks="$(json_object_insert "$tasks" "$index" "$(generate_task_json)")"
+        existing_task=$(printf "$tasks" | jq ".[\"$index\"]")
+        numeric_id=$(echo "${index}" | grep -P '^\d+$')
+
+        if [ "$existing_task" == "null" ] && [ -n "$numeric_id" ]; then
+          unset TASK
+          declare -A TASK
+          parse_task <<< "${line}"
+          # declare -p TASK >&2
+          tasks="$(json_object_insert "$tasks" "$index" "$(generate_task_json)")"
+        fi
 
         if [ "$(parse_job_id <<< "$line")" == "${JOB_ID}" ] ; then
             ARRAY_JOB[state]=$(parse_state <<< "$line")
@@ -180,33 +184,35 @@ main() {
     ARRAY_JOB[lazy]="false"
     ARRAY_JOB[state]="UNKNOWN"
 
+    # First attempt to get the data from scontrol
     output=$(run_scontrol "${JOB_ID}" | tee >(log_command "scontrol" 1>&2))
-    exit_status=$?
-
-    if [[ $exit_status -eq 0 ]] ; then
+    scontrol_exit_status=$?
+    if [[ $scontrol_exit_status -eq 0 ]] ; then
         source_parsers "scontrol"
         parse_scontrol_output <<< "$output"
-    elif [[ "${output}" == "slurm_load_jobs error: Invalid job id specified" ]] ; then
-        output=$(run_sacct "$JOB_ID" | tee >(log_command "sacct" 1>&2))
-        exit_status=$?
-        # XXX Replace with -X / --allocations
-        output=$(echo "$output" | awk 'FNR%2')
-        if [[ $exit_status -eq 0 ]] && [ -z "$output" ]; then
-            echo "No Tasks Found!" >&2
-        elif [[ $exit_status -eq 0 ]]; then
-            source_parsers "sacct"
-            parse_sacct_output <<< "${output}"
-        else
-            exit $exit_status
-        fi
-    else
-        exit $exit_status
     fi
 
-    if [ "${ARRAY_JOB[state]}" == "CANCELLED" ] ; then
+    # Second, attempt to load additional data from sacct
+    # The earliest tasks may move here before the last finishes
+    output=$(run_sacct "$JOB_ID" | tee >(log_command "sacct" 1>&2))
+    sacct_exit_status=$?
+    if [[ $sacct_exit_status -eq 0 ]] && [ -z "$output" ]; then
+        echo "No Tasks Found!" >&2
+    elif [[ $sacct_exit_status -eq 0 ]]; then
+        source_parsers "sacct"
+        parse_sacct_output <<< "${output}"
+    fi
+
+    # Exit if both commands failed
+    if [ $scontrol_exit_status -ne 0 ] && [ $sacct_exit_status -ne 0 ]; then
+        exit $sacct_exit_status
+    fi
+
+    if echo "RUNNING" "PENDING" | grep -q "${ARRAY_JOB[state]}" ; then
+        ARRAY_JOB[lazy]="true"
+    else
         ARRAY_JOB[lazy]="false"
     fi
-    # declare -p ARRAY_JOB >&2
 
     generate_template | report_metadata
 }
