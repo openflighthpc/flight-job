@@ -38,10 +38,6 @@ module FlightJob
       @submit ? true : false
     end
 
-    def format_time(time)
-      Outputs.format_time(time, verbose?)
-    end
-
     def format_row(field, value, padding)
       f = pastel.blue.bold field
       s = pastel.bold ':'
@@ -81,24 +77,18 @@ module FlightJob
         register(header: 'Submitted') { job.submit_status == 0 }
       end
 
-      register(header: 'Submitted at') do |job|
-        if verbose?
-          job.created_at
-        else
-          DateTime.rfc3339(job.created_at).strftime('%d/%m/%y %H:%M')
-        end
-      end
+      register(header: 'Submitted at', &:created_at)
 
       if job.actual_start_time || verbose?
-        register(header: 'Started at') { format_time(job.actual_start_time) }
+        register(header: 'Started at', &:actual_start_time)
       else
-        register(header: 'Estimated Start') { format_time(job.estimated_start_time) }
+        register(header: 'Estimated Start', &:estimated_start_time)
       end
 
       if job.actual_end_time || verbose?
-        register(header: 'Ended at') { format_time(job.actual_end_time) }
+        register(header: 'Ended at', &:actual_end_time)
       else
-        register(header: 'Estimated Finish') { format_time(job.estimated_end_time) }
+        register(header: 'Estimated Finish', &:estimated_end_time)
       end
 
       stdout_header = if job.stdout_path == job.stderr_path && !verbose?
@@ -126,12 +116,8 @@ module FlightJob
       # Consider reordering on the next major version bump.
       register(header: 'Results Dir') { job.results_dir }
       if verbose?
-        register(header: 'Estimated start') do
-          Outputs.format_time(job.estimated_start_time, false)
-        end
-        register(header: 'Estimated end') do
-          Outputs.format_time(job.estimated_end_time, false)
-        end
+        register(header: 'Estimated start', &:estimated_start_time)
+        register(header: 'Estimated end', &:estimated_end_time)
       end
 
       register(header: "Desktop ID:", &:desktop_id)

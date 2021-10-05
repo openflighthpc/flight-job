@@ -46,20 +46,10 @@ module FlightJob
         register(header: 'Submitted') { |j| j.submit_status == 0 }
       end
 
-      register(header: 'Submitted at') do |job|
-        if verbose?
-          job.created_at
-        else
-          DateTime.rfc3339(job.created_at).strftime('%d/%m/%y %H:%M')
-        end
-      end
+      register(header: 'Submitted at', &:created_at)
 
-      register(header: 'Started at') do |job|
-        Outputs.format_time(job.actual_start_time, verbose?)
-      end
-      register(header: 'Ended at') do |job|
-        Outputs.format_time(job.actual_end_time, verbose?)
-      end
+      register(header: 'Started at', &:actual_start_time)
+      register(header: 'Ended at', &:actual_end_time)
 
       if verbose?
         register(header: 'StdOut Path', &:stdout_path)

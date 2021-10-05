@@ -36,6 +36,11 @@ module FlightJob
       task.metadata.slice('stdout_path', 'stderr_path').values.uniq.length == 1
     end
 
+    def fetch_time(key)
+      time = task.metadata[key]
+      time ? Time.parse(time) : time
+    end
+
     constructor do
       template(<<~ERB) if interactive?
         <% each(:default) do |value, padding:, field:| -%>
@@ -54,32 +59,20 @@ module FlightJob
       register(header: 'State') { |t| t.metadata['state'] }
 
       if task.metadata['start_time'] || verbose?
-        register(header: 'Started at') do |task|
-          Outputs.format_time(task.metadata['start_time'], verbose?)
-        end
+        register(header: 'Started at') { fetch_time('start_time') }
       else
-        register(header: 'Estimated Start') do |task|
-          Outputs.format_time(task.metadata['estimated_start_time'], false)
-        end
+        register(header: 'Estimated Start') { fetch_time('estimated_start_time') }
       end
 
       if task.metadata['end_time'] || verbose?
-        register(header: 'Ended at') do
-          Outputs.format_time(task.metadata['end_time'], verbose?)
-        end
+        register(header: 'Ended at') { fetch_time('end_time') }
       else
-        register(header: 'Estimated Finish') do
-          Outputs.format_time(task.metadata['estimated_end_time'], false)
-        end
+        register(header: 'Estimated Finish') { fetch_time('estimated_end_time') }
       end
 
       if verbose?
-        register(header: 'Estimated start') do |task|
-          Outputs.format_time(task.metadata['estimated_start_time'], false)
-        end
-        register(header: 'Estimated end') do |task|
-          Outputs.format_time(task.metadata['estimated_end_time'], false)
-        end
+        register(header: 'Estimated start') { fetch_time('estimated_start_time') }
+        register(header: 'Estimated start') { fetch_time('estimated_end_time') }
       end
 
       path_header = merged_stderr? && !verbose? ? 'Output Path' : 'Stdout Path'

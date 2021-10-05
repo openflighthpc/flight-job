@@ -88,6 +88,11 @@ module FlightJob
         :stdout_path, :stderr_path, :results_dir, :reason, :created_at,
         :submit_status, :submit_stdout, :submit_stderr, :estimated_start_time, :estimated_end_time
 
+      def created_at(stringify: false)
+        time = object.metadata['created_at']
+        time && !stringify ? Time.parse(time) : time
+      end
+
       def state
         case job_type
         when 'FAILED_SUBMISSION'
@@ -99,8 +104,8 @@ module FlightJob
         end
       end
 
-      def actual_start_time
-        case job_type
+      def actual_start_time(stringify: false)
+        time = case job_type
         when 'SINGLETON'
           object.metadata['start_time']
         when 'ARRAY'
@@ -108,10 +113,11 @@ module FlightJob
           # Revisit if required
           (first_task&.metadata || {})['start_time']
         end
+        time && !stringify ? Time.parse(time) : time
       end
 
-      def estimated_start_time
-        case job_type
+      def estimated_start_time(stringify: false)
+        time = case job_type
         when 'SINGLETON'
           object.metadata['estimated_start_time']
         when 'ARRAY'
@@ -123,10 +129,11 @@ module FlightJob
             (first_pending_task&.metadata || {})['estimated_start_time']
           end
         end
+        time && !stringify ? Time.parse(time) : time
       end
 
-      def actual_end_time
-        case job_type
+      def actual_end_time(stringify: false)
+        time = case job_type
         when 'SINGLETON'
           object.metadata['actual_end_time']
         when 'ARRAY'
@@ -136,10 +143,11 @@ module FlightJob
             (last_end_time_task&.metadata || {})['end_time']
           end
         end
+        time && !stringify ? Time.parse(time) : time
       end
 
-      def estimated_end_time
-        case job_type
+      def estimated_end_time(stringify: false)
+        time = case job_type
         when 'SINGLETON'
           object.metadata['estimated_end_time']
         when 'ARRAY'
@@ -147,6 +155,7 @@ module FlightJob
           # TODO: Augment with metadata version
           (last_non_terminal_task&.metadata ||{})['estimated_end_time']
         end
+        time && !stringify ? Time.parse(time) : time
       end
 
       def desktop_id
@@ -162,7 +171,7 @@ module FlightJob
           # ----------------------------------------------------------------------------
           "job_type" => job_type,
           "id" => id,
-          "created_at" => created_at,
+          "created_at" => created_at(stringify: true),
           "script_id" => script_id,
           "state" => state,
           "submit_status" => submit_status,
@@ -176,18 +185,18 @@ module FlightJob
           #
           # The original behaviour is being maintained in the serialization
           # ----------------------------------------------------------------------------
-          "end_time" => actual_end_time || estimated_end_time,
+          "end_time" => actual_end_time(stringify: true) || estimated_end_time(stringify: true),
           "scheduler_id" => scheduler_id,
           "scheduler_state" => scheduler_state,
-          "start_time" => actual_start_time || estimated_start_time,
+          "start_time" => actual_start_time(stringify: true) || estimated_start_time(stringify: true),
           "stdout_path" => stdout_path,
           "stderr_path" => stderr_path,
           "results_dir" => results_dir,
           "reason" => reason,
-          "actual_start_time" => actual_start_time,
-          "estimated_start_time" => estimated_start_time,
-          "actual_end_time" => actual_end_time,
-          "estimated_end_time" => estimated_end_time,
+          "actual_start_time" => actual_start_time(stringify: true),
+          "estimated_start_time" => estimated_start_time(stringify: true),
+          "actual_end_time" => actual_end_time(stringify: true),
+          "estimated_end_time" => estimated_end_time(stringify: true),
           "controls" => object.controls_dir.serializable_hash,
         }.tap do |hash|
           # NOTE: The API uses the 'size' attributes as a proxy check to exists/readability

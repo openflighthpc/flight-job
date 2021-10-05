@@ -48,11 +48,7 @@ module FlightJob
       register(section: :main, header: 'Path') { |s| s.script_path }
 
       register(section: :main, header: 'Created at') do |script|
-        if verbose?
-          script.created_at
-        else
-          DateTime.rfc3339(script.created_at).strftime('%d/%m/%y %H:%M')
-        end
+        Time.parse script.created_at
       end
 
       register(section: :notes, header: 'Notes') { |s| s.notes }

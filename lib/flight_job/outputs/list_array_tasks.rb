@@ -30,21 +30,22 @@ require 'output_mode'
 
 module FlightJob
   class Outputs::ListArrayTasks < OutputMode::Formatters::Index
+    def fetch_time(task, key)
+      time = task.metadata[key]
+      time ? Time.parse(time) : time
+    end
+
     constructor do
       register(header: 'Index', row_color: :yellow, &:index)
       register(header: 'Job ID', &:job_id)
       register(header: 'State') { |t| t.metadata['state'] }
 
-      register(header: 'Started at') do |task|
-        Outputs.format_time(task.metadata['start_time'], verbose?)
-      end
-      register(header: 'Ended at') do |task|
-        Outputs.format_time(task.metadata['end_time'], verbose?)
-      end
+      register(header: 'Started at') { |t| fetch_time(t, 'start_time') }
+      register(header: 'Ended at') { |t| fetch_time(t, 'end_time') }
 
       if verbose?
-        register(header: 'Estimated Start') { |t| t.metadata['estimated_start_time'] }
-        register(header: 'Estimated Finish') { |t| t.metadata['estimated_end_time'] }
+        register(header: 'Estimated Start') { |t| fetch_time(t, 'estimated_start_time') }
+        register(header: 'Estimated Finish') { |t| fetch_time(t, 'estimated_end_time') }
 
         register(header: 'StdOut Path') { |t| t.metadata['stdout_path'] }
         register(header: 'StdErr Path') { |t| t.metadata['stderr_path'] }

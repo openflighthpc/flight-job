@@ -35,11 +35,7 @@ module FlightJob
       register(header: 'File Name') { |s| s.script_name }
 
       register(header: 'Created at') do |script|
-        if verbose?
-          script.created_at
-        else
-          DateTime.rfc3339(script.created_at).strftime('%d/%m/%y %H:%M')
-        end
+        Time.parse script.created_at
       end
 
       if verbose?
