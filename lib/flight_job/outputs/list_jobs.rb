@@ -29,15 +29,9 @@ require 'output_mode'
 
 module FlightJob
   class Outputs::ListJobs < OutputMode::Formatters::Index
-    def register_id
+    def register_ids
       register(header: 'ID', row_color: :yellow) { |j| j.id }
-    end
-
-    def register_script_id
       register(header: 'Script ID') { |j| j.script_id }
-    end
-
-    def register_sched_id
       register(header: 'Sched. ID') { |j| j.scheduler_id }
     end
 
@@ -75,23 +69,15 @@ module FlightJob
 
     constructor do
       if interactive?
-        register_id
-        register_sched_id
-        register_script_id
-
+        register_ids
         register_state
 
         register_shared_times
 
-        if verbose?
-          register_paths
-        end
+        register_paths if verbose?
       else
         # NOTE The following cannot be re-ordered without introducing a breaking change
-        register_id
-        register_script_id
-
-        register_sched_id
+        register_ids
         register_state
 
         register(header: 'Submit Status') { |j| j.submit_status }
