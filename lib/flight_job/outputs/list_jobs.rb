@@ -45,10 +45,26 @@ module FlightJob
       register(header: 'State') { |j| j.state }
     end
 
+    # NOTE: The estimated time *may* be displayed in an interactive shell
+    # This must not affect the non-interactive output
     def register_shared_times
       register(header: 'Submitted at', &:created_at)
-      register(header: 'Started at', &:actual_start_time)
-      register(header: 'Ended at', &:actual_end_time)
+      register(header: 'Started at') do |job|
+        if job.actual_start_time || !interactive?
+          job.actual_start_time
+        elsif job.estimated_start_time
+          time = format(job.estimated_start_time)
+          "#{time} (Est.)"
+        end
+      end
+      register(header: 'Ended at') do |job|
+        if job.actual_end_time || !interactive?
+          job.actual_end_time
+        elsif job.estimated_end_time
+          time = format(job.estimated_end_time)
+          "#{time} (Est.)"
+        end
+      end
     end
 
     def register_paths
