@@ -114,7 +114,7 @@ run_scontrol() {
 }
 
 run_sacct() {
-  sacct --noheader --parsable --jobs "$1" --format State,Reason,START,END,AllocTRES,JobID,JobIDRaw
+  sacct --noheader --parsable -X --jobs "$1" --format State,Reason,START,END,AllocTRES,JobID,JobIDRaw
 }
 
 parse_scontrol_output() {
@@ -193,10 +193,8 @@ main() {
     fi
 
     # Second, attempt to load additional data from sacct
-    # NOTE: The earliest tasks may move here before the last finishes
-    # XXX Replace with -X / --allocations
+    # The earliest tasks may move here before the last finishes
     output=$(run_sacct "$JOB_ID" | tee >(log_command "sacct" 1>&2))
-    output=$(echo "$output" | awk 'FNR%2')
     sacct_exit_status=$?
     if [[ $sacct_exit_status -eq 0 ]] && [ -z "$output" ]; then
         echo "No Tasks Found!" >&2
