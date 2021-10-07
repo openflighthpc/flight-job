@@ -84,12 +84,20 @@ module FlightJob
 
       private
 
+      def task_schema(type)
+        schema = SINGLETON_STDOUT_SCHEMAS[type].dup.tap do |s|
+          s["properties"] ||= {}
+          s["properties"].merge!({ "id" => { "type" => "string" } })
+        end
+        JSONSchemer.schema(schema)
+      end
+
       def validate_response(data)
         validate_data(ARRAY_STDOUT_SCHEMA, data, tag: "monitor-array")
         data['tasks'].each do |index, datum|
-          validate_data(SINGLETON_STDOUT_SCHEMAS[:common], datum, tag: "monitor-array task: #{index} (common)")
+          validate_data(task_schema(:common), datum, tag: "monitor-array task: #{index} (common)")
           state = datum['state']
-          validate_data(SINGLETON_STDOUT_SCHEMAS[state], datum, tag: "monitor-array task: #{index} (#{state})")
+          validate_data(task_schema(state), datum, tag: "monitor-array task: #{index} (#{state})")
         end
       end
 

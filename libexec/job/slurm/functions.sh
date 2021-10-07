@@ -129,6 +129,7 @@ parse_task() {
     state="$(parse_state <<< "${parse_input}")"
 
     TASK[state]="${state}"
+    TASK[scheduler_id]="$(parse_job_id <<< "${parse_input}")"
     TASK[scheduler_state]=$(parse_scheduler_state <<< "${parse_input}")
     TASK[reason]=$(parse_reason <<< "${parse_input}")
     TASK[start_time]=$(parse_start_time "${state}" <<< "${parse_input}")

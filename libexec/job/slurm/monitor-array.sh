@@ -47,6 +47,7 @@ generate_task_json() {
     read -r -d '' task_template <<'TEMPLATE' || true
 {
   version: 1,
+  id: ($id),
   state: (
     if $state == "" then "UNKNOWN" else $state end
   ),
@@ -76,6 +77,7 @@ generate_task_json() {
 TEMPLATE
 
     echo '{}' | jq  \
+      --arg id "${TASK[scheduler_id]}" \
       --arg state "${TASK[state]}" \
       --arg scheduler_state "${TASK[scheduler_state]}" \
       --arg reason "${TASK[reason]}" \
