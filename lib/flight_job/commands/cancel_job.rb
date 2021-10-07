@@ -30,19 +30,12 @@ module FlightJob
     class CancelJob < Command
       def run
         job = load_job(args.first)
-        if job.cancel
-          # The job may not have been cancelled by this point, so the current
-          # state is displayed
-          puts render_output(Outputs::InfoJob, job.decorate)
-        else
-          # This is an intentional misnomer
-          #
-          # There are race conditions between Job#cancel and the job otherwise
-          # terminating naturally.
-          raise InputError, "Cannot cancel terminated job: #{id}"
+        if job.scheduler_id.nil?
+          raise InputError, "Cannot cancel job as its scheduler id is not known"
         end
+        job.cancel
+        puts render_output(Outputs::InfoJob, job.decorate)
       end
     end
   end
 end
-

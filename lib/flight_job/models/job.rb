@@ -63,12 +63,6 @@ module FlightJob
         job = new(id: id)
         if job.valid?(:load)
           job.tap(&:monitor)
-          if job.initializing?
-            FlightJob.logger.debug("Skipping #{job.job_type} job: #{job.id}")
-            nil
-          else
-            job
-          end
         else
           FlightJob.logger.error("Failed to load missing/invalid job: #{id}")
           FlightJob.logger.info(job.errors.full_messages.join("\n"))
@@ -245,10 +239,6 @@ module FlightJob
       end
     end
 
-    def initializing?
-      ['SUBMITTING', 'BOOTSTARPPING'].include? job_type
-    end
-
     def scheduler_id
       metadata['scheduler_id']
     end
@@ -283,7 +273,7 @@ module FlightJob
       success = case job_type
       when 'SUBMITTING'
         JobTransitions::FailedSubmitter.new(self).run
-      when 'BOOTSTARPPING'
+      when 'BOOTSTRAPPING'
         JobTransitions::BootstrapMonitor.new(self).run
       when 'SINGLETON'
         JobTransitions::SingletonMonitor.new(self).run

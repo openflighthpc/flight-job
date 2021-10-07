@@ -37,7 +37,7 @@
   "oneOf": [
     {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "created_at",
         "job_type",
@@ -68,115 +68,7 @@
     },
     {
       "type": "object",
-      "additionalProperties": false,
-      "allOf": [
-        {
-          "required": [
-            "created_at",
-            "job_type",
-            "rendered_path",
-            "script_id",
-            "version"
-          ]
-        },
-        {
-          "required": [
-            "submit_status",
-            "submit_stdout",
-            "submit_stderr"
-          ]
-        }
-      ],
-      "properties": {
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "rendered_path": {
-          "type": "string",
-          "minLength": 1
-        },
-        "script_id": {
-          "type": "string",
-          "minLength": 1
-        },
-        "version": {
-          "const": 1
-        },
-        "submit_status": {
-          "const": 0
-        },
-        "submit_stdout": {
-          "type": "string"
-        },
-        "submit_stderr": {
-          "type": "string"
-        },
-        "results_dir": {
-          "type": "string",
-          "minLength": 1
-        },
-        "job_type": {
-          "const": "BOOTSTRAPPING"
-        }
-      }
-    },
-    {
-      "type": "object",
-      "additionalProperties": false,
-      "allOf": [
-        {
-          "required": [
-            "created_at",
-            "job_type",
-            "rendered_path",
-            "script_id",
-            "version"
-          ]
-        },
-        {
-          "required": [
-            "submit_status",
-            "submit_stdout",
-            "submit_stderr"
-          ]
-        }
-      ],
-      "properties": {
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "rendered_path": {
-          "type": "string",
-          "minLength": 1
-        },
-        "script_id": {
-          "type": "string",
-          "minLength": 1
-        },
-        "version": {
-          "const": 1
-        },
-        "job_type": {
-          "const": "FAILED_SUBMISSION"
-        },
-        "submit_status": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 255
-        },
-        "submit_stdout": {
-          "type": "string"
-        },
-        "submit_stderr": {
-          "type": "string"
-        }
-      }
-    },
-    {
-      "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "allOf": [
         {
           "required": [
@@ -197,6 +89,122 @@
         {
           "required": [
             "scheduler_id"
+          ]
+        }
+      ],
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rendered_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "script_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "const": 1
+        },
+        "submit_status": {
+          "type": "integer"
+        },
+        "submit_stdout": {
+          "type": "string"
+        },
+        "submit_stderr": {
+          "type": "string"
+        },
+        "scheduler_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "job_type": {
+          "const": "BOOTSTRAPPING"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": true,
+      "allOf": [
+        {
+          "required": [
+            "created_at",
+            "job_type",
+            "rendered_path",
+            "script_id",
+            "version"
+          ]
+        },
+        {
+          "required": [
+            "submit_status",
+            "submit_stdout",
+            "submit_stderr"
+          ]
+        }
+      ],
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rendered_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "script_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "const": 1
+        },
+        "submit_status": {
+          "type": "integer"
+        },
+        "submit_stdout": {
+          "type": "string"
+        },
+        "submit_stderr": {
+          "type": "string"
+        },
+        "job_type": {
+          "const": "FAILED_SUBMISSION"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": true,
+      "allOf": [
+        {
+          "required": [
+            "created_at",
+            "job_type",
+            "rendered_path",
+            "script_id",
+            "version"
+          ]
+        },
+        {
+          "required": [
+            "submit_status",
+            "submit_stdout",
+            "submit_stderr"
+          ]
+        },
+        {
+          "required": [
+            "scheduler_id"
+          ]
+        },
+        {
+          "required": [
+
           ]
         },
         {
@@ -223,7 +231,7 @@
           "const": 1
         },
         "submit_status": {
-          "const": 0
+          "type": "integer"
         },
         "submit_stdout": {
           "type": "string"
@@ -231,11 +239,11 @@
         "submit_stderr": {
           "type": "string"
         },
-        "results_dir": {
+        "scheduler_id": {
           "type": "string",
           "minLength": 1
         },
-        "scheduler_id": {
+        "results_dir": {
           "type": "string",
           "minLength": 1
         },
@@ -254,8 +262,7 @@
           ]
         },
         "scheduler_state": {
-          "type": "string",
-          "minLength": 1
+          "type": "string"
         },
         "estimated_start_time": {
           "type": [
@@ -302,7 +309,7 @@
     },
     {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "allOf": [
         {
           "required": [
@@ -323,6 +330,11 @@
         {
           "required": [
             "scheduler_id"
+          ]
+        },
+        {
+          "required": [
+
           ]
         },
         {
@@ -348,7 +360,7 @@
           "const": 1
         },
         "submit_status": {
-          "const": 0
+          "type": "integer"
         },
         "submit_stdout": {
           "type": "string"
@@ -356,11 +368,11 @@
         "submit_stderr": {
           "type": "string"
         },
-        "results_dir": {
+        "scheduler_id": {
           "type": "string",
           "minLength": 1
         },
-        "scheduler_id": {
+        "results_dir": {
           "type": "string",
           "minLength": 1
         },

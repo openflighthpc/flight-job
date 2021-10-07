@@ -41,15 +41,26 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source "${DIR}/functions.sh"
 source "${DIR}/parser.sh"
 
-submit_job() {
-    $DIR/sbatch-wrapper.sh "$1"
+# There are multiple definitions of run_scontrol in the Slurm integration.
+#
+# XXX Find a mechanism to remove the difference and extract to a common
+# location (scontrol_parser.sh).
+run_scontrol() {
+    scontrol show job "${1}" --oneline | head -n1 | tr ' ' '\n'
 }
 
-# Parse the scheduler id from `sbatch` output and set into JOB associative
-# array.
-parse_scheduler_id() {
+
+parse_job() {
     assert_assoc_array_var JOB
-    JOB[scheduler_id]=$( cut -d' ' -f4)
+    local working_dir job_name parse_input scheduler_id
+
+    scheduler_id="$1"
+    parse_input="$(cat)"
+    working_dir=$(parse_field WorkDir <<< "${parse_input}")
+    job_name=$(parse_field JobName <<< "${parse_input}")
+
+    JOB[job_type]=$(parse_job_type <<< "${parse_input}")
+    JOB[results_dir]="${working_dir}/${job_name}-outputs/${scheduler_id}" 
 }
 
 # Print to stdout the JSON template to be returned to flight job.
@@ -60,27 +71,31 @@ generate_template() {
     read -r -d '' template <<'TEMPLATE' || true
 {
   version: 1,
-  id: ($id)
+  job_type: ($job_type),
+  results_dir: ($results_dir)
 }
 TEMPLATE
 
   echo '{}' | jq  \
-    --arg id "${JOB[scheduler_id]}" \
+    --arg results_dir "${JOB[results_dir]}"  \
+    --arg job_type    "${JOB[job_type]}"     \
     "$template"
 }
 
 main() {
+    JOB_ID="$1"
     declare -A JOB
-    local exit_status output
+    local exit_status output 
 
-    assert_progs jq sbatch
+    assert_progs jq scontrol
 
-    output="$(submit_job "$1" | tee >(log_command "sbatch wrapper" 1>&2))"
+    output=$(run_scontrol "${JOB_ID}" | tee >(log_command "scontrol" 1>&2))
     exit_status=$?
     if [[ $exit_status -ne 0 ]]; then
         exit $exit_status
     fi
-    parse_scheduler_id <<< "${output}"
+    source_parsers "scontrol"
+    parse_job "${JOB_ID}" <<< "${output}"
     declare -p JOB >&2
 
     generate_template | report_metadata

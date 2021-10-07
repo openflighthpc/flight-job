@@ -78,9 +78,6 @@ module FlightJob
 
       def initialize(object)
         @object = object
-        if object.initializing?
-          raise InternalError, "Can not decorate job #{object.job_type}"
-        end
       end
 
       delegate :id, :job_type, to: :object
@@ -90,6 +87,13 @@ module FlightJob
 
       def state
         case job_type
+        when 'SUBMITTING'
+          'SUBMITTING'
+        when'BOOTSTRAPPING'
+          # Job's should not remain BOOTSTRAPPING.  If we have a BOOTSTRAPPING
+          # job here it is likely broken in some way.  We'd expect it to
+          # transition to FAILED_SUBMISSION soon.
+          'BROKEN'
         when 'FAILED_SUBMISSION'
           'FAILED'
         when 'SINGLETON'

@@ -31,6 +31,16 @@ module FlightJob
       include JobTransitionHelper
       include ActiveModel::Validations
 
+      SUBMITTER_SCHEMA = JSONSchemer.schema({
+        "type" => "object",
+        "additionalProperties" => true,
+        "required" => ["version", "id"],
+        "properties" => {
+          "version" => { "const" => 1 },
+          "id" => { "type" => "string", "minLength" => 1 },
+        }
+      })
+
       validate do
         job.valid?
         job.errors.each { |e| @errors << e }
@@ -72,12 +82,10 @@ module FlightJob
         FlightJob.logger.info("Submitting Job: #{job.id}")
         cmd = [FlightJob.config.submit_script_path, job.metadata["rendered_path"]]
         execute_command(*cmd, tag: 'submit') do |status, out, err, data|
-          # set the status/stdout/stderr
           job.metadata['submit_status'] = status.exitstatus
           job.metadata['submit_stdout'] = out
           job.metadata['submit_stderr'] = err
 
-          # Return early if the submission failed
           unless status.success?
             job.metadata['job_type'] = 'FAILED_SUBMISSION'
             job.save_metadata
@@ -85,12 +93,13 @@ module FlightJob
             return
           end
 
-          # Save the job into the bootstrapping state.
+          validate_data(SUBMITTER_SCHEMA, data, tag: "submit")
+
           job.metadata["job_type"] = "BOOTSTRAPPING"
+          job.metadata['scheduler_id'] = data['id']
           job.save_metadata
 
-          # Bootstrap the monitor
-          BootstrapMonitor.new(job).run!
+          BootstrapMonitor.new(job).run
         end
       end
     end
