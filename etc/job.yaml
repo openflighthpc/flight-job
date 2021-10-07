@@ -86,6 +86,20 @@
 # submit_script_path: libexec/job/<scheduler>/submit.sh
 
 # ==============================================================================
+# Bootstrap Script Path
+# Specify the path to the script which bootstraps jobs.
+#
+# The default value will automatically use the 'scheduler' config. This feature
+# is not supported when overridden.
+#
+# Relative paths are expanded according to the "Relative path expansion" rules
+# described below.
+#
+# The environment variable flight_JOB_bootstrap_script_path takes precedence.
+# ==============================================================================
+# bootstrap_script_path: libexec/job/<scheduler>/bootstrap.sh
+
+# ==============================================================================
 # Monitor Script Paths
 # Specify the paths to the scripts which monitor jobs.  Separate scripts are
 # used for monitoring array and non-array jobs.
