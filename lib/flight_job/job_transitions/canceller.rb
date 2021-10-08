@@ -25,6 +25,8 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+require 'open3'
+
 module FlightJob
   module JobTransitions
     class Canceller
@@ -69,7 +71,9 @@ module FlightJob
       private
 
       def execute_command(*cmd, tag:)
-        env = ENV.slice('PATH', 'HOME', 'USER', 'LOGNAME')
+        env = ENV.slice('PATH', 'HOME', 'USER', 'LOGNAME').tap do |h|
+          h['PATH'] += Flight.config.additional_paths
+        end
         cmd_stdout, cmd_stderr, status = Open3.capture3(env, *cmd, unsetenv_others: true, close_others: true)
 
         unless status.success?
