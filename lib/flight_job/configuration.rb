@@ -63,6 +63,9 @@ module FlightJob
     attribute :scheduler, default: 'slurm'
     validates :scheduler, presence: true
 
+    attribute :additional_paths, default: '',
+              transform: ->(paths) { paths.empty? || paths[0] == ':' ? paths : ":#{paths}" }
+
     attribute :submit_script_path,
               default: ->(config) { File.join('libexec/job', config.scheduler, 'submit.sh') },
               transform: relative_to(root_path)

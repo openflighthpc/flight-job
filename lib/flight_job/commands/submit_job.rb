@@ -25,8 +25,6 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require 'open3'
-
 module FlightJob
   module Commands
     class SubmitJob < Command

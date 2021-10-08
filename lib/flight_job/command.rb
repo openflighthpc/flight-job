@@ -29,7 +29,6 @@ require 'ostruct'
 require 'pastel'
 require 'tty-editor'
 
-require 'open3'
 require 'stringio'
 
 module FlightJob
