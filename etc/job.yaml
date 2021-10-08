@@ -74,7 +74,7 @@
 # ==============================================================================
 # Additional PATH directories
 #
-# Additional directories to add to PATH when running the HPC scheduler
+# Additional directories to append to PATH when running the HPC scheduler
 # integratation scripts.
 #
 # If the binaries for your HPC scheduler are installed to non-common
