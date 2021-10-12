@@ -50,17 +50,14 @@ module FlightJob
     constructor do
       template(<<~ERB) if interactive?
         <% each(:default) do |value, padding:, field:| -%>
-        <%= format_row(field, value, padding) %>
+        <%=   format_row(field, value, padding) %>
         <% end -%>
-        <%
-          submit_outputs = callables.select { |proc| proc.config[:section] == :submit }
-          if verbose? || submit?
-        -%>
+        <% if submit? -%>
 
-        <%= pastel.blue.bold "Submit Stdout" -%><%= pastel.bold ':' %>
-        <%= pastel.green format(job.submit_stdout) %>
-        <%= pastel.blue.bold "Submit Stderr" -%><%= pastel.bold ':' %>
-        <%= pastel.green format(job.submit_stderr) %>
+        <%=   pastel.blue.bold "Submit Stdout" -%><%= pastel.bold ':' %>
+        <%=   pastel.green format(job.submit_stdout) %>
+        <%=   pastel.blue.bold "Submit Stderr" -%><%= pastel.bold ':' %>
+        <%=   pastel.green format(job.submit_stderr) %>
         <% end -%>
       ERB
 
