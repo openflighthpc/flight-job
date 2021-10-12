@@ -31,8 +31,6 @@ module FlightJob
   class Outputs::ListTemplates < OutputMode::Formatters::Index
     constructor do
       register(header: 'Index', row_color: :yellow) do |template|
-        # NOTE: The OutputMode library does not support *_with_index type notation
-        #       Instead the index needs to be cached on the object itself
         template.index
       end
       register(header: 'Name') do |template|
