@@ -29,9 +29,9 @@ require 'output_mode'
 
 module FlightJob
   class Outputs::InfoJob < OutputMode::Formatters::Show
-    def initialize(job, submit: true, **opts)
-      @submit = submit
+    def initialize(job, **opts)
       super(job, **opts)
+      @submit = verbose? || job.submit_status != 0
     end
 
     def submit?
