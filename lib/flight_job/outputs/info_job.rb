@@ -117,7 +117,7 @@ module FlightJob
         register(header: 'Estimated end', &:estimated_end_time)
       end
 
-      register(header: "Desktop ID:", &:desktop_id)
+      register(header: "Desktop ID", &:desktop_id)
     end
   end
 end
