@@ -174,7 +174,7 @@ module FlightJob
       @output_options ||= {
         verbose: (opts.verbose ? true : nil),
         ascii: (opts.ascii ? true : nil),
-        interactive: (opts.ascii || opts.pretty || $stdout.tty? ? true : nil)
+        humanize: (opts.ascii || opts.pretty || $stdout.tty? ? true : nil)
       }
     end
 

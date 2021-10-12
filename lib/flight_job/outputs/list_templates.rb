@@ -29,7 +29,7 @@ require 'output_mode'
 
 module FlightJob
   class Outputs::ListTemplates < OutputMode::Formatters::Index
-    constructor do
+    def register_all
       register(header: 'Index', row_color: :yellow) do |template|
         template.index
       end
@@ -40,7 +40,7 @@ module FlightJob
 
       if verbose?
         register(header: file_header) do |template|
-          if interactive?
+          if humanize?
             Pathname.new(template.workload_path).relative_path_from FlightJob.config.templates_dir
           else
             template.workload_path

@@ -35,7 +35,7 @@ module FlightJob
       time ? Time.parse(time) : time
     end
 
-    constructor do
+    def register_all
       register(header: 'Index', row_color: :yellow, &:index)
       register(header: 'Job ID', &:job_id)
       register(header: 'State') { |t| t.metadata['state'] }

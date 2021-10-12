@@ -35,7 +35,7 @@ module FlightJob
       MarkdownRenderer.new(text).wrap_markdown
     end
 
-    constructor do
+    def register_all
       # Intentionally overwrite the template in all modes
       template(<<~ERB)
         # <%= workload_path -%> -- <%= id %>

@@ -29,7 +29,7 @@ require 'output_mode'
 
 module FlightJob
   class Outputs::ListScripts < OutputMode::Formatters::Index
-    constructor do
+    def register_all
       register(header: 'ID', row_color: :yellow) { |s| s.id }
       register(header: 'Template ID') { |s| s.template_id }
       register(header: 'File Name') { |s| s.script_name }

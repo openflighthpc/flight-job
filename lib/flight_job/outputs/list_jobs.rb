@@ -68,7 +68,7 @@ module FlightJob
     # Override the "render" method to add the estimated time footnote
     def render(*a, **o)
       super.tap do |txt|
-        next unless interactive?
+        next unless humanize?
         next unless @estimated_time
         txt << "\n"
         txt << pastel.yellow(" * Estimated start/finish time(s)")
@@ -90,7 +90,7 @@ module FlightJob
     def register_shared_times
       register(header: 'Submitted', long_date: true, &:created_at)
       register(header: 'Started') do |job|
-        if job.actual_start_time || !interactive?
+        if job.actual_start_time || !humanize?
           job.actual_start_time
         elsif job.estimated_start_time
           @estimated_time = true
@@ -99,7 +99,7 @@ module FlightJob
         end
       end
       register(header: 'Ended') do |job|
-        if job.actual_end_time || !interactive?
+        if job.actual_end_time || !humanize?
           job.actual_end_time
         elsif job.estimated_end_time
           @estimated_time = true
@@ -120,8 +120,8 @@ module FlightJob
       @pastel ||= Pastel.new(enabled: color?)
     end
 
-    constructor do
-      if interactive?
+    def register_all
+      if humanize?
         register_ids
         register_state
 

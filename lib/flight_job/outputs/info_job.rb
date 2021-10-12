@@ -105,8 +105,8 @@ module FlightJob
       end
     end
 
-    constructor do
-      template(<<~ERB) if interactive?
+    def register_all
+      template(<<~ERB) if humanize?
         <% each(:default) do |value, padding:, field:| -%>
         <%=   format_row(field, value, padding) %>
         <% end -%>
@@ -131,7 +131,7 @@ module FlightJob
 
       # Display the stdout/stderr callables in non-interactive
       # They are hard rendered into the interactive template
-      register_submit_std unless interactive?
+      register_submit_std unless humanize?
 
       # NOTE: The following appear after the submit attributes in the non-interactive output. This
       # maintains the column order and backwards compatibility.

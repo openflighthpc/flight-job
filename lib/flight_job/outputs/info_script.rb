@@ -29,8 +29,8 @@ require 'output_mode'
 
 module FlightJob
   class Outputs::InfoScript < OutputMode::Formatters::Show
-    constructor do
-      template(<<~ERB) if interactive?
+    def register_all
+      template(<<~ERB) if humanize?
         <% each(:main) do |value, field:, padding:, **_| -%>
         <%= padding -%><%= pastel.blue.bold field -%><%= pastel.bold ':' -%> <%= pastel.green value %>
         <% end -%>

@@ -41,8 +41,8 @@ module FlightJob
       time ? Time.parse(time) : time
     end
 
-    constructor do
-      template(<<~ERB) if interactive?
+    def register_all
+      template(<<~ERB) if humanize?
         <% each(:default) do |value, padding:, field:| -%>
         <%
             # Apply the colours
