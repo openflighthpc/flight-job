@@ -47,6 +47,64 @@ module FlightJob
 
     alias_method :job, :object
 
+    def register_ids
+      register(header: 'ID') { job.id }
+      register(header: 'Script ID') { job.script_id }
+      register(header: 'Scheduler ID') { job.scheduler_id }
+    end
+
+    # Show a boolean in the "simplified" output, and the exit code in the verbose
+    # NOTE: There is a rendering issue of integers into the TSV output. Needs investigation
+    def register_status
+      if verbose?
+        register(header: 'Submit Status') { job.submit_status.to_s }
+      else
+        register(header: 'Submitted') { job.submit_status == 0 }
+      end
+    end
+
+    def register_paths
+      stdout_header = if job.stdout_path == job.stderr_path && !verbose?
+        'Output Path'
+      else
+        'Stdout Path'
+      end
+      register(header: stdout_header) { job.stdout_path }
+      if verbose?
+        register(header: 'Stderr Path') { job.stderr_path }
+      end
+    end
+
+    def register_submit_std
+      register(header: 'Submit Stdout') { job.submit_stdout }
+      register(header: 'Submit Stderr') { job.submit_stderr }
+    end
+
+    def register_times(force: nil)
+      a_start = ->() { register(header: 'Started at', &:actual_start_time) }
+      a_end   = ->() { register(header: 'Ended at', &:actual_end_time) }
+      e_start = ->() { register(header: 'Estimated Start', &:estimated_start_time) }
+      e_end   = ->() { register(header: 'Estimated Finish', &:estimated_end_time) }
+
+      unless [:actual, :estimated, nil].include? force
+        raise InternalError, "Unrecognised force flag: #{force}"
+      end
+
+      case force
+      when :actual
+        a_start.call
+        a_end.call
+      when :estimated
+        e_start.call
+        e_end.call
+      when :inferred
+        job.actual_start_time ? a_start.call : e_start.call
+        job.actual_end_time   ? a_end.call   : e_end.call
+      else
+        raise InternalError, "Unrecognised force flag: #{force}"
+      end
+    end
+
     constructor do
       template(<<~ERB) if interactive?
         <% each(:default) do |value, padding:, field:| -%>
@@ -61,49 +119,19 @@ module FlightJob
         <% end -%>
       ERB
 
-      register(header: 'ID') { job.id }
-      register(header: 'Script ID') { job.script_id }
-      register(header: 'Scheduler ID') { job.scheduler_id }
+      register_ids
       register(header: 'State') { job.state }
-
-      # Show a boolean in the "simplified" output, and the exit code in the verbose
-      # NOTE: There is a rendering issue of integers into the TSV output. Needs investigation
-      if verbose?
-        register(header: 'Submit Status') { job.submit_status.to_s }
-      else
-        register(header: 'Submitted') { job.submit_status == 0 }
-      end
+      register_status
 
       register(header: 'Submitted at', &:created_at)
 
-      if job.actual_start_time || verbose?
-        register(header: 'Started at', &:actual_start_time)
-      else
-        register(header: 'Estimated Start', &:estimated_start_time)
-      end
+      register_times force: (verbose? ? :actual : :inferred)
 
-      if job.actual_end_time || verbose?
-        register(header: 'Ended at', &:actual_end_time)
-      else
-        register(header: 'Estimated Finish', &:estimated_end_time)
-      end
-
-      stdout_header = if job.stdout_path == job.stderr_path && !verbose?
-        'Output Path'
-      else
-        'Stdout Path'
-      end
-      register(header: stdout_header) { job.stdout_path }
-      if verbose?
-        register(header: 'Stderr Path') { job.stderr_path }
-      end
+      register_paths
 
       # Display the stdout/stderr callables in non-interactive
       # They are hard rendered into the interactive template
-      unless interactive?
-        register(header: 'Submit Stdout') { job.submit_stdout }
-        register(header: 'Submit Stderr') { job.submit_stderr }
-      end
+      register_submit_std unless interactive?
 
       # NOTE: The following appear after the submit attributes in the non-interactive output. This
       # maintains the column order and backwards compatibility.
@@ -112,10 +140,7 @@ module FlightJob
       #
       # Consider reordering on the next major version bump.
       register(header: 'Results Dir') { job.results_dir }
-      if verbose?
-        register(header: 'Estimated start', &:estimated_start_time)
-        register(header: 'Estimated end', &:estimated_end_time)
-      end
+      register_times(force: :estimated) if verbose?
 
       register(header: "Desktop ID", &:desktop_id)
     end
