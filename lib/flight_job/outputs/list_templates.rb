@@ -41,7 +41,7 @@ module FlightJob
       file_header = "File (Dir: #{FlightJob.config.templates_dir})"
 
       if verbose?
-        register_column(header: file_header) do |template|
+        register(header: file_header) do |template|
           if interactive?
             Pathname.new(template.workload_path).relative_path_from FlightJob.config.templates_dir
           else
