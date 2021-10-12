@@ -86,10 +86,6 @@ module FlightJob
       e_start = ->() { register(header: 'Estimated Start', &:estimated_start_time) }
       e_end   = ->() { register(header: 'Estimated Finish', &:estimated_end_time) }
 
-      unless [:actual, :estimated, nil].include? force
-        raise InternalError, "Unrecognised force flag: #{force}"
-      end
-
       case force
       when :actual
         a_start.call
@@ -97,11 +93,9 @@ module FlightJob
       when :estimated
         e_start.call
         e_end.call
-      when :inferred
+      else
         job.actual_start_time ? a_start.call : e_start.call
         job.actual_end_time   ? a_end.call   : e_end.call
-      else
-        raise InternalError, "Unrecognised force flag: #{force}"
       end
     end
 
@@ -125,7 +119,7 @@ module FlightJob
 
       register(header: 'Submitted at', &:created_at)
 
-      register_times force: (verbose? ? :actual : :inferred)
+      register_times force: (verbose? ? :actual : nil)
 
       register_paths
 
