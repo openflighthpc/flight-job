@@ -236,7 +236,7 @@ module FlightJob
             "additionalProperties" => false,
             "properties" => {
               **QUESTION_PROPS_STUB,
-              "default" => { "type" => "string" },
+              "default" => { "type" => ["string", "integer", "number"] },
               "format" => {
                 "type" => "object",
                 "additionalProperties" => false,
@@ -250,7 +250,7 @@ module FlightJob
                       "required" => ["text", "value"],
                       "properties" => {
                         "text" => { "type" => "string" },
-                        "value" => { "type" => "string" }
+                        "value" => { "type" => ["string", "integer", "number"] }
                       }
                     }
                   }
@@ -268,7 +268,7 @@ module FlightJob
               **QUESTION_PROPS_STUB,
               "default" => {
                 "type" => "array",
-                "items" => { "type" => "string" }
+                "items" => { "type" => ["string", "integer", "number"] },
               },
               "format" => {
                 "type" => "object",
@@ -283,7 +283,7 @@ module FlightJob
                       "required" => ["text", "value"],
                       "properties" => {
                         "text" => { "type" => "string" },
-                        "value" => { "type" => "string" }
+                        "value" => { "type" => ["string", "integer", "number"] }
                       }
                     }
                   }
