@@ -123,14 +123,16 @@ module FlightJob
 
       register_paths
 
-      # Display the stdout/stderr callables in non-interactive
-      # They are hard rendered into the interactive template
+      # Display the stdout/stderr callables in non-humanized output.
+      # They are hard rendered into the humanized template.
       register_submit_std unless humanize?
 
-      # NOTE: The following appear after the submit attributes in the non-interactive output. This
-      # maintains the column order and backwards compatibility.
+      # NOTE: The following appear after the submit outputs in the
+      # non-humanized output. This maintains the column order and backwards
+      # compatibility.
       #
-      # The submit columns will always be sorted to the bottom in the interactive outputs.
+      # The submit columns will always be sorted to the bottom in the
+      # humanized outputs.
       #
       # Consider reordering on the next major version bump.
       register(header: 'Results Dir') { job.results_dir }
