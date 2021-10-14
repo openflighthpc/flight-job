@@ -25,47 +25,122 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-
 require 'output_mode'
 
 module FlightJob
-  module Outputs::ListJobs
-    extend OutputMode::TLDR::Index
+  class Outputs::ListJobs < OutputMode::Formatters::Index
+    # Used to dynamically format the time based
+    def format_dynamic_time(time, long_date: false)
+      # Modify the time to be local
+      time.localtime
 
-    register_column(header: 'ID', row_color: :yellow) { |s| s.id }
-    register_column(header: 'Script ID') { |j| j.script_id }
-    register_column(header: 'Sched. ID', verbose: true) { |j| j.scheduler_id }
-    register_column(header: 'State') { |j| j.state }
-
-    # Show a boolean in the "simplified" output, and the exit code in the verbose
-    # NOTE: The headers are intentionally toggled between outputs
-    register_column(header: 'Submitted', verbose: false) { |j| j.submit_status == 0 }
-    register_column(header: 'Submit Status', verbose: true) { |j| j.submit_status }
-
-    register_column(header: 'Submitted at') do |job, verbose:|
-      if verbose
-        job.created_at
+      # Display the time if the same day
+      if same_day?(time)
+        time.strftime("%H:%M")
+      # Display the date
+      elsif long_date
+        time.strftime("%d/%m/%y")
       else
-        DateTime.rfc3339(job.created_at).strftime('%d/%m/%y %H:%M')
+        time.strftime("%d/%m")
       end
     end
 
-    register_column(header: 'Started at') do |job, verbose:|
-      Outputs.format_time(job.actual_start_time, verbose)
+    # Checks if a given time is the same day
+    # NOTE: Must have the same offset
+    def same_day?(time)
+      [:day, :mon, :year].all? { |m| [time_now, time].map(&m).uniq.length == 1 }
     end
-    register_column(header: 'Ended at') do |job, verbose:|
-      Outputs.format_time(job.actual_end_time, verbose)
+
+    # Used to determine the current day
+    def time_now
+      @time_now ||= Time.now
     end
 
-    register_column(header: 'StdOut Path', verbose: true) { |j| j.stdout_path }
-    register_column(header: 'StdErr Path', verbose: true) { |j| j.stderr_path }
-    register_column(header: 'Results Dir', verbose: true) { |j| j.results_dir }
+    # Override the "format" to allow for dynamic times
+    def format(value, **config)
+      if value.is_a?(Time) && !verbose?
+        format_dynamic_time(value, long_date: config[:long_date])
+      else
+        super
+      end
+    end
 
-    register_column(header: 'Estimated Start', verbose: true, &:estimated_start_time)
-    register_column(header: 'Estimated Finish', verbose: true, &:estimated_end_time)
+    # Override the "render" method to add the estimated time footnote
+    def render(*a, **o)
+      super.tap do |txt|
+        next unless humanize?
+        next unless @estimated_time
+        txt << "\n"
+        txt << pastel.yellow(" * Estimated start/finish time(s)")
+      end
+    end
 
-    def self.build_output(**opts)
-      super(row_color: :cyan, header_color: :bold, **opts)
+    def register_ids
+      register(header: 'ID', row_color: :yellow) { |j| j.id }
+      register(header: 'Script ID') { |j| j.script_id }
+      register(header: 'Sched. ID') { |j| j.scheduler_id }
+    end
+
+    def register_state
+      register(header: 'State') { |j| j.state }
+    end
+
+    # NOTE: The estimated time *may* be displayed in an interactive shell
+    # This must not affect the non-interactive output
+    def register_shared_times
+      register(header: 'Submitted', long_date: true, &:created_at)
+      register(header: 'Started') do |job|
+        if job.actual_start_time || !humanize?
+          job.actual_start_time
+        elsif job.estimated_start_time
+          @estimated_time = true
+          time = format(job.estimated_start_time)
+          pastel.yellow "#{time}*"
+        end
+      end
+      register(header: 'Ended') do |job|
+        if job.actual_end_time || !humanize?
+          job.actual_end_time
+        elsif job.estimated_end_time
+          @estimated_time = true
+          time = format(job.estimated_end_time)
+          pastel.yellow "#{time}*"
+        end
+      end
+    end
+
+    def register_paths
+      register(header: 'StdOut Path', &:stdout_path)
+      register(header: 'StdErr Path', &:stderr_path)
+      register(header: 'Results Dir', &:results_dir)
+    end
+
+
+    def pastel
+      @pastel ||= Pastel.new(enabled: color?)
+    end
+
+    def register_all
+      if humanize?
+        register_ids
+        register_state
+
+        register_shared_times
+
+        register_paths if verbose?
+      else
+        # NOTE The following cannot be re-ordered without introducing a breaking change
+        register_ids
+        register_state
+
+        register(header: 'Submit Status') { |j| j.submit_status }
+
+        register_shared_times
+
+        register_paths
+        register(header: 'Estimated Start',  &:estimated_start_time)
+        register(header: 'Estimated Finish', &:estimated_end_time)
+      end
     end
   end
 end

@@ -28,28 +28,25 @@
 require 'output_mode'
 
 module FlightJob
-  module Outputs::ListTemplates
-    extend OutputMode::TLDR::Index
-
-    register_column(header: 'Index', row_color: :yellow) do |template|
-      # NOTE: The OutputMode library does not support *_with_index type notation
-      #       Instead the index needs to be cached on the object itself
-      template.index
-    end
-    register_column(header: 'Name') do |template|
-      template.id
-    end
-    file_header = "File (Dir: #{FlightJob.config.templates_dir})"
-    register_column(header: file_header, verbose: true) do |template, interactive:|
-      if interactive
-        Pathname.new(template.workload_path).relative_path_from FlightJob.config.templates_dir
-      else
-        template.workload_path
+  class Outputs::ListTemplates < OutputMode::Formatters::Index
+    def register_all
+      register(header: 'Index', row_color: :yellow) do |template|
+        template.index
       end
-    end
+      register(header: 'Name') do |template|
+        template.id
+      end
+      file_header = "File (Dir: #{FlightJob.config.templates_dir})"
 
-    def self.build_output(**opts)
-      super(row_color: :cyan, header_color: :bold, **opts)
+      if verbose?
+        register(header: file_header) do |template|
+          if humanize?
+            Pathname.new(template.workload_path).relative_path_from FlightJob.config.templates_dir
+          else
+            template.workload_path
+          end
+        end
+      end
     end
   end
 end

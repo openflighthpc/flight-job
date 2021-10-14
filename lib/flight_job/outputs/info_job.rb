@@ -28,107 +28,117 @@
 require 'output_mode'
 
 module FlightJob
-  module Outputs::InfoJob
-    extend OutputMode::TLDR::Show
+  class Outputs::InfoJob < OutputMode::Formatters::Show
+    def initialize(job, **opts)
+      super(job, **opts)
+      @submit = verbose? || job.submit_status != 0
+    end
 
-    TEMPLATE = <<~ERB
-      <% verbose = output.context[:verbose] -%>
-      <% each(:default) do |value, padding:, field:| -%>
-      <%
-          # Apply the colours
-          value = pastel.green value
-          field = pastel.blue.bold field
-      -%>
-      <%= padding -%><%= pastel.blue.bold field -%><%= pastel.bold ':' -%> <%= value %>
-      <% end -%>
-      <%
-        submit_outputs = output.procs.select { |proc| proc.config[:section] == :submit }
-        if verbose || output.context[:submit]
-      -%>
+    def submit?
+      @submit ? true : false
+    end
 
-      <%= pastel.blue.bold "Submit Stdout" -%><%= pastel.bold ':' %>
-      <%= pastel.green submit_outputs.first.call(model) %>
-      <%= pastel.blue.bold "Submit Stderr" -%><%= pastel.bold ':' %>
-      <%= pastel.green submit_outputs.last.call(model) %>
-      <% end -%>
-    ERB
+    def format_row(field, value, padding)
+      f = pastel.blue.bold field
+      s = pastel.bold ':'
+      v = pastel.green value
+      "#{padding}#{f}#{s} #{v}"
+    end
 
-    register_attribute(header: 'ID') { |j| j.id }
-    register_attribute(header: 'Script ID') { |j| j.script_id }
-    register_attribute(header: 'Scheduler ID') { |j| j.scheduler_id }
-    register_attribute(header: 'State') { |j| j.state }
+    alias_method :job, :object
+
+    def register_ids
+      register(header: 'ID') { job.id }
+      register(header: 'Script ID') { job.script_id }
+      register(header: 'Scheduler ID') { job.scheduler_id }
+    end
 
     # Show a boolean in the "simplified" output, and the exit code in the verbose
     # NOTE: There is a rendering issue of integers into the TSV output. Needs investigation
-    register_attribute(header: 'Submitted', verbose: false) { |j| j.submit_status == 0 }
-    register_attribute(header: 'Submit Status', verbose: true) { |j| j.submit_status.to_s }
-
-    register_attribute(header: 'Submitted at') do |job, verbose:|
-      if verbose
-        job.created_at
+    def register_status
+      if verbose?
+        register(header: 'Submit Status') { job.submit_status.to_s }
       else
-        DateTime.rfc3339(job.created_at).strftime('%d/%m/%y %H:%M')
+        register(header: 'Submitted') { job.submit_status == 0 }
       end
     end
 
-    start_header = ->(job, verbose:) do
-      job.actual_start_time || verbose ? 'Started at' : 'Estimated Start'
-    end
-    register_attribute(header: start_header) do |job, verbose:|
-      if job.actual_start_time || verbose
-        Outputs.format_time(job.actual_start_time, verbose)
-      else
-        Outputs.format_time(job.estimated_start_time, false)
-      end
-    end
-
-    end_header = ->(job, verbose:) do
-      job.actual_end_time || verbose ? 'Ended at' : 'Estimated Finish'
-    end
-    register_attribute(header: end_header) do |job, verbose:|
-      if job.actual_end_time || verbose
-        Outputs.format_time(job.actual_end_time, verbose)
-      else
-        Outputs.format_time(job.estimated_end_time, false)
-      end
-    end
-
-    path_header = ->(job, verbose:) do
-      if job.stdout_path == job.stderr_path && !verbose
+    def register_paths
+      stdout_header = if job.stdout_path == job.stderr_path && !verbose?
         'Output Path'
       else
         'Stdout Path'
       end
-    end
-    register_attribute(header: path_header) { |j| j.stdout_path }
-    register_attribute(header: 'Stderr Path', verbose: true) { |j| j.stderr_path }
-
-    register_attribute(section: :submit, header: 'Submit Stdout') do |job|
-      job.submit_stdout
-    end
-    register_attribute(section: :submit, header: 'Submit Stderr') do |job|
-      job.submit_stderr
+      register(header: stdout_header) { job.stdout_path }
+      if verbose?
+        register(header: 'Stderr Path') { job.stderr_path }
+      end
     end
 
-    # NOTE: The following appear after the submit attributes in the non-interactive output. This
-    # maintains the column order and backwards compatibility.
-    #
-    # The submit columns will always be sorted to the bottom in the interactive outputs.
-    #
-    # Consider reordering on the next major version bump.
-    register_attribute(header: 'Results Dir') { |j| j.results_dir }
-    register_attribute(verbose: true, header: 'Estimated start') do |job|
-      Outputs.format_time(job.estimated_start_time, false)
-    end
-    register_attribute(verbose: true, header: 'Estimated end') do |job|
-      Outputs.format_time(job.estimated_end_time, false)
+    def register_submit_std
+      register(header: 'Submit Stdout') { job.submit_stdout }
+      register(header: 'Submit Stderr') { job.submit_stderr }
     end
 
-    register_attribute(header: "Desktop ID:", &:desktop_id)
+    def register_times(force: nil)
+      a_start = ->() { register(header: 'Started at', &:actual_start_time) }
+      a_end   = ->() { register(header: 'Ended at', &:actual_end_time) }
+      e_start = ->() { register(header: 'Estimated Start', &:estimated_start_time) }
+      e_end   = ->() { register(header: 'Estimated Finish', &:estimated_end_time) }
 
-    def self.build_output(**opts)
-      submit = opts.delete(:submit)
-      super(template: TEMPLATE, context: { submit: submit }, **opts)
+      case force
+      when :actual
+        a_start.call
+        a_end.call
+      when :estimated
+        e_start.call
+        e_end.call
+      else
+        job.actual_start_time ? a_start.call : e_start.call
+        job.actual_end_time   ? a_end.call   : e_end.call
+      end
+    end
+
+    def register_all
+      template(<<~ERB) if humanize?
+        <% each(:default) do |value, padding:, field:| -%>
+        <%=   format_row(field, value, padding) %>
+        <% end -%>
+        <% if submit? -%>
+
+        <%=   pastel.blue.bold "Submit Stdout" -%><%= pastel.bold ':' %>
+        <%=   pastel.green format(job.submit_stdout) %>
+        <%=   pastel.blue.bold "Submit Stderr" -%><%= pastel.bold ':' %>
+        <%=   pastel.green format(job.submit_stderr) %>
+        <% end -%>
+      ERB
+
+      register_ids
+      register(header: 'State') { job.state }
+      register_status
+
+      register(header: 'Submitted at', &:created_at)
+
+      register_times force: (verbose? ? :actual : nil)
+
+      register_paths
+
+      # Display the stdout/stderr callables in non-humanized output.
+      # They are hard rendered into the humanized template.
+      register_submit_std unless humanize?
+
+      # NOTE: The following appear after the submit outputs in the
+      # non-humanized output. This maintains the column order and backwards
+      # compatibility.
+      #
+      # The submit columns will always be sorted to the bottom in the
+      # humanized outputs.
+      #
+      # Consider reordering on the next major version bump.
+      register(header: 'Results Dir') { job.results_dir }
+      register_times(force: :estimated) if verbose?
+
+      register(header: "Desktop ID", &:desktop_id)
     end
   end
 end

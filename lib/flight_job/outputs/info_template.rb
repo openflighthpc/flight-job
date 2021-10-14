@@ -25,44 +25,36 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
+require 'output_mode'
 require_relative '../markdown_renderer'
 
 module FlightJob
-  class Outputs::InfoTemplate
-    TEMPLATE = ERB.new(<<~ERB, nil, '-')
-      # <%= workload_path -%> -- <%= id %>
-
-      ## DESCRIPTION
-
-      <%= metadata['synopsis'] %>
-      <%= metadata['description'] -%><%= "\n" if metadata['description'] -%>
-
-      ## LICENSE
-
-      This work is licensed under a <%= metadata['license'] -%> License.
-
-      ## COPYRIGHT
-
-      <%= metadata['copyright'] -%>
-    ERB
-
-    def self.build_output(**opts)
-      new(**opts)
+  class Outputs::InfoTemplate < OutputMode::Formatters::Show
+    def self.render(template, **config)
+      text = super
+      MarkdownRenderer.new(text).wrap_markdown
     end
 
-    def initialize(**opts)
-      @opts = opts
-    end
+    def register_all
+      # Intentionally overwrite the template in all modes
+      template(<<~ERB)
+        # <%= workload_path -%> -- <%= id %>
 
-    def render(template)
-      bind = nil
-      # NOTE: template.send(:binding) does not work as you would expect
-      # It returns the active binding from the moment it was called
-      # aka Outputs::InfoTemplate not Template
-      #
-      # Instead it needs to be called within instance_exec
-      template.instance_exec { bind = binding }
-      MarkdownRenderer.new(TEMPLATE.result(bind)).wrap_markdown
+        ## DESCRIPTION
+
+        <%= metadata['synopsis'] %>
+        <%= metadata['description'] -%><%= "\n" if metadata['description'] -%>
+
+        ## LICENSE
+
+        This work is licensed under a <%= metadata['license'] -%> License.
+
+        ## COPYRIGHT
+
+        <%= metadata['copyright'] -%>
+      ERB
+
+      scope object
     end
   end
 end

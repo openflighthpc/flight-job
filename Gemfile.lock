@@ -49,7 +49,7 @@ GEM
       rexml
     method_source (1.0.0)
     minitest (5.14.4)
-    output_mode (1.6.0)
+    output_mode (1.7.1)
       pastel (>= 0.7)
       tty-color (>= 0.5)
       tty-table (>= 0.11)
@@ -92,7 +92,7 @@ GEM
     tty-screen (0.8.1)
     tzinfo (2.0.4)
       concurrent-ruby (~> 1.0)
-    unicode-display_width (2.0.0)
+    unicode-display_width (2.1.0)
     unicode_utils (1.4.0)
     uri_template (0.7.0)
     wisper (2.0.1)
@@ -108,7 +108,7 @@ DEPENDENCIES
   dotenv
   flight_configuration!
   json_schemer
-  output_mode
+  output_mode (~> 1.7.1)
   pastel
   pry
   pry-byebug

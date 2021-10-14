@@ -165,7 +165,7 @@ module FlightJob
         json = data.as_json
         output_options[:interactive] ? JSON.pretty_generate(json) : JSON.dump(json)
       else
-        klass.build_output(**output_options).render(*data)
+        klass.render(*data, **output_options)
       end
     end
 
@@ -173,7 +173,7 @@ module FlightJob
       @output_options ||= {
         verbose: (opts.verbose ? true : nil),
         ascii: (opts.ascii ? true : nil),
-        interactive: (opts.ascii || opts.pretty || $stdout.tty? ? true : nil)
+        humanize: (opts.ascii || opts.pretty || $stdout.tty? ? true : nil)
       }
     end
 

@@ -33,11 +33,6 @@ module FlightJob
         job.initialize_metadata(script)
         job.submit
 
-        # Patches the submit flag on to output_options
-        # NOTE: There is probably a better way to do this in general,
-        #       but this is a once off
-        output_options.merge!(submit: job.metadata['submit_status'] != 0)
-
         puts render_output(Outputs::InfoJob, job.decorate)
       end
 
