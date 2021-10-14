@@ -38,6 +38,7 @@ module FlightJob
     def register_all
       register(header: 'Index', row_color: :yellow, &:index)
       register(header: 'Job ID', &:job_id)
+      register(header: 'Sched. ID', &:scheduler_id)
       register(header: 'State') { |t| t.metadata['state'] }
 
       register(header: 'Started at') { |t| fetch_time(t, 'start_time') }
