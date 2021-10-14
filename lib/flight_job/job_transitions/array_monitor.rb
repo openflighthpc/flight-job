@@ -115,6 +115,7 @@ module FlightJob
       def build_tasks(data)
         data['tasks'].map do |index, datum|
           Task.new(job_id: id, index: index).tap do |task|
+            task.metadata['scheduler_id'] = datum['id']
             apply_task_attributes(task, datum)
           end
         end
