@@ -31,10 +31,10 @@ module FlightJob
     SINGLETON_SHARED_PROPS = {
       "version" => { "const" => 1 },
       "stdout_path" => { "type" => ['null', "string"] },
-      "stderr_path" => { "type" => ['null', "string"] }
+      "stderr_path" => { "type" => ['null', "string"] },
     }
     SINGLETON_STDOUT_SCHEMAS = {
-      common: JSONSchemer.schema({
+      common: {
         "type" => "object",
         "additionalProperties" => true,
         "required" => SINGLETON_SHARED_KEYS,
@@ -42,9 +42,9 @@ module FlightJob
           **SINGLETON_SHARED_PROPS,
           "state" => { "enum" => Job::STATES },
         }
-      }),
+      },
 
-      "PENDING" => JSONSchemer.schema({
+      "PENDING" => {
         "type" => "object",
         "additionalProperties" => false,
         "required" => SINGLETON_SHARED_KEYS,
@@ -58,9 +58,9 @@ module FlightJob
           "estimated_start_time" => { "type" => ["string", "null"] },
           "estimated_end_time" => { "type" => ["string", "null"] }
         }
-      }),
+      },
 
-      "RUNNING" => JSONSchemer.schema({
+      "RUNNING" => {
         "type" => "object",
         "additionalProperties" => false,
         "required" => [*SINGLETON_SHARED_KEYS, "start_time"],
@@ -74,9 +74,9 @@ module FlightJob
           "estimated_start_time" => { "type" => "null" },
           "estimated_end_time" => { "type" => ["string", "null"] }
         }
-      }),
+      },
 
-      "COMPLETED" => JSONSchemer.schema({
+      "COMPLETED" => {
         "type" => "object",
         "additionalProperties" => false,
         "required" => [*SINGLETON_SHARED_KEYS, "start_time", "end_time"],
@@ -90,9 +90,9 @@ module FlightJob
           "estimated_start_time" => { "type" => "null" },
           "estimated_end_time" => { "type" => "null" }
         }
-      }),
+      },
 
-      "CANCELLED" => JSONSchemer.schema({
+      "CANCELLED" => {
         "type" => "object",
         "additionalProperties" => false,
         "required" => [*SINGLETON_SHARED_KEYS, "end_time"],
@@ -106,9 +106,9 @@ module FlightJob
           "estimated_start_time" => { "type" => "null" },
           "estimated_end_time" => { "type" => "null" }
         }
-      }),
+      },
 
-      "UNKNOWN" => JSONSchemer.schema({
+      "UNKNOWN" => {
         "type" => "object",
         "additionalProperties" => false,
         "required" => SINGLETON_SHARED_KEYS,
@@ -122,7 +122,7 @@ module FlightJob
           "estimated_start_time" => { "type" => "null" },
           "estimated_end_time" => { "type" => "null" }
         }
-      })
+      }
     }.tap do |h|
       h["FAILED"] = h["COMPLETED"]
       h["COMPLETING"] = h["RUNNING"]
@@ -164,8 +164,8 @@ module FlightJob
         execute_command(*cmd, tag: 'monitor') do |status, stdout, stderr, data|
           if status.success?
             # Validate the output
-            validate_data(SINGLETON_STDOUT_SCHEMAS[:common], data, tag: "monitor (common)")
-            validate_data(SINGLETON_STDOUT_SCHEMAS[data['state']], data, tag: "monitor (#{data['state']})")
+            validate_data(schema(:common), data, tag: "monitor (common)")
+            validate_data(schema(data['state']), data, tag: "monitor (#{data['state']})")
 
             # Update the attributes
             apply_task_attributes(job, data)
@@ -177,6 +177,12 @@ module FlightJob
             raise_command_error
           end
         end
+      end
+
+      private
+
+      def schema(type)
+        JSONSchemer.schema(SINGLETON_STDOUT_SCHEMAS[type])
       end
     end
   end

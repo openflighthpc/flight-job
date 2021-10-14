@@ -43,6 +43,7 @@ module FlightJob
       "properties" => {
         # Required
         "version" => { "const" => 1 },
+        "scheduler_id" => { "type" => "string", "minLength" => 1 },
         "scheduler_state" => { "type" => "string", "minLength" => 1 },
         "state" => { "enum" => STATES },
         # Optional
@@ -201,6 +202,10 @@ module FlightJob
         reform_state_index_file
         reform_end_time_index_file
       end
+    end
+
+    def scheduler_id
+      metadata['scheduler_id']
     end
 
     def job

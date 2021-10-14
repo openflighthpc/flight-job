@@ -55,7 +55,7 @@ module FlightJob
 
       register(header: 'Index', &:index)
       register(header: 'Job ID', &:job_id)
-      register(header: 'Scheduler ID') { |t| t.job.metadata['scheduler_id'] }
+      register(header: 'Scheduler ID', &:scheduler_id)
       register(header: 'State') { |t| t.metadata['state'] }
 
       if task.metadata['start_time'] || verbose?
