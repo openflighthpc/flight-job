@@ -183,12 +183,12 @@ generation_questions:
       
       Note that this setting is specified in megabytes.  e.g. specify `1024`
       for 1 gigabyte.
-    default: '1024'
-    validate:
-      type: 'string'
-      pattern: '^\d+$'
+    default: 1024
     format:
-      type: text
+      type: number
+    validate:
+      type: integer
+      minimum: 1
 
   - id: array_configuration
     text: Array configuration

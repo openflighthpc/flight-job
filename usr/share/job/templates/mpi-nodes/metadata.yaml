@@ -188,12 +188,12 @@ generation_questions:
       
       Note that this setting is specified in megabytes.  e.g. specify `1024`
       for 1 gigabyte.
-    default: '1024'
+    default: 1024
     format:
-      type: text
+      type: number
     validate:
-      type: 'string'
-      pattern: '^\d+$'
+      type: integer
+      minimum: 1
 
   - id: number_of_nodes
     text: Processing requirements
@@ -204,12 +204,12 @@ generation_questions:
       (or process) that your script and/or application executes.  Note
       that requesting a larger number of slots will mean that your job
       could take longer to launch.
-    default: '2'
+    default: 2
     format:
-      type: text
+      type: number
     validate:
-      type: 'string'
-      pattern: '^\d+$'
+      type: integer
+      minimum: 1
 
   - id: workload
     text: "Who, or what, should we greet"
