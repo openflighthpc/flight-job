@@ -31,6 +31,18 @@ require 'tempfile'
 module FlightJob
   module Commands
     class CreateScript < Command
+      VALIDATION_ERROR = ERB.new(<<~'TEMPLATE', nil, '-')
+        Cannot continue as the following errors occurred whilst validating the answers
+        <% errors.each do |key, msgs| -%>
+        <%   next if msgs.empty? -%>
+
+        <%= key == :root ? "The root value" : "'" + key + "'" -%> is invalid as it:
+        <%   msgs.each do |msg| -%>
+        <%= ::FlightJob::QuestionPrompter.bulletify(msg) %>
+        <%   end -%>
+        <% end -%>
+      TEMPLATE
+
       def run
         # The script_id, answers and notes can be provided in a number of
         # different ways.  Including two that we consider to be user errors.
