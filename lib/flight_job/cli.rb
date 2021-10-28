@@ -246,6 +246,7 @@ module FlightJob
 
     create_command 'view-array-task-stdout', 'JOB_ID INDEX' do |c|
       c.summary = "View an array task's standard output"
+      apply_follow_opts.call(c)
       c.action do |args, opts|
         require_relative '../flight_job'
         opts.type = :task_stdout
@@ -255,6 +256,7 @@ module FlightJob
 
     create_command 'view-array-task-stderr', 'JOB_ID INDEX' do |c|
       c.summary = "View an array task's standard error"
+      apply_follow_opts.call(c)
       c.action do |args, opts|
         require_relative '../flight_job'
         opts.type = :task_stderr
