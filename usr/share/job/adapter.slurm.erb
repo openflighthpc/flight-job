@@ -59,6 +59,7 @@ session_start() {
         ${flight_ROOT:-/opt/flight}/bin/flight desktop \
             start \
             --script ${SESSION_SCRIPT} \
+            --no-env-override \
             | tee >( grep '^Identity' | cut -f2 > "${FLIGHT_SESSION_ID_PATH}" )
     )
 
