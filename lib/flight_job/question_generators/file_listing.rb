@@ -26,7 +26,7 @@
 #==============================================================================
 
 module FlightJob
-  module OptionGenerators
+  module QuestionGenerators
 
     # Generate a list of options based on globbing a directory or directories.
     #

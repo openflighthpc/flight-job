@@ -26,57 +26,24 @@
 #==============================================================================
 
 module FlightJob
-  module OptionGenerators
+  module QuestionGenerators
+    Dir.glob(File.expand_path('question_generators/*.rb', __dir__)).each do |path|
+      autoload FlightJob.constantize(File.basename(path, '.*')), path
+    end
 
-    # Substitutes placeholders in path.
-    #
-    # A place holder has the format `<identifier>` bracketed by the path
-    # separator.
-    #
-    # E.g. if the process is running as the user `vagrant`, the `<username>`
-    # placeholder is substituted with the string `vagrant`.
-    #
-    # PathPlaceholder.new(path: '/some/<username>/dir')
-    #=> '/some/vagrant/dir`.
-    class PathPlaceholder
-      def initialize(path: nil)
-        @path = path
-      end
-
-      def call
-        case @path
-        when nil
-          nil
-        when String
-          map_placeholders(@path)
-        when Array
-          @path.map { |p| map_placeholders(p) }
-        end
+    class << self
+      def call(type:, **opts)
+        generator(type, **opts).call
       end
 
       private
 
-      def map_placeholders(path)
-        segments = []
-        remaining = path
-        loop do
-          segments << File.basename(remaining)
-          break if remaining == File::SEPARATOR
-          remaining = File.dirname(remaining)
-        end
-        segments = segments
-          .reverse
-          .map { |segment| sub_placeholder(segment) }
-        File.join(*segments)
-      end
-
-      def sub_placeholder(segment)
-        case segment
-        when "<username>"
-          Etc.getlogin
-        else
-          segment
-        end
+      def generator(type, **opts)
+        const_string = FlightJob.constantize(type)
+        FlightJob::QuestionGenerators.const_get(const_string).new(**opts)
+      rescue NameError
+        FlightJob.logger.fatal "Unknown option generator #{type}"
+        raise InternalError, "Unknown option generator #{type}"
       end
     end
   end

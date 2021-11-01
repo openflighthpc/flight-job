@@ -281,14 +281,11 @@ module FlightJob
       end
     end
 
-    # XXX Fold into generation_questions???
-    def questions_data
-      return [] if metadata.nil?
-      metadata['generation_questions']
-    end
-
     def generation_questions
-      @questions ||= questions_data.map do |datum|
+      return [] if metadata.nil?
+      return [] if metadata['generation_questions'].nil?
+
+      @questions ||= metadata['generation_questions'].map do |datum|
         Question.new(**datum.symbolize_keys)
       end
     end
