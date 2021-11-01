@@ -73,7 +73,7 @@ module FlightJob
       def sub_placeholder(segment)
         case segment
         when "<username>"
-          Etc.getlogin
+          Etc.getpwuid&.name || Etc.getlogin
         else
           segment
         end
