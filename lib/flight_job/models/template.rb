@@ -65,6 +65,7 @@ module FlightJob
             },
             "include_null" => { "type" => { "oneof" => ["boolean", "string"] } },
             "glob" => { "type" => "string" },
+            "format_path" => { "enum" => ["absolute", "relative", "basename" ] },
             "directories" => {
               "type" => "array",
               "items" => {

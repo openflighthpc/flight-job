@@ -28,10 +28,11 @@
 module FlightJob
   module OptionGenerators
     class FileListing
-      def initialize(directories:, include_null: false, glob: '*')
+      def initialize(directories:, include_null: false, glob: '*', format_path: 'basename')
         @directories = directories
-        @include_null = include_null
+        @format_path = format_path
         @glob = glob
+        @include_null = include_null
       end
 
       def call
@@ -39,9 +40,6 @@ module FlightJob
           dir = map_placeholders(dir)
           accum += select_entries(dir)
           accum
-        end
-        paths = paths.map do |path|
-          { "text" => File.basename(path), "value" => path }
         end
         case @include_null
         when true
@@ -82,6 +80,20 @@ module FlightJob
         return [] unless File.directory?(dir)
         Dir.glob(File.join(dir, @glob))
           .select { |e| File.file?(e) }
+          .map { |e| { "text" => text_for_entry(e, dir), "value" => e } }
+      end
+
+      def text_for_entry(e, dir)
+        case @format_path
+        when 'absolute'
+          e
+        when 'relative'
+          Pathname.new(e).relative_path_from(dir).to_s
+        when 'basename'
+          File.basename(e)
+        else
+          File.basename(e)
+        end
       end
     end
   end
