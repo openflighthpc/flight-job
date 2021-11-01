@@ -63,9 +63,9 @@ module FlightJob
                 "file_listing"
               ]
             },
-            "include_null" => { "type" => { "oneof" => ["boolean", "string"] } },
-            "glob" => { "type" => "string" },
             "format_path" => { "enum" => ["absolute", "relative", "basename" ] },
+            "glob" => { "type" => "string" },
+            "include_null" => { "type" => { "oneof" => ["boolean", "string"] } },
             "directories" => {
               "type" => "array",
               "items" => {
@@ -73,6 +73,20 @@ module FlightJob
               }
             }
           }
+        }
+      }
+    }
+
+    DYNAMIC_DEFAULT_SPEC = {
+      "type" => "object",
+      "required" => ["type"],
+      "properties" => {
+        # The following is a field called "type".
+        "type" => {
+          "type" => "string" ,
+          "enum" => [
+            "path_placeholder"
+          ]
         }
       }
     }
@@ -103,6 +117,7 @@ module FlightJob
           # It keeps the initial implementation simple as everything is a strings
           # Eventually multiple formats will be supported
           'default' => {},
+          'dynamic_default' => DYNAMIC_DEFAULT_SPEC,
           'format' => FORMAT_SPEC,
           'ask_when' => ASK_WHEN_SPEC
         },
@@ -212,7 +227,7 @@ module FlightJob
         errors.add(:questions, "could not locate referenced question: #{$!.message}")
       rescue
         FlightJob.logger.error "Failed to validate the template questions due to another error: #{id}"
-        FlightJob.logger.debug("Error:\n") { $!.messages }
+        FlightJob.logger.debug("Error:\n") { $!.message }
         errors.add(:questions, 'could not be validated')
       end
     end

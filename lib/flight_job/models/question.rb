@@ -27,20 +27,26 @@
 
 module FlightJob
   class Question < ApplicationModel
-    attr_accessor :id, :text, :description, :default, :ask_when, :template
-    attr_writer :format
+    attr_accessor :id, :text, :description, :ask_when, :template
+    attr_writer :default, :dynamic_default, :format
 
     def related_question_id
       return nil unless ask_when
       ask_when['value'].split('.')[1]
     end
 
+    def default
+      return @default if @dynamic_default.nil?
+
+      generate(**@dynamic_default) || @default
+    end
+
     def format
       return @format unless @format.key?("dynamic_options")
 
       f = @format.dup
-      f.delete("dynamic_options")
-      f.merge("options" => generate_options)
+      dynamic_options = f.delete("dynamic_options")
+      f.merge("options" => generate(**dynamic_options))
     end
 
     def serializable_hash(opts = nil)
@@ -58,8 +64,8 @@ module FlightJob
 
     private
 
-    def generate_options
-      OptionGenerators.call(**@format["dynamic_options"].dup.symbolize_keys)
+    def generate(**opts)
+      OptionGenerators.call(**opts.symbolize_keys)
     end
   end
 end

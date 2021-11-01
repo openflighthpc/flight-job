@@ -27,8 +27,19 @@
 
 module FlightJob
   module OptionGenerators
+
+    # Generate a list of options based on globbing a directory or directories.
+    #
+    # The generated options have the format `{ "type" => "...", "value" =>
+    # "..." }` which is suitable for use as the options to `select` and
+    # `multiselect` questions.
     class FileListing
-      def initialize(directories:, include_null: false, glob: '*', format_path: 'basename')
+      def initialize(
+        directories:,
+        format_path: 'basename',
+        glob: '*',
+        include_null: false
+      )
         @directories = directories
         @format_path = format_path
         @glob = glob
@@ -37,10 +48,11 @@ module FlightJob
 
       def call
         paths = @directories.reduce([]) do |accum, dir|
-          dir = map_placeholders(dir)
+          dir = PathPlaceholder.new(path: dir).call
           accum += select_entries(dir)
           accum
         end
+        paths = paths.sort_by { |h| h["text"] }
         case @include_null
         when true
           [ { "text" => "(none)",      "value" => nil } ] + paths
@@ -52,29 +64,6 @@ module FlightJob
       end
 
       private
-
-      def map_placeholders(dir)
-        segments = []
-        remaining = dir
-        loop do
-          segments << File.basename(remaining)
-          break if remaining == File::SEPARATOR
-          remaining = File.dirname(remaining)
-        end
-        segments = segments
-          .reverse
-          .map { |segment| sub_placeholder(segment) }
-        File.join(*segments)
-      end
-
-      def sub_placeholder(segment)
-        case segment
-        when "<username>"
-          Etc.getlogin
-        else
-          segment
-        end
-      end
 
       def select_entries(dir)
         return [] unless File.directory?(dir)
