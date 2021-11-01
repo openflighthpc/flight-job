@@ -65,7 +65,7 @@ module FlightJob
     private
 
     def generate(**opts)
-      OptionGenerators.call(**opts.symbolize_keys)
+      QuestionGenerators.call(**opts.symbolize_keys)
     end
   end
 end

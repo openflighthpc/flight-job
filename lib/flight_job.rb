@@ -68,5 +68,5 @@ module FlightJob
     end
   end
 
-  autoload :OptionGenerators, File.expand_path('flight_job/option_generators.rb', __dir__)
+  autoload :QuestionGenerators, File.expand_path('flight_job/question_generators.rb', __dir__)
 end
