@@ -27,11 +27,39 @@
 
 module FlightJob
   class Question < ApplicationModel
-    attr_accessor :id, :text, :description, :default, :format, :ask_when, :template
+    attr_accessor :id, :text, :description, :default, :ask_when, :template
+    attr_writer :format
 
     def related_question_id
       return nil unless ask_when
       ask_when['value'].split('.')[1]
+    end
+
+    def format
+      return @format unless @format.key?("dynamic_options")
+
+      f = @format.dup
+      f.delete("dynamic_options")
+      f.merge("options" => generate_options)
+    end
+
+    def serializable_hash(opts = nil)
+      opts ||= {}
+      {
+        id: id,
+        text: text,
+        description: description,
+        default: default,
+        ask_when: ask_when,
+        format: format,
+      }
+        .reject { |k, v| v.nil? }
+    end
+
+    private
+
+    def generate_options
+      OptionGenerators.call(**@format["dynamic_options"].dup.symbolize_keys)
     end
   end
 end

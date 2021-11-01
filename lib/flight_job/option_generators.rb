@@ -1,4 +1,3 @@
-# frozen_string_literal: true
 #==============================================================================
 # Copyright (C) 2021-present Alces Flight Ltd.
 #
@@ -26,47 +25,20 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require 'active_support/core_ext/module/delegation'
-
-require_relative 'flight_job/configuration'
-require_relative 'flight_job/command'
-
 module FlightJob
-  class << self
-    delegate :config, :env, :logger, :root, to: Flight
-  end
-
-  def self.constantize(sym)
-    sym.to_s.dup.split(/[-_]/).each { |c| c[0] = c[0].upcase }.join
-  end
-
-  module Commands
-    Dir.glob(File.expand_path('flight_job/commands/*.rb', __dir__)).each do |path|
+  module OptionGenerators
+    Dir.glob(File.expand_path('option_generators/*.rb', __dir__)).each do |path|
       autoload FlightJob.constantize(File.basename(path, '.*')), path
     end
-  end
 
-  Dir.glob(File.expand_path('flight_job/models/*.rb', __dir__)).each do |path|
-    autoload FlightJob.constantize(File.basename(path, '.*')), path
-  end
-
-  module Outputs
-    # NOTE: This method is a bit out of place, but there currently isn't
-    # a better location for it
-    def self.format_time(rfc3339_time, verbose)
-      if rfc3339_time.nil?
-        nil
-      elsif verbose
-        rfc3339_time
-      else
-        DateTime.rfc3339(rfc3339_time).strftime('%d/%m/%y %H:%M')
-      end
-    end
-
-    Dir.glob(File.expand_path('flight_job/outputs/*.rb', __dir__)).each do |path|
-      autoload FlightJob.constantize(File.basename(path, '.*')), path
+    def self.call(type:, **opts)
+      const_string = FlightJob.constantize(type)
+      generator = FlightJob::OptionGenerators.const_get(const_string).new(**opts)
+    rescue NameError
+      FlightJob.logger.fatal "Unknown option generator #{type}"
+      raise InternalError, "Unknown option generator #{type}"
+    else
+      generator.call
     end
   end
-
-  autoload :OptionGenerators, File.expand_path('flight_job/option_generators.rb', __dir__)
 end

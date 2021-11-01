@@ -36,11 +36,11 @@ module FlightJob
       "additionalProperties" => false,
       "required" => ['type'],
       "properties" => {
-        # The following are field called "type" and "options" not settings within "properties"
-        'type' => { "type" => "string" , "enum" => [
+        # The following are fields called "type" and "options".
+        "type" => { "type" => "string" , "enum" => [
           "text", "time", "select", "multiselect", 'multiline_text'
         ] },
-        'options' => {
+        "options" => {
           "type" => "array",
           "items" => {
             "type" => "object",
@@ -49,6 +49,27 @@ module FlightJob
             "properties" => {
               'text' => { "type" => "string" },
               'value' => { "type" => "string" },
+            }
+          }
+        },
+        "dynamic_options" => {
+          "type" => "object",
+          "required" => ['type'],
+          "properties" => {
+            # The following is a field called "type".
+            "type" => {
+              "type" => "string" ,
+              "enum" => [
+                "file_listing"
+              ]
+            },
+            "include_null" => { "type" => { "oneof" => ["boolean", "string"] } },
+            "glob" => { "type" => "string" },
+            "directories" => {
+              "type" => "array",
+              "items" => {
+                "type" => "string",
+              }
             }
           }
         }
@@ -235,7 +256,8 @@ module FlightJob
       {
         'id' => id,
         'path' => workload_path,
-      }.merge(metadata).tap do |hash|
+        'generation_questions' => generation_questions,
+      }.merge(metadata.except("generation_questions")).tap do |hash|
         if Flight.config.includes.include? 'scripts'
           # NOTE: Consider using a file registry instead
           hash['scripts'] = Script.load_all.select { |s| s.template_id == id }
@@ -243,6 +265,7 @@ module FlightJob
       end
     end
 
+    # XXX Fold into generation_questions???
     def questions_data
       return [] if metadata.nil?
       metadata['generation_questions']
