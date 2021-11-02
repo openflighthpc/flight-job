@@ -221,6 +221,70 @@ the only comparison is equality.
 
 ```
 
+#### Dynamic question defaults and options
+
+Some aspects of a template's questions can be dynamically generated instead of
+being hardcoded.  These include the default value and the options for select
+and multiselect questions.
+
+The syntax for dynamic defaults is 
+
+```yaml
+generation_questions:
+  - <OTHER QUESTION ATTRIBUTES>
+    dynamic_default:
+      type: path_placeholder
+      path: <PATH_CONTAINING_PLACEHOLDERS>
+```
+
+There is currently only a single type of dynamic default available, namely,
+`path_placeholder`.
+
+The syntax for path placeholders is `<identifier>` where `<identifier>` is an
+entire "path segment".  E.g., the path `/some/path/<username>/somewhere`
+contains the placeholder `<username>` whilst `/some/path_<username>/somewhere`
+and `/some/path/<username>_somewhere` do not.
+
+The only supported placeholder is `<username>` which is replaced with the
+process's user's login name.
+
+
+The syntax for dynamic options is
+
+```yaml
+generation_questions:
+  - <OTHER QUESTION ATTRIBUTES>
+    format:
+      type: select
+      dynamic_options:
+        type: file_listing
+        include_null: <true|false|string>
+        glob: "*"
+        format_path: <absolute|relative|basename>
+        directories:
+          - <PATH OPTIONALLY CONTAINING PATH PLACEHOLDERS>
+          - ...
+```
+
+The only supported type of dynamic question is currently `file_listing`.  It
+globs the specified directories with the specified glob.
+
+Any files (not directories) that match the glob are included in the generated
+list of options.  The text presented to the user for each generated option is
+controlled by the `format_path` setting.  The text can be the `absolute` path
+to the globbed file; the `relative` path from the directory under which it was
+globbed; or its `basename`.
+
+A "null" option can be included in the list of generated options by specifying
+the `include_null` setting.  If set to a string, that string will be used as
+the user-visible text for the null option.  If set to `true` the string
+`(none)` will be used.
+
+The directories to glob can optionally contain path placeholders.  They work
+the same as described above for "Dynamic defaults".
+
+
+
 ### `directives.<scheduler>.erb`
 
 The `directives.<scheduler>.erb` file is an ERb template.  When it is rendered

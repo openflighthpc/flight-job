@@ -115,6 +115,42 @@ module FlightJob
     VALIDATOR_DEF["array_validator_def"]["properties"]["type"]["enum"].delete("array")
     VALIDATOR_DEF["array_validator_def"]["oneOf"].delete_if { |s| s["properties"]["type"]["const"] == "array" }
 
+    DYNAMIC_DEFAULT_SPEC = {
+      "type" => "object",
+      "required" => ["type"],
+      "properties" => {
+        # The following is a field called "type".
+        "type" => {
+          "type" => "string" ,
+          "enum" => [
+            "path_placeholder"
+          ]
+        }
+      }
+    }
+
+    DYNAMIC_OPTIONS_SPEC = {
+      "type" => "object",
+      "required" => ['type'],
+      "properties" => {
+        "type" => {
+          "type" => "string" ,
+          "enum" => [
+            "file_listing"
+          ]
+        },
+        "format_path" => { "enum" => ["absolute", "relative", "basename" ] },
+        "glob" => { "type" => "string" },
+        "include_null" => { "type" => { "oneof" => ["boolean", "string"] } },
+        "directories" => {
+          "type" => "array",
+          "items" => {
+            "type" => "string",
+          }
+        }
+      }
+    }
+
     ASK_WHEN_SPEC = {
       "type" => "object",
       "additionalProperties" => false,
@@ -128,7 +164,7 @@ module FlightJob
     }
 
     QUESTION_PROPS_STUB = {
-      "id" => {}, "text" => {}, "description" => {},
+      "id" => {}, "text" => {}, "description" => {}, "dynamic_default" => {},
       "validate" => {}, "ask_when" => {}
     }
     QUESTION_DEF = {
@@ -144,6 +180,7 @@ module FlightJob
           "description" => { "type" => "string" },
           'validate' => { "$ref" => "#/$defs/validator_def" },
           'ask_when' => ASK_WHEN_SPEC,
+          "dynamic_default" => DYNAMIC_DEFAULT_SPEC,
           "format" => {
             "type" => "object",
             "required" => ["type"],
@@ -230,7 +267,6 @@ module FlightJob
           },
 
           # Select format questions
-          # NOTE: Consider allowing integer/boolean defaults
           {
             "type" => "object",
             "additionalProperties" => false,
@@ -253,14 +289,14 @@ module FlightJob
                         "value" => { "type" => ["string", "integer", "number"] }
                       }
                     }
-                  }
+                  },
+                  "dynamic_options" => DYNAMIC_OPTIONS_SPEC,
                 }
               }
             }
           },
 
           # Multi-select format questions
-          # NOTE: Consider allowing integer/boolean defaults
           {
             "type" => "object",
             "additionalProperties" => false,
@@ -286,7 +322,8 @@ module FlightJob
                         "value" => { "type" => ["string", "integer", "number"] }
                       }
                     }
-                  }
+                  },
+                  "dynamic_options" => DYNAMIC_OPTIONS_SPEC,
                 }
               }
             }
@@ -466,27 +503,19 @@ module FlightJob
       {
         'id' => id,
         'path' => workload_path,
-      }.merge(metadata).tap do |hash|
+        'generation_questions' => generation_questions,
+      }.merge(metadata.except("generation_questions")).tap do |hash|
         if Flight.config.includes.include? 'scripts'
-          # NOTE: Consider using a file registry instead
           hash['scripts'] = Script.load_all.select { |s| s.template_id == id }
-        end
-
-        # Replace the 'validate' key with the JSON:Schema specification
-        hash['generation_questions'] = hash['generation_questions'].map(&:dup)
-        hash['generation_questions'].each_with_index do |data, index|
-          data['validate'] = generation_questions[index].validate_schema
         end
       end
     end
 
-    def questions_data
-      return [] if metadata.nil?
-      metadata['generation_questions']
-    end
-
     def generation_questions
-      @questions ||= questions_data.map do |datum|
+      return [] if metadata.nil?
+      return [] if metadata['generation_questions'].nil?
+
+      @questions ||= metadata['generation_questions'].map do |datum|
         Question.new(**datum.symbolize_keys)
       end
     end

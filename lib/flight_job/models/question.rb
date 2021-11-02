@@ -27,7 +27,8 @@
 
 module FlightJob
   class Question < ApplicationModel
-    attr_accessor :id, :text, :description, :default, :format, :ask_when, :template, :validate
+    attr_accessor :id, :text, :description, :ask_when, :template, :validate
+    attr_writer :default, :dynamic_default, :format
 
     def related_question_id
       return nil unless ask_when
@@ -84,7 +85,39 @@ module FlightJob
       end
     end
 
+    def default
+      return @default if @dynamic_default.nil?
+
+      generate(**@dynamic_default) || @default
+    end
+
+    def format
+      return @format unless @format.key?("dynamic_options")
+
+      f = @format.dup
+      dynamic_options = f.delete("dynamic_options")
+      f.merge("options" => generate(**dynamic_options))
+    end
+
+    def serializable_hash(opts = nil)
+      opts ||= {}
+      {
+        id: id,
+        text: text,
+        description: description,
+        default: default,
+        ask_when: ask_when,
+        format: format,
+        validate: validate_schema,
+      }
+        .reject { |k, v| v.nil? }
+    end
+
     private
+
+    def generate(**opts)
+      QuestionGenerators.call(**opts.symbolize_keys)
+    end
 
     def apply_type_validations(allOf, specs)
       required = specs['required']

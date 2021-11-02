@@ -46,38 +46,33 @@ module FlightJob
   autoload 'NameGenerator', File.expand_path('flight_job/name_generator', __dir__)
   autoload 'OneOfParser', File.expand_path('flight_job/one_of_parser.rb', __dir__)
   autoload 'QuestionPrompter', File.expand_path('flight_job/question_prompter', __dir__)
+  autoload :QuestionGenerators, File.expand_path('flight_job/question_generators.rb', __dir__)
 
-  # Setup the autoloads for the commands
   module Commands
     Dir.glob(File.expand_path('flight_job/commands/*.rb', __dir__)).each do |path|
       autoload FlightJob.constantize(File.basename(path, '.*')), path
     end
   end
 
-  # Setup the autoloads for the decorators
   module Decorators
     Dir.glob(File.expand_path('flight_job/decorators/*.rb', __dir__)).each do |path|
       autoload FlightJob.constantize(File.basename(path, '.*')), path
     end
   end
 
-  # Setup the autoloads for the job transitions
   module JobTransitions
     Dir.glob(File.expand_path('flight_job/job_transitions/*.rb', __dir__)).each do |path|
       autoload FlightJob.constantize(File.basename(path, '.*')), path
     end
   end
 
-  # Setup the autoloads for models
   Dir.glob(File.expand_path('flight_job/models/*.rb', __dir__)).each do |path|
     autoload FlightJob.constantize(File.basename(path, '.*')), path
   end
 
-  # Setup the autoloads for outputs
   module Outputs
     Dir.glob(File.expand_path('flight_job/outputs/*.rb', __dir__)).each do |path|
       autoload FlightJob.constantize(File.basename(path, '.*')), path
     end
   end
 end
-
