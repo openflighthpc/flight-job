@@ -488,14 +488,14 @@ module FlightJob
     # This allows it to be directly passed to the API layer.
     # Consider refactoring when introducing a non-backwards compatible change
     def metadata
-      return @metadata unless @metadata.nil?
+      return @metadata if defined?(@metadata)
       @metadata = YAML.load(File.read(metadata_path)).to_h
     rescue Errno::ENOENT
       errors.add(:metadata, "has not been saved")
-      @metadata = false
+      @metadata = {}
     rescue Psych::SyntaxError
       errors.add(:metadata, "is not valid YAML")
-      @metadata = false
+      @metadata = {}
     end
 
     def serializable_hash(opts = nil)
