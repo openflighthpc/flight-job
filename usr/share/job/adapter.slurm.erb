@@ -22,6 +22,17 @@ FLIGHT_SESSION_ID_PATH="${CONTROLS_DIR}"/flight_desktop_id
 FLIGHT_SESSION_STATUS_PATH="${CONTROLS_DIR}"/flight_desktop_status
 SESSION_OUTPUT="${RESULTS_DIR}/session.output"
 
+register_control() {
+  name=$1
+  value=$2
+  if [ "$CONTROLS_DIR}" == "" ]; then
+    echo "CONTROLS_DIR has not been set." >&2
+    echo "${name} ${value}"
+  else
+    echo "${value}" > "${CONTROLS_DIR}/${name}"
+  fi
+}
+
 create_session_script() {
     SESSION_SCRIPT=$( mktemp --tmpdir session-script.XXXXXX.sh )
     echo "Creating session script ${SESSION_SCRIPT}"
