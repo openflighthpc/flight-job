@@ -38,6 +38,8 @@ source "${flight_ROOT:-/opt/flight}"/etc/setup.sh
 # will be unable to help you access your results.
 #
 # RESULTS_DIR has already been set to "$WORKING_DIR/${SLURM_JOB_NAME}-outputs/$SLURM_ARRAY_JOB_ID"
+RESULTS_DIR="$(pwd)/${SLURM_JOB-NAME}-outputs/$SLURM_ARRAY_JOB_ID"
+register_control "results_dir" "${RESULTS_DIR}"
 echo "Your results will be stored in: $RESULTS_DIR"
 mkdir -p "$RESULTS_DIR"
 
