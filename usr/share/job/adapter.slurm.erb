@@ -52,8 +52,7 @@ session_start() {
     echo "Starting session..."
     (
         set -o pipefail
-        #${flight_ROOT:-/opt/flight}/bin/flight desktop \
-        /opt/flight/bin/ruby /code/flight-desktop/bin/desktop \
+        ${flight_ROOT:-/opt/flight}/bin/flight desktop \
             start \
             --script ${SESSION_SCRIPT} \
             --no-override-env \
