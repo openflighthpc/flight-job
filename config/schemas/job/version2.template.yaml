@@ -1,0 +1,134 @@
+# Metadata keys used to construct the schema
+# This key is stripped when the file is loaded
+__meta__:
+
+  # Common properties when the job is first created, before an attempt is made
+  # to submit it.
+  VERSION: &VERSION
+    const: 2
+  SHARED_REQUIRED: &SHARED_REQUIRED
+    required: ["created_at", "job_type", "rendered_path", "script_id", "version"]
+  SHARED_PROPERTIES: &SHARED_PROPERTIES
+    created_at: { "type": "string", "format": "date-time" }
+    rendered_path: { "type": "string", "minLength": 1 }
+    script_id: { "type": "string", "minLength": 1 }
+    version:
+      <<: *VERSION
+
+  # Additional properties once the submission script has ran.
+  SUBMIT_STATUS_REQUIRED: &SUBMIT_STATUS_REQUIRED
+    required: ['submit_status', 'submit_stdout', 'submit_stderr']
+  SUBMIT_STATUS_PROPERTIES: &SUBMIT_STATUS_PROPERTIES
+    submit_status: { "type" : "integer" }
+    submit_stdout: { "type" : "string" }
+    submit_stderr: { "type" : "string" }
+
+  # Additional properties once the scheduler id is known.
+  SCHED_ID_REQUIRED: &SCHED_ID_REQUIRED
+    required: ["scheduler_id"]
+  SCHED_ID_PROPERTIES: &SCHED_ID_PROPERTIES
+    scheduler_id: { "type" : "string", "minLength" : 1 }
+
+  # Additional properties once the bootstrapping script has ran.
+  BOOTSTRAP_STATUS_REQUIRED: &BOOTSTRAP_STATUS_REQUIRED
+    required: []
+  BOOTSTRAP_STATUS_PROPERTIES: &BOOTSTRAP_STATUS_PROPERTIES {}
+
+  STATES_ENUM: &STATES_ENUM
+    enum: ["PENDING", "RUNNING", "COMPLETING", "FAILED", "COMPLETED", "CANCELLED", "UNKNOWN"]
+
+type: "object"
+additionalProperties: true
+<<: *SHARED_REQUIRED
+properties:
+  <<: *SHARED_PROPERTIES
+  job_type:
+    enum: ["SUBMITTING", "BOOTSTRAPPING", "SINGLETON", "ARRAY", "FAILED_SUBMISSION"]
+
+oneOf:
+  # SUBMITTING Jobs
+  # All jobs are created in this state before submit.sh is ran.
+  - type: "object"
+    additionalProperties: true
+    <<: *SHARED_REQUIRED
+    properties:
+      <<: *SHARED_PROPERTIES
+      job_type: { "const" : "SUBMITTING" }
+
+  # BOOTSTRAPPING Jobs
+  # The job has been accepted by the scheduler; we have a scheduler id for it.
+  # All other information can be retrieved from the scheduler id, but we have
+  # not yet done so.
+  - type: "object"
+    additionalProperties: true
+    allOf:
+      - *SHARED_REQUIRED
+      - *SUBMIT_STATUS_REQUIRED
+      - *SCHED_ID_REQUIRED
+    properties:
+      <<: *SHARED_PROPERTIES
+      <<: *SUBMIT_STATUS_PROPERTIES
+      <<: *SCHED_ID_PROPERTIES
+      job_type: { "const" : "BOOTSTRAPPING" }
+
+  # FAILED_SUBMISSION Jobs
+  - type: "object"
+    additionalProperties: true
+    allOf:
+      - *SHARED_REQUIRED
+      - *SUBMIT_STATUS_REQUIRED
+    properties:
+      <<: *SHARED_PROPERTIES
+      <<: *SUBMIT_STATUS_PROPERTIES
+      job_type: { "const" : "FAILED_SUBMISSION" }
+
+  # SINGLETON Jobs
+  - type: "object"
+    additionalProperties: true
+    allOf:
+      - *SHARED_REQUIRED
+      - *SUBMIT_STATUS_REQUIRED
+      - *SCHED_ID_REQUIRED
+      - *BOOTSTRAP_STATUS_REQUIRED
+      - required: ['state', 'scheduler_state']
+    properties:
+      # Required
+      <<: *SHARED_PROPERTIES
+      <<: *SUBMIT_STATUS_PROPERTIES
+      <<: *SCHED_ID_PROPERTIES
+      <<: *BOOTSTRAP_STATUS_PROPERTIES
+      job_type: { "const" : "SINGLETON" }
+      state: *STATES_ENUM
+      scheduler_state: { "type" : "string" }
+      # Optional
+      estimated_start_time: { "type" : ['date-time', 'null'] }
+      estimated_end_time: { "type" : ['date-time', 'null'] }
+      start_time: { "type" : ["date-time", "null"] }
+      end_time: { "type" : ["date-time", "null"] }
+      reason: { "type" : ["string", "null"] }
+      cancelling: { "type": "boolean" }
+      # Optional, but must be non-empty if given.
+      stdout_path: { "type" : "string", "minLength" : 1 }
+      stderr_path: { "type" : "string", "minLength" : 1 }
+
+  # ARRAY Jobs
+  - type: "object"
+    additionalProperties: true
+    allOf:
+      - *SHARED_REQUIRED
+      - *SUBMIT_STATUS_REQUIRED
+      - *SCHED_ID_REQUIRED
+      - *BOOTSTRAP_STATUS_REQUIRED
+      - required: ['lazy']
+    properties:
+      # Required
+      <<: *SHARED_PROPERTIES
+      <<: *SUBMIT_STATUS_PROPERTIES
+      <<: *SCHED_ID_PROPERTIES
+      <<: *BOOTSTRAP_STATUS_PROPERTIES
+      job_type: { "const" : "ARRAY" }
+      lazy: { "type" : "boolean" }
+      # Optional
+      estimated_start_time: { "type" : ['date-time', 'null'] }
+      estimated_end_time: { "type" : ['date-time', 'null'] }
+      cancelling: { "type": "boolean" }

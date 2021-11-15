@@ -2,7 +2,6 @@
 #  >>>> FLIGHT JOB ADAPTER
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
-<% if template.tag('script:type') == 'interactive' -%>
 #======================
 #  Controls directory
 #----------------------
@@ -10,17 +9,6 @@
 # files.  This is used to store the desktop session ID of the interactive
 # session.
 mkdir -p "$CONTROLS_DIR"
-<% end -%>
-
-<% if template.tag('script:type') == 'interactive' -%>
-#=========================
-#  Session orchestration
-#-------------------------
-# Functions used to orchestrate the creation of your interactive session with
-# Flight Desktop.
-FLIGHT_SESSION_ID_PATH="${CONTROLS_DIR}"/flight_desktop_id
-FLIGHT_SESSION_STATUS_PATH="${CONTROLS_DIR}"/flight_desktop_status
-SESSION_OUTPUT="${RESULTS_DIR}/session.output"
 
 register_control() {
   name=$1
@@ -32,6 +20,16 @@ register_control() {
     echo "${value}" > "${CONTROLS_DIR}/${name}"
   fi
 }
+
+<% if template.tag('script:type') == 'interactive' -%>
+#=========================
+#  Session orchestration
+#-------------------------
+# Functions used to orchestrate the creation of your interactive session with
+# Flight Desktop.
+FLIGHT_SESSION_ID_PATH="${CONTROLS_DIR}"/flight_desktop_id
+FLIGHT_SESSION_STATUS_PATH="${CONTROLS_DIR}"/flight_desktop_status
+SESSION_OUTPUT="${RESULTS_DIR}/session.output"
 
 create_session_script() {
     SESSION_SCRIPT=$( mktemp --tmpdir session-script.XXXXXX.sh )
@@ -54,7 +52,8 @@ session_start() {
     echo "Starting session..."
     (
         set -o pipefail
-        ${flight_ROOT:-/opt/flight}/bin/flight desktop \
+        #${flight_ROOT:-/opt/flight}/bin/flight desktop \
+        /opt/flight/bin/ruby /code/flight-desktop/bin/desktop \
             start \
             --script ${SESSION_SCRIPT} \
             --no-override-env \
