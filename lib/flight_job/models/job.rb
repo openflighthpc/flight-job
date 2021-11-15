@@ -179,7 +179,7 @@ module FlightJob
     end
 
     def results_dir
-      self.controls_file("results_dir").read || metadata['results_dir']
+      controls_file("results_dir").read || metadata['results_dir']
     end
 
     # DEPRECATED: This method belongs on the decorator!
