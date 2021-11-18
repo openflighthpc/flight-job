@@ -32,6 +32,9 @@ module FlightJobMigration
   module Jobs
     class MigrateV1 < Base
       def migrate!
+        results_dir = pre_metadata['results_dir']
+        create_control_file(results_dir)
+        new_metadata.delete('results_dir')
         increment_version
         save_metadata
       end
@@ -42,6 +45,13 @@ module FlightJobMigration
         Flight.logger.error "Error determining if migrate v2 is applicable to job '#{File.basename(@job_dir)}'"
         Flight.logger.debug $!
         return false
+      end
+
+      private
+
+      def create_control_file(results_dir)
+        controls_file = File.join(@job_dir, "controls", "results_dir")
+        File.write(controls_file, results_dir)
       end
     end
   end
