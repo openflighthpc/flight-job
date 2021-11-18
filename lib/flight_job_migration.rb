@@ -30,20 +30,29 @@ require_relative 'flight_job/configuration'
 require_relative 'flight'
 
 module FlightJobMigration
+  class MigrationError < FlightJob::InternalError; end
+
   module Jobs
     autoload 'MigrateV1', File.expand_path('flight_job_migration/jobs/v1.rb', __dir__)
+    autoload 'MigrateV2', File.expand_path('flight_job_migration/jobs/v2.rb', __dir__)
 
     def self.migrate(dir)
-      migratation = Jobs::MigrateV1.new(dir)
-      if migratation.applicable?
-        migratation.migrate
-      else
-        false
+      migrations = [
+        Jobs::MigrateV1.new(dir),
+        Jobs::MigrateV2.new(dir),
+      ]
+      migrations.all? do |migration|
+        if migratation.applicable?
+          migratation.migrate
+        else
+          false
+        end
       end
     end
   end
 
   def self.migrate
     Jobs::MigrateV1.load_all.select(&:applicable?).each(&:migrate)
+    Jobs::MigrateV2.load_all.select(&:applicable?).each(&:migrate)
   end
 end

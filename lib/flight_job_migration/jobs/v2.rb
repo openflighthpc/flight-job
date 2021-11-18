@@ -27,3 +27,22 @@
 
 require 'json_schemer'
 require 'tempfile'
+
+module FlightJobMigration
+  module Jobs
+    class MigrateV1 < Base
+      def migrate!
+        increment_version
+        save_metadata
+      end
+
+      def applicable?
+        pre_metadata["version"] == 1
+      rescue
+        Flight.logger.error "Error determining if migrate v2 is applicable to job '#{File.basename(@job_dir)}'"
+        Flight.logger.debug $!
+        return false
+      end
+    end
+  end
+end
