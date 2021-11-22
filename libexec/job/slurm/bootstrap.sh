@@ -52,15 +52,11 @@ run_scontrol() {
 
 parse_job() {
     assert_assoc_array_var JOB
-    local working_dir job_name parse_input scheduler_id
+    local parse_input
 
-    scheduler_id="$1"
     parse_input="$(cat)"
-    working_dir=$(parse_field WorkDir <<< "${parse_input}")
-    job_name=$(parse_field JobName <<< "${parse_input}")
 
     JOB[job_type]=$(parse_job_type <<< "${parse_input}")
-    JOB[results_dir]="${working_dir}/${job_name}-outputs/${scheduler_id}" 
 }
 
 # Print to stdout the JSON template to be returned to flight job.
@@ -70,14 +66,12 @@ generate_template() {
 
     read -r -d '' template <<'TEMPLATE' || true
 {
-  version: 1,
-  job_type: ($job_type),
-  results_dir: ($results_dir)
+  version: 2,
+  job_type: ($job_type)
 }
 TEMPLATE
 
   echo '{}' | jq  \
-    --arg results_dir "${JOB[results_dir]}"  \
     --arg job_type    "${JOB[job_type]}"     \
     "$template"
 }

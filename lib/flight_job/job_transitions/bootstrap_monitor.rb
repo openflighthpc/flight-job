@@ -30,10 +30,9 @@ module FlightJob
     BOOTSTRAP_SCHEMA = JSONSchemer.schema({
       "type" => "object",
       "additionalProperties" => false,
-      "required" => ["job_type", "version", "results_dir"],
+      "required" => ["job_type", "version"],
       "properties" => {
-        "version" => { "const" => 1 },
-        "results_dir" => { "type" => "string", "minLength" => 1 },
+        "version" => { "const" => 2 },
         "job_type" => { "enum" => ["SINGLETON", "ARRAY"] }
       }
     })
@@ -45,7 +44,7 @@ module FlightJob
         run!
         return true
       rescue
-        Flight.logger.error "Failed to boostrap monitor job '#{job.id}'"
+        Flight.logger.error "Failed to bootstrap monitor job '#{job.id}'"
         Flight.logger.warn $!
         return false
       end
@@ -57,7 +56,6 @@ module FlightJob
           raise_command_error unless status.success?
 
           validate_data(BOOTSTRAP_SCHEMA, data, tag: "bootstrap")
-          job.metadata['results_dir'] = data['results_dir']
           job.metadata['job_type'] = data['job_type']
           job.metadata['cancelling'] = false
 

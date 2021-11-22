@@ -139,7 +139,7 @@ module FlightJob
     end
 
     def job_schema_path
-      join_schema_path('version1.json')
+      join_schema_path('version2.json')
     end
 
     def directives_name

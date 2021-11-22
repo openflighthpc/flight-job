@@ -29,8 +29,8 @@
 require 'json'
 require 'yaml'
 
-src = File.expand_path('../config/schemas/job/version1.template.yaml', __dir__)
-dst = File.expand_path('../config/schemas/job/version1.json', __dir__)
+src = File.expand_path('../config/schemas/job/version2.template.yaml', __dir__)
+dst = File.expand_path('../config/schemas/job/version2.json', __dir__)
 
 yaml = YAML.load File.read(src)
 yaml.delete('__meta__')

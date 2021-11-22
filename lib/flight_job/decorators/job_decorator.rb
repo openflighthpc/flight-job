@@ -80,9 +80,9 @@ module FlightJob
         @object = object
       end
 
-      delegate :id, :job_type, to: :object
+      delegate :id, :results_dir, :job_type, to: :object
       delegate_metadata :script_id, :scheduler_id, :scheduler_state,
-        :stdout_path, :stderr_path, :results_dir, :reason, :created_at,
+        :stdout_path, :stderr_path, :reason, :created_at,
         :submit_status, :submit_stdout, :submit_stderr, :estimated_start_time, :estimated_end_time
 
       def created_at(stringify: false)

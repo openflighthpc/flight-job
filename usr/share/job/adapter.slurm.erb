@@ -2,28 +2,24 @@
 #  >>>> FLIGHT JOB ADAPTER
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
-#=====================
-#  Results directory
-#---------------------
-# By convention, job's submitted with `flight-job` are expected to save their
-# results to RESULTS_DIR.  `flight-job` provides easy access to any files
-# saved there.
-<% if template.tag('script:workload') == 'array' -%>
-RESULTS_DIR="$(pwd)/${SLURM_JOB_NAME}-outputs/$SLURM_ARRAY_JOB_ID"
-<% else -%>
-RESULTS_DIR="$(pwd)/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
-<% end -%>
-
-<% if template.tag('script:type') == 'interactive' -%>
 #======================
 #  Controls directory
 #----------------------
 # The controls directory is used internally to track various flight-job data
 # files.  This is used to store the desktop session ID of the interactive
-# sesison.
-CONTROLS_DIR="${CONTROLS_DIR:-"${RESULTS_DIR}"}"
+# session.
 mkdir -p "$CONTROLS_DIR"
-<% end -%>
+
+register_control() {
+  name=$1
+  value=$2
+  if [ "$CONTROLS_DIR}" == "" ]; then
+    echo "CONTROLS_DIR has not been set." >&2
+    echo "${name} ${value}"
+  else
+    echo "${value}" > "${CONTROLS_DIR}/${name}"
+  fi
+}
 
 <% if template.tag('script:type') == 'interactive' -%>
 #=========================
