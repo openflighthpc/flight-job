@@ -34,8 +34,8 @@ source "${flight_ROOT:-/opt/flight}"/etc/setup.sh
 # saved there.
 #
 # Your job can save its results anywhere you want, but if the results are
-# saved outside of RESULTS_DIR (or if RESULTS_DIR is modified), 'flight-job'
-# will be unable to help you access your results.
+# saved outside of RESULTS_DIR, 'flight-job' will be unable to help you
+# access your results.
 
 RESULTS_DIR="$(pwd)/${SLURM_JOB-NAME}-outputs/$SLURM_ARRAY_JOB_ID"
 register_control "results_dir" "${RESULTS_DIR}"
