@@ -345,14 +345,18 @@ module FlightJob
             opts[:default] = idx + 1 if opt['value'] == default
             { name: opt['text'], value: opt['value'] }
           end
-          prompt.select(question_label(question), choices, **opts)
+          puts pastel.green(question_label(question))
+          puts pastel.dim(WrapIndentHelper.call(question.description, 80, 1)) if question.description
+          prompt.select("", choices, **opts)
         when 'multiselect'
           opts = { show_help: :always, echo: false, help: MULTI_HELP, default: [] }
           choices = question.format['options'].each_with_index.map do |opt, idx|
             opts[:default] << idx + 1 if default.is_a?(Array) && default.include?(opt['value'])
             { name: opt['text'], value: opt['value'] }
           end
-          prompt.multi_select(question_label(question), choices, **opts)
+          puts pastel.green(question_label(question))
+          puts pastel.dim(WrapIndentHelper.call(question.description, 80, 1)) if question.description
+          prompt.multi_select("", choices, **opts)
         when 'time'
           puts pastel.green(question_label(question))
           puts pastel.dim(WrapIndentHelper.call(question.description, 80, 1)) if question.description
