@@ -328,11 +328,15 @@ module FlightJob
       answer =
         case question.format['type']
         when 'text'
-          prompt.ask(question_label(question), default: default)
+          puts pastel.green(question_label(question))
+          puts pastel.dim(WrapIndentHelper.call(question.description, 80, 1)) if question.description
+          prompt.ask("TEXT > ", default: default)
         when 'multiline_text'
           # NOTE: The 'default' field does not work particularly well for multiline inputs
           # Consider replacing with $EDITOR
-          lines = prompt.multiline(question_label(question))
+          puts pastel.green(question_label(question))
+          puts pastel.dim(WrapIndentHelper.call(question.description, 80, 1)) if question.description
+          lines = prompt.multiline("TEXT > ")
           lines.empty? ? answers[question.id] : lines.join('')
         when 'select'
           error_on_enum_select = true
@@ -350,7 +354,9 @@ module FlightJob
           end
           prompt.multi_select(question_label(question), choices, **opts)
         when 'time'
-          prompt.ask(question_label(question)) do |q|
+          puts pastel.green(question_label(question))
+          puts pastel.dim(WrapIndentHelper.call(question.description, 80, 1)) if question.description
+          prompt.ask("TEXT > ") do |q|
             q.default default
             q.validate(/\A24:00|([0-1]\d|2[0-3]):[0-5]\d\Z/, "Times must be in HH:MM format")
           end
@@ -359,7 +365,9 @@ module FlightJob
           # By default, this only allows integers. This behaviour has been replicated here
           #
           # Consider refactoring to allow floating points
-          prompt.ask(question_label(question), convert: :integer, default: default)
+          puts pastel.green(question_label(question))
+          puts pastel.dim(WrapIndentHelper.call(question.description, 80, 1)) if question.description
+          prompt.ask("NUMBER > ", convert: :integer, default: default)
         else
           raise InternalError, "Unexpectedly reached question type: #{question.format['type']}"
         end
