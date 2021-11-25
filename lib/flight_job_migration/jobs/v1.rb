@@ -29,8 +29,6 @@ require 'json_schemer'
 require 'tempfile'
 
 module FlightJobMigration
-  class MigrationError < FlightJob::InternalError; end
-
   module Jobs
     SCHEMA_V0 = JSONSchemer.schema(
       JSON.parse(File.read Flight.config.join_schema_path('version0.json'))

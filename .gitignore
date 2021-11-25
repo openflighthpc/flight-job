@@ -3,3 +3,4 @@ var
 .bundle/*
 vendor
 .env.development.local
+/log
