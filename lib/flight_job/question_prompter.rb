@@ -325,14 +325,20 @@ module FlightJob
       error_on_enum_select = false
 
       default = answers.key?(question.id) ? answers[question.id] : question.default
+
+      # Question labels and descriptions are printed separately
+      # to the TTY prompter
+      puts question_label(question)
+      puts pastel.bright_blue(WrapIndentHelper.call(question.description, 80, 1)) if question.description
+
       answer =
         case question.format['type']
         when 'text'
-          prompt.ask(question_label(question), default: default)
+          prompt.ask("TEXT > ", default: default)
         when 'multiline_text'
           # NOTE: The 'default' field does not work particularly well for multiline inputs
           # Consider replacing with $EDITOR
-          lines = prompt.multiline(question_label(question))
+          lines = prompt.multiline("TEXT > ")
           lines.empty? ? answers[question.id] : lines.join('')
         when 'select'
           error_on_enum_select = true
@@ -341,16 +347,16 @@ module FlightJob
             opts[:default] = idx + 1 if opt['value'] == default
             { name: opt['text'], value: opt['value'] }
           end
-          prompt.select(question_label(question), choices, **opts)
+          prompt.select("", choices, **opts)
         when 'multiselect'
           opts = { show_help: :always, echo: false, help: MULTI_HELP, default: [] }
           choices = question.format['options'].each_with_index.map do |opt, idx|
             opts[:default] << idx + 1 if default.is_a?(Array) && default.include?(opt['value'])
             { name: opt['text'], value: opt['value'] }
           end
-          prompt.multi_select(question_label(question), choices, **opts)
+          prompt.multi_select("", choices, **opts)
         when 'time'
-          prompt.ask(question_label(question)) do |q|
+          prompt.ask("TEXT > ") do |q|
             q.default default
             q.validate(/\A24:00|([0-1]\d|2[0-3]):[0-5]\d\Z/, "Times must be in HH:MM format")
           end
@@ -359,7 +365,7 @@ module FlightJob
           # By default, this only allows integers. This behaviour has been replicated here
           #
           # Consider refactoring to allow floating points
-          prompt.ask(question_label(question), convert: :integer, default: default)
+          prompt.ask("NUMBER > ", convert: :integer, default: default)
         else
           raise InternalError, "Unexpectedly reached question type: #{question.format['type']}"
         end
