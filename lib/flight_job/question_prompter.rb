@@ -328,8 +328,8 @@ module FlightJob
 
       # Question labels and descriptions are printed separately
       # to the TTY prompter
-      puts pastel.green(question_label(question))
-      puts pastel.dim(WrapIndentHelper.call(question.description, 80, 1)) if question.description
+      puts question_label(question)
+      puts pastel.bright_blue(WrapIndentHelper.call(question.description, 80, 1)) if question.description
 
       answer =
         case question.format['type']
