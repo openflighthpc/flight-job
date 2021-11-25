@@ -354,7 +354,7 @@ module FlightJob
             opts[:default] << idx + 1 if default.is_a?(Array) && default.include?(opt['value'])
             { name: opt['text'], value: opt['value'] }
           end
-          prompt.multi_select("", choices, **opts)
+          prompt.multi_select("", choices, **opts).compact
         when 'time'
           prompt.ask("TEXT > ") do |q|
             q.default default
