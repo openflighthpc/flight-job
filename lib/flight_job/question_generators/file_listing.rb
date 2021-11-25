@@ -59,7 +59,11 @@ module FlightJob
         when String
           [ { "text" => @include_null, "value" => nil } ] + paths
         else
-          paths
+          if paths.empty?
+            [ { "text" => "(no matching files found)", "value" => nil } ]
+          else
+            paths
+          end
         end
       end
 
