@@ -29,6 +29,14 @@ module FlightJob
   module Commands
     class CopyTemplate < Command
       def run
+        # Check for nil defaults before rendering, as a nil working
+        # directory raises an error.
+        without_defaults = template.without_defaults
+        if without_defaults.any?
+          $stderr.puts <<~INFO.chomp
+            WARNING: Copied template is missing default values for: #{without_defaults.map(&:id).join(', ')}
+          INFO
+        end
         content = render_content
         FileUtils.mkdir_p File.dirname(dst_path)
         File.write(dst_path, content)
