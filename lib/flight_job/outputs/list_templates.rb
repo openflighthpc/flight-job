@@ -34,7 +34,11 @@ module FlightJob
         template.index
       end
       register(header: 'Name') do |template|
-        template.id
+        if template.errors.any?
+          "#{template.id} **INVALID**"
+        else
+          template.id
+        end
       end
       file_header = "File (Dir: #{FlightJob.config.templates_dir})"
 
