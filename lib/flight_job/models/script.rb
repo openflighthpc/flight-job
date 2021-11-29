@@ -148,9 +148,10 @@ module FlightJob
     end
 
     def metadata_path
+      # Sometimes we render a script that has no ID; in this case, it doesn't
+      # exist outside of the execution scope, and will not have a path.
+      return nil if id.nil?
       @metadata_path ||= File.join(FlightJob.config.scripts_dir, id, 'metadata.yaml')
-    rescue TypeError
-      nil
     end
 
     def script_path
