@@ -29,13 +29,24 @@ require 'output_mode'
 
 module FlightJob
   class Outputs::ListTemplates < OutputMode::Formatters::Index
+    # Override "render" method to add invalid template footnote
+    def render(*a, **o)
+      super.tap do |txt|
+        next unless humanize?
+        next unless @invalid_template
+        txt << "\n"
+        txt << pastel.yellow(" * Invalid template")
+      end
+    end
+
     def register_all
       register(header: 'Index', row_color: :yellow) do |template|
         template.index
       end
       register(header: 'Name') do |template|
         if template.errors.any?
-          "#{template.id} **INVALID**"
+          @invalid_template = true
+          pastel.yellow "#{template.id}*"
         else
           template.id
         end
@@ -51,6 +62,10 @@ module FlightJob
           end
         end
       end
+    end
+
+    def pastel
+      @pastel ||= Pastel.new(enabled: color?)
     end
   end
 end
