@@ -180,7 +180,7 @@ module FlightJob
     def load_template(name_or_id)
       template = Template.new(id: name_or_id)
       if template.exists?
-        unless template.valid?(:verbose)
+        unless template.valid?
           FlightJob.logger.error("Failed to load invalid template: #{template.id}")
           FlightJob.logger.warn(template.errors.full_messages.join("\n"))
           raise InternalError, <<~ERROR.chomp
@@ -202,7 +202,7 @@ module FlightJob
           ERROR
         end
         templates[index].tap do |template|
-          unless template.valid?(:verbose)
+          unless template.valid?
             FlightJob.logger.error("Failed to load invalid template: #{template.id}")
             FlightJob.logger.warn(template.errors.full_messages.join("\n"))
             raise InternalError, <<~ERROR

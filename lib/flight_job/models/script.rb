@@ -123,7 +123,7 @@ module FlightJob
       template = load_template
       if template.nil?
         errors.add(:template, 'could not be resolved')
-      elsif ! template.valid?(:verbose)
+      elsif !template.valid?
         errors.add(:template, 'is not valid')
         FlightJob.logger.info("Template errors: #{template_id}\n") do
           template.errors.full_messages.join("\n")

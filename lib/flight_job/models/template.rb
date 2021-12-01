@@ -421,10 +421,8 @@ module FlightJob
           errors.add(:metadata, 'is not valid')
         end
       end
-    end
 
-    # Validates the workload_path and directives_path
-    validate do
+      # Validates the workload_path and directives_path
       unless File.exists? workload_path
         legacy_path = File.join(FlightJob.config.templates_dir, id, "#{script_template_name}.erb")
         if File.exists?(legacy_path)
@@ -435,9 +433,7 @@ module FlightJob
           errors.add(:workload_path, "does not exist")
         end
       end
-    end
 
-    validate on: :verbose do
       # Ensure the questions are sorted correctly
       begin
         next unless errors.empty?
