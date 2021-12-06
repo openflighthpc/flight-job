@@ -357,30 +357,25 @@ module FlightJob
                    .merge!(QUESTION_DEF)
     })
 
-    def self.load_all(validate: true)
+    def self.load_all
       templates = Dir.glob(new(id: '*').metadata_path).map do |path|
         id = File.basename(File.dirname(path))
         new(id: id)
       end
 
-      if validate
-        templates.select do |template|
-          next true if template.valid?
-          FlightJob.logger.error("Failed to load missing/invalid template: #{template.id}")
-          FlightJob.logger.warn(template.errors.full_messages.join("\n"))
-          false
-        end
-
-        templates.sort!
-
-        templates.each_with_index do |t, idx|
-          t.index = idx + 1
-        end
-
-        templates
-      else
-        templates
+      templates.each do |template|
+        next if template.valid?
+        FlightJob.logger.warn("Invalid template detected upon load: #{template.id}")
+        FlightJob.logger.warn(template.errors.full_messages.join("\n"))
       end
+
+      templates.sort!
+
+      templates.each_with_index do |t, idx|
+        t.index = idx + 1
+      end
+
+      templates
     end
 
     attr_accessor :id, :index
@@ -426,10 +421,8 @@ module FlightJob
           errors.add(:metadata, 'is not valid')
         end
       end
-    end
 
-    # Validates the workload_path and directives_path
-    validate do
+      # Validates the workload_path and directives_path
       unless File.exists? workload_path
         legacy_path = File.join(FlightJob.config.templates_dir, id, "#{script_template_name}.erb")
         if File.exists?(legacy_path)
@@ -440,9 +433,7 @@ module FlightJob
           errors.add(:workload_path, "does not exist")
         end
       end
-    end
 
-    validate on: :verbose do
       # Ensure the questions are sorted correctly
       begin
         next unless errors.empty?
