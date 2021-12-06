@@ -33,7 +33,7 @@ module FlightJob
         # directory raises an error.
         without_defaults = template.without_defaults
         if without_defaults.any?
-          $stderr.puts <<~INFO.chomp
+          $stderr.puts pastel.yellow <<~INFO.chomp
             WARNING: Copied template is missing default values for: #{without_defaults.map(&:id).join(', ')}
           INFO
         end
