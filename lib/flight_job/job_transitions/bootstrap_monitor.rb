@@ -33,7 +33,8 @@ module FlightJob
       "required" => ["job_type", "version"],
       "properties" => {
         "version" => { "const" => 2 },
-        "job_type" => { "enum" => ["SINGLETON", "ARRAY"] }
+        "job_type" => { "enum" => ["SINGLETON", "ARRAY"] },
+        "results_dir" => { "type" => "string", "minLength" => 1 }
       }
     })
 
@@ -56,6 +57,7 @@ module FlightJob
           raise_command_error unless status.success?
 
           validate_data(BOOTSTRAP_SCHEMA, data, tag: "bootstrap")
+          job.metadata['results_dir'] = data['results_dir']
           job.metadata['job_type'] = data['job_type']
           job.metadata['cancelling'] = false
 
