@@ -243,6 +243,10 @@
           "type": "string",
           "minLength": 1
         },
+        "results_dir": {
+          "type": "string",
+          "minLength": 1
+        },
         "job_type": {
           "const": "SINGLETON"
         },
@@ -365,6 +369,10 @@
           "type": "string"
         },
         "scheduler_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "results_dir": {
           "type": "string",
           "minLength": 1
         },

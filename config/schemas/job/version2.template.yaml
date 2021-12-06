@@ -32,7 +32,8 @@ __meta__:
   # Additional properties once the bootstrapping script has ran.
   BOOTSTRAP_STATUS_REQUIRED: &BOOTSTRAP_STATUS_REQUIRED
     required: []
-  BOOTSTRAP_STATUS_PROPERTIES: &BOOTSTRAP_STATUS_PROPERTIES {}
+  BOOTSTRAP_STATUS_PROPERTIES: &BOOTSTRAP_STATUS_PROPERTIES
+    results_dir: { "type" : "string", "minLength" : 1}
 
   STATES_ENUM: &STATES_ENUM
     enum: ["PENDING", "RUNNING", "COMPLETING", "FAILED", "COMPLETED", "CANCELLED", "UNKNOWN"]
