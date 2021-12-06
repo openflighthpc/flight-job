@@ -8,16 +8,18 @@
 # The controls directory is used internally to track various flight-job data
 # files.  This is used to store the desktop session ID of the interactive
 # session.
-mkdir -p "$CONTROLS_DIR"
+if [ "${CONTROLS_DIR}" != "" ]; then
+  mkdir -p "${CONTROLS_DIR}"
+fi
 
 register_control() {
   name=$1
   value=$2
-  if [ "$CONTROLS_DIR}" == "" ]; then
-    echo "CONTROLS_DIR has not been set." >&2
-    echo "${name} ${value}"
-  else
+  if [ -d "${CONTROLS_DIR}" ]; then
     echo "${value}" > "${CONTROLS_DIR}/${name}"
+  else
+    echo "CONTROLS_DIR has not been set or is not a directory" >&2
+    echo "${name} ${value}"
   fi
 }
 
