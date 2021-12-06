@@ -520,6 +520,14 @@ module FlightJob
       end
     end
 
+    def without_defaults
+      # Get all questions with no default key specified. Default keys with an
+      # empty string value are allowed, as it's probably intended.
+      generation_questions.select do |gq|
+        gq.default.nil?
+      end
+    end
+
     def validate_generation_questions_values(hash)
       @validate_generation_questions_values ||= JSONSchemer.schema({
         "type" => "object",

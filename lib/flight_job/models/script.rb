@@ -75,8 +75,10 @@ module FlightJob
 
     validates :id, presence: true, length: { maximum: FlightJob.config.max_id_length },
               format: { with: /\A[a-zA-Z0-9_-]+\Z/,
-                        message: 'can only contain letters, numbers, hyphens, and underscores' }
-    validates :id, format: { with: /\A[[:alnum:]].*\Z/, message: 'must start with a letter or a number' }
+                        message: 'can only contain letters, numbers, hyphens, and underscores' },
+              unless: -> { validation_context == :render }
+    validates :id, format: { with: /\A[[:alnum:]].*\Z/, message: 'must start with a letter or a number' },
+              unless: -> { validation_context == :render }
 
     validate do
       # Skip this validation on :id_check
@@ -146,6 +148,9 @@ module FlightJob
     end
 
     def metadata_path
+      # Sometimes we render a script that has no ID; in this case, it doesn't
+      # exist outside of the execution scope, and will not have a path.
+      return nil if id.nil?
       @metadata_path ||= File.join(FlightJob.config.scripts_dir, id, 'metadata.yaml')
     end
 
@@ -297,7 +302,7 @@ module FlightJob
     # This allows it to be directly passed to the API layer.
     # Consider refactoring when introducing a non-backwards compatible change
     def metadata
-      @metadata ||= if File.exists?(metadata_path)
+      @metadata ||= if metadata_path && File.exists?(metadata_path)
         YAML.load File.read(metadata_path)
       else
         { 'version' => 0, 'created_at' => DateTime.now.rfc3339 }
