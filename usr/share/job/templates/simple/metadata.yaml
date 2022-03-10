@@ -150,6 +150,7 @@ generation_questions:
       value: question.notification_wanted.answer
       eq: 'yes'
 
+submission_questions:
   - id: max_runtime
     text: Expected RUNTIME
     description: >

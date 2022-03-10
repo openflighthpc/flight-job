@@ -51,6 +51,10 @@ module FlightJob
           "type" => "array",
           "items" => { "$ref" => "#/$defs/question_def" }
         },
+        "submission_questions" => {
+          "type" => "array",
+          "items" => { "$ref" => "#/$defs/question_def" }
+        },
         "license" => { "type" => "string" },
         "name" => { "type" => "string" },
         "priority" => { "type" => "integer" },
