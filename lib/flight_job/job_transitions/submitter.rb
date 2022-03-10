@@ -80,6 +80,7 @@ module FlightJob
 
         opts = job.render_submit_yaml || {}
         sched_args = opts.dig("scheduler", "args")
+        script_args = opts.dig("job_script", "args")
 
         # Run the submission command
         FlightJob.logger.info("Submitting Job: #{job.id}")
@@ -87,6 +88,7 @@ module FlightJob
           FlightJob.config.submit_script_path,
           *sched_args,
           job.metadata["rendered_path"],
+          *script_args,
         ]
         execute_command(*cmd, tag: 'submit') do |status, out, err, data|
           job.metadata['submit_status'] = status.exitstatus
