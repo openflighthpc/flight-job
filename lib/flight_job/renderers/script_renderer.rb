@@ -25,53 +25,11 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require 'ostruct'
+require_relative 'base_renderer'
 
 module FlightJob
   module Renderers
-    # This object is used to provide nice answer handling for missing questions so that:
-    # questions.missing.answer # => nil (Instead of raising NoMethodError)
-    #
-    # It essentially reimplements the OpenStruct initializer to support defaults handling
-    # in a similar manner to Hash.
-    #
-    # The key? method must always return 'true' to denote that the OpenStruct responds
-    # to all keys. Changing this has undefined behaviour
-    #
-    # Consider refactoring
-    #
-    # For full details see:
-    # https://github.com/openflighthpc/flight-job/pull/3#discussion_r597600201
-    class DefaultsOpenStruct < OpenStruct
-      def initialize(opts = {}, &b)
-        if b
-          @table = Hash.new(&b)
-        else
-          @table = {}
-        end
-        @table.define_singleton_method(:key?) { |_| true }
-        opts.each do |k, v|
-          @table[k.to_sym] = v
-        end
-      end
-    end
-
     class ScriptRenderer
-      class AnswerDecorator
-        def initialize(question:, answer:)
-          @question = question
-          @answer = answer
-        end
-
-        def answer
-          @answer || @question.default
-        end
-
-        def default
-          @question.default
-        end
-      end
-
       class TemplateDecorator
         def initialize(template)
           @template = template
@@ -84,29 +42,10 @@ module FlightJob
         end
       end
 
-      class RenderDecorator
-        def initialize(template:, answers:)
+      class RenderDecorator < BaseRenderer::RenderDecorator
+        def initialize(template:, answers:, questions:)
           @template = template
-          @answers = answers
-        end
-
-        def question
-          questions
-        end
-
-        def questions
-          @questions ||= begin
-                           questions = @template.generation_questions.reduce({}) do |memo, question|
-                             memo.merge({
-                               question.id => AnswerDecorator.new(question: question,
-                                                                  answer: @answers[question.id])
-                             })
-                           end
-                           DefaultsOpenStruct.new(questions) do |h, k|
-                             question = Question.new(id: k)
-                             h[k] = AnswerDecorator.new(question: question, answer: nil)
-                           end
-                         end
+          super
         end
 
         def template
@@ -142,7 +81,12 @@ module FlightJob
       end
 
       def generate_binding
-        RenderDecorator.new(template: @template, answers: @answers).instance_exec { binding }
+        decorator = RenderDecorator.new(
+          template: @template,
+          answers: @answers,
+          questions: @template.generation_questions
+        )
+        decorator.instance_exec { binding }
       end
     end
   end
