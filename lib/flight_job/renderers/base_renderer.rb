@@ -30,14 +30,15 @@ require 'ostruct'
 module FlightJob
   module Renderers
     class BaseRenderer
-      # This object is used to provide nice answer handling for missing questions so that:
-      # questions.missing.answer # => nil (Instead of raising NoMethodError)
+      # This object is used to provide nice answer handling for missing
+      # questions so that: `questions.missing.answer # => nil` (Instead of
+      # raising NoMethodError)
       #
-      # It essentially reimplements the OpenStruct initializer to support defaults handling
-      # in a similar manner to Hash.
+      # It essentially reimplements the OpenStruct initializer to support
+      # defaults handling in a similar manner to Hash.
       #
-      # The key? method must always return 'true' to denote that the OpenStruct responds
-      # to all keys. Changing this has undefined behaviour
+      # The key? method must always return 'true' to denote that the
+      # OpenStruct responds to all keys. Changing this has undefined behaviour
       #
       # Consider refactoring
       #

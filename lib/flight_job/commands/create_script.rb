@@ -101,7 +101,7 @@ module FlightJob
             # We may or may not have answers, a script_id or notes.  We use
             # the (hopefully) sensible defaults if they are missing.
             unless answers_provided?
-              msg = "No answers have been provided! Proceeding with the defaults."
+              msg = "No answers have been provided. Proceeding with the defaults."
               $stderr.puts pastel.red(msg)
               FlightJob.logger.warn msg
             end

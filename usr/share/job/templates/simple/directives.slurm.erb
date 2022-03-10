@@ -116,7 +116,11 @@
 # Format: one of "minutes", "minutes:seconds",
 # "hours:minutes:seconds", "days-hours", "days-hours:minutes" and
 # "days-hours:minutes:seconds". e.g. `3-0` for 3 days.
+<% if questions.max_runtime.answer.blank? -%>
+##SBATCH --time=
+<% else -%>
 #SBATCH --time=<%= questions.max_runtime.answer %>
+<% end -%>
 
 #================
 #  Memory limit
@@ -131,7 +135,11 @@
 # Note that this setting is specified in megabytes.
 # e.g. specify `1024` for 1 gigabyte.
 #
+<% if questions.memory_limit.answer.blank? -%>
+##SBATCH --mem=
+<% else -%>
 #SBATCH --mem=<%= questions.memory_limit.answer %>
+<% end -%>
 
 #=========================
 #  Resource requirements

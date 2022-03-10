@@ -1,7 +1,7 @@
 <%
     # You can use this space to run arbitrary Ruby code and then use that in
-    # the `args` below.
-%>
+    # the YAML below.
+-%>
 ---
 scheduler:
   # An array of command line arguments that will be given to the scheduler
@@ -11,5 +11,11 @@ scheduler:
     - "<%= questions.max_runtime.answer %>"
     - "--mem"
     - "<%= questions.memory_limit.answer %>"
-    - "--nodes"
-    - "2"
+    - "--job-name"
+    - "<%= questions.job_name.answer %>"
+
+job_script:
+  # An array of command line arguments that will be given to the job script,
+  # (assuming that the scheduler supports this functionality).
+  args:
+    - "<%= questions.workload.answer %>"

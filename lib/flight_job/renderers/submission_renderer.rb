@@ -36,9 +36,9 @@ module FlightJob
       end
 
       def initialize(script:, answers:)
+        @answers = answers
         @script = script
         @template = script.load_template
-        @answers = answers
       end
 
       def render

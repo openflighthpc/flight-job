@@ -174,12 +174,20 @@ module FlightJob
     end
 
     def validate_generation_questions_values(hash)
-      @validate_generation_questions_values ||= JSONSchemer.schema({
+      validate_questions_values(generation_questions, hash)
+    end
+
+    def validate_submission_questions_values(hash)
+      validate_questions_values(submission_questions, hash)
+    end
+
+    def validate_questions_values(questions, hash)
+      schema = JSONSchemer.schema({
         "type" => "object",
         "additionalProperties" => false,
-        "properties" => generation_questions.map { |q| [q.id, {}] }.to_h
+        "properties" => questions.map { |q| [q.id, {}] }.to_h
       })
-      errors = @validate_generation_questions_values.validate(hash).to_a
+      errors = schema.validate(hash).to_a
       {}.tap do |all_errors|
         unless errors.empty?
           all_errors[:root] = []
@@ -201,7 +209,7 @@ module FlightJob
           end
         end
         if hash.is_a?(Hash)
-          generation_questions.each do |q|
+          questions.each do |q|
             value = hash[q.id]
             all_errors[q.id] = q.validate_answer(value).map { |_, m| m }
           end

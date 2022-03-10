@@ -51,7 +51,7 @@ module FlightJob
         end
 
         FlightJob.logger.debug <<~DEBUG
-          COMMAND: #{cmd.join(" ")}
+          COMMAND: #{cmd.inspect}
           STATUS: #{status.exitstatus}
           STDOUT:
           #{cmd_stdout}
