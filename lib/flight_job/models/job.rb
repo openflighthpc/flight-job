@@ -31,6 +31,7 @@ require 'json_schemer'
 require 'time'
 
 require_relative 'job/validator'
+require_relative '../renderers/submission_renderer'
 
 module FlightJob
   class Job < ApplicationModel
@@ -127,6 +128,10 @@ module FlightJob
 
     def metadata_path
       @metadata_path ||= File.join(job_dir, 'metadata.yaml')
+    end
+
+    def submit_yaml_path
+      @_submit_yaml_path ||= File.join(job_dir, 'submit.yaml')
     end
 
     def active_index_path
@@ -342,6 +347,17 @@ module FlightJob
         FlightJob.logger.info(errors.full_messages.join("\n"))
         raise InternalError, "Unexpectedly failed to save job '#{id}' metadata"
       end
+    end
+
+    def render_submit_yaml
+      script = load_script
+      renderer = FlightJob::Renderers::SubmissionRenderer.new(
+        script: script, answers: script.answers
+      )
+      yaml = renderer.render
+      File.write(submit_yaml_path, yaml)
+      # XXX Better error handling here.
+      YAML.load(yaml)['scheduler']['args']
     end
 
     protected

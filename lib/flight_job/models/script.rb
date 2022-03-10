@@ -162,6 +162,11 @@ module FlightJob
       @notes_path ||= File.join(FlightJob.config.scripts_dir, id, 'notes.md')
     end
 
+    # XXX Wanted???
+    def submit_yaml_path
+      @_submit_yaml_path ||= File.join(FlightJob.config.scripts_dir, id, 'submit.yaml.erb')
+    end
+
     def created_at
       metadata['created_at']
     end

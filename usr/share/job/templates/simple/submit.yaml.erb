@@ -1,0 +1,15 @@
+<%
+    # You can use this space to run arbitrary Ruby code and then use that in
+    # the `args` below.
+%>
+---
+scheduler:
+  # An array of command line arguments that will be given to the scheduler
+  # submission tool, e.g., `sbatch`.
+  args:
+    - "--time"
+    - "<%= questions.max_runtime.answer %>"
+    - "--mem"
+    - "<%= questions.memory_limit.answer %>"
+    - "--nodes"
+    - "2"

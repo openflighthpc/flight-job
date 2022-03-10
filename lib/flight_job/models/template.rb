@@ -110,6 +110,11 @@ module FlightJob
       File.join(FlightJob.config.templates_dir, id, Flight.config.directives_name)
     end
 
+    # XXX Wanted???
+    def submit_yaml_path
+      File.join(FlightJob.config.templates_dir, id, 'submit.yaml.erb')
+    end
+
     def script_template_name
       metadata.fetch('script_template', 'script.sh')
     end
@@ -145,7 +150,17 @@ module FlightJob
       return [] if metadata.nil?
       return [] if metadata['generation_questions'].nil?
 
-      @questions ||= metadata['generation_questions'].map do |datum|
+      @_generation_questions ||= metadata['generation_questions'].map do |datum|
+        Question.new(**datum.symbolize_keys)
+      end
+    end
+
+    # XXX Copy this to the script???
+    def submission_questions
+      return [] if metadata.nil?
+      return [] if metadata['submission_questions'].nil?
+
+      @_submission_questions ||= metadata['submission_questions'].map do |datum|
         Question.new(**datum.symbolize_keys)
       end
     end
