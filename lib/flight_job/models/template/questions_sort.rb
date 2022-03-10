@@ -28,33 +28,37 @@
 require 'tsort'
 
 module FlightJob
-  QuestionSort = Struct.new(:hash) do
-    # NOTE: This is not a user facing error, instead it is used to flag
-    # the missing question ID
-    class UnresolvedReference < RuntimeError; end
+  class Template < ApplicationModel
+    class QuestionSort
+      class UnresolvedReference < RuntimeError; end
 
-    include TSort
+      include TSort
 
-    def self.build(questions)
-      new(questions.map { |q| [q.id, q] }.to_h)
-    end
+      def self.build(questions)
+        new(questions.map { |q| [q.id, q] }.to_h)
+      end
 
-    attr_accessor :questions
+      def initialize(hash)
+        @hash = hash
+      end
 
-    def tsort_each_node(&b)
-      hash.values.each(&b)
-    end
+      private
 
-    def tsort_each_child(question, &b)
-      id = hash[question.id].related_question_id
-      ids = id.nil? ? [] : [id]
-      ids.map do |id|
-        if hash.key?(id)
-          hash[id]
-        else
-          raise UnresolvedReference, id
-        end
-      end.each(&b)
+      def tsort_each_node(&b)
+        @hash.values.each(&b)
+      end
+
+      def tsort_each_child(question, &b)
+        id = @hash[question.id].related_question_id
+        ids = id.nil? ? [] : [id]
+        ids.map do |id|
+          if @hash.key?(id)
+            @hash[id]
+          else
+            raise UnresolvedReference, id
+          end
+        end.each(&b)
+      end
     end
   end
 end

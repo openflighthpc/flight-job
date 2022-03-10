@@ -27,7 +27,7 @@
 
 require 'json_schemer'
 
-require_relative '../questions_sort'
+require_relative 'template/validator'
 
 module FlightJob
   class Template < ApplicationModel
@@ -382,78 +382,7 @@ module FlightJob
 
     ONE_OF_VALIDATOR = /\A\/\$defs\/validator_def\/oneOf\/(?<index>\d+)/
 
-    # Validates the metadata and questions file
-    validate do
-      if metadata
-        unless (schema_errors = SCHEMA.validate(metadata).to_a).empty?
-          # # Parsers the errors for those with the correct oneOf match
-          top_flags = OneOfParser.new(
-            'validator_def', 'properties/type',
-            /\A\/generation_questions\/\d+\/validate/,
-            schema_errors
-          ).flags
-
-          # # Re-run the parser for the array validators
-          array_flags = OneOfParser.new(
-            'array_validator_def', 'properties/type',
-            /\A\/generation_questions\/\d+\/validate\/items/,
-            schema_errors
-          ).flags
-
-          # Re-run the parser for the question format validators
-          format_flags = OneOfParser.new(
-            'question_def', 'properties/format/properties/type',
-            /\A\/generation_questions\/\d+/,
-            schema_errors
-          ).flags
-
-          # Generate the log levels from the flags:
-          # * warn: Errors unrelated to a oneOf
-          # * warn: Errors which match a oneOf with the correct type
-          # * debug: Errors which failed a oneOf on the wrong type
-          levels = top_flags.each_with_index.map do |_, idx|
-            flags = [top_flags[idx], array_flags[idx], format_flags[idx]]
-            flags.include?(false) ? :debug : :warn
-          end
-
-          FlightJob.logger.error("The following metadata file is invalid: #{metadata_path}")
-          JSONSchemaErrorLogger.new(schema_errors, levels).log
-          errors.add(:metadata, 'is not valid')
-        end
-      end
-
-      # Validates the workload_path and directives_path
-      unless File.exists? workload_path
-        legacy_path = File.join(FlightJob.config.templates_dir, id, "#{script_template_name}.erb")
-        if File.exists?(legacy_path)
-          # Symlink the legacy script path into place, if required
-          FileUtils.ln_s File.basename(legacy_path), workload_path
-        else
-          # Otherwise error
-          errors.add(:workload_path, "does not exist")
-        end
-      end
-
-      # Ensure the questions are sorted correctly
-      begin
-        next unless errors.empty?
-        sorted = QuestionSort.build(generation_questions).tsort
-        unless sorted == generation_questions
-          FlightJob.logger.error "The questions for template '#{id}' have not been topographically sorted! A possible sort order is:\n" do
-            sorted.map(&:id).join(',')
-          end
-          errors.add(:questions, 'have not been topographically sorted')
-        end
-      rescue TSort::Cyclic
-        errors.add(:questions, 'form a circular loop')
-      rescue UnresolvedReference
-        errors.add(:questions, "could not locate referenced question: #{$!.message}")
-      rescue
-        FlightJob.logger.error "Failed to validate the template questions due to another error: #{id}"
-        FlightJob.logger.debug("Error:\n") { $!.message }
-        errors.add(:questions, 'could not be validated')
-      end
-    end
+    validates_with Template::Validator
 
     def exists?
       File.exists? metadata_path
