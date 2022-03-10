@@ -25,23 +25,12 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require 'json'
-require 'tempfile'
+require_relative "concerns/answers_options_concern"
 
 module FlightJob
   module Commands
     class CreateScript < Command
-      VALIDATION_ERROR = ERB.new(<<~'TEMPLATE', nil, '-')
-        Cannot continue as the following errors occurred whilst validating the answers
-        <% errors.each do |key, msgs| -%>
-        <%   next if msgs.empty? -%>
-
-        <%= key == :root ? "The root value" : "'" + key + "'" -%> is invalid as it:
-        <%   msgs.each do |msg| -%>
-        <%= ::FlightJob::Prompters::ScriptCreationPrompter.bulletify(msg) %>
-        <%   end -%>
-        <% end -%>
-      TEMPLATE
+      include Concerns::AnswersOptionsConcern
 
       def run
         # The script_id, answers and notes can be provided in a number of
@@ -117,7 +106,7 @@ module FlightJob
         prompter = Prompters::ScriptCreationPrompter.new(
           pastel,
           pager,
-          template.generation_questions,
+          questions,
           answers,
           script_id,
           notes
@@ -142,7 +131,7 @@ module FlightJob
       end
 
       def template
-        @template ||= load_template(args.first).tap do |t|
+        @_template ||= load_template(args.first).tap do |t|
           unless t.valid?
             FlightJob.logger.debug("Missing/invalid template: #{t.id}\n") do
               t.errors.full_messages.join("\n")
@@ -188,55 +177,6 @@ module FlightJob
         end
       end
 
-      def answers_provided?
-        !answers.nil?
-      end
-
-      def answers_provided_on_stdin?
-        if opts.stdin
-          true
-        elsif opts.answers
-          stdin_flag?(opts.answers)
-        else
-          false
-        end
-      end
-
-      def answers
-        return unless opts.stdin || opts.answers
-        string = if answers_provided_on_stdin?
-                   cached_stdin
-                 elsif opts.answers[0] == '@'
-                   read_file(opts.answers[1..])
-                 else
-                   opts.answers
-                 end
-        JSON.parse(string).tap do |hash|
-          # Inject the defaults if possible
-          if hash.is_a?(Hash)
-            template.generation_questions.each do |question|
-              next if question.default.nil?
-              next if hash.key? question.id
-              hash[question.id] = question.default
-            end
-          end
-
-          # Validate the answers
-          errors = template.validate_generation_questions_values(hash)
-          next if errors.all? { |_, msgs| msgs.empty? }
-
-          # Raise the validation error
-          bind = OpenStruct.new(errors).instance_exec { binding }
-          msg = VALIDATION_ERROR.result(bind)
-          raise InputError, msg.chomp
-        end
-      rescue JSON::ParserError
-        raise InputError, <<~ERROR.chomp
-          Failed to parse the answers as they are not valid JSON:
-          #{$!.message}
-        ERROR
-      end
-
       # Checks if the script's ID is valid
       def verify_id(id)
         script = Script.new(id: id)
@@ -257,6 +197,14 @@ module FlightJob
         else
           raise InputError, "The ID #{error.message}!"
         end
+      end
+
+      def questions
+        template.generation_questions
+      end
+
+      def validate_answers(hash)
+        template.validate_generation_questions_values(hash)
       end
     end
   end

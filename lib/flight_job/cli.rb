@@ -178,6 +178,11 @@ module FlightJob
 
     create_command 'submit-job', 'SCRIPT_ID' do |c|
       c.summary = 'Schedule a new job to run from a script'
+      c.slop.string '--answers', <<~MSG.chomp, meta: 'JSON|@filepath|@-'
+        Provide the answers as a JSON string.
+        Alternatively specify a file containing the JSON answers with @filepath or STDIN as @-
+      MSG
+      c.slop.bool '--stdin', 'Same as: "--answers @-"'
     end
 
     create_command 'info-job', 'JOB_ID' do |c|

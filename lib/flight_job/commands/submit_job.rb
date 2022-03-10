@@ -25,22 +25,12 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require_relative "../prompters/submission_prompter"
+require_relative "concerns/answers_options_concern"
 
 module FlightJob
   module Commands
     class SubmitJob < Command
-      VALIDATION_ERROR = ERB.new(<<~'TEMPLATE', nil, '-')
-        Cannot continue as the following errors occurred whilst validating the answers
-        <% errors.each do |key, msgs| -%>
-        <%   next if msgs.empty? -%>
-
-        <%= key == :root ? "The root value" : "'" + key + "'" -%> is invalid as it:
-        <%   msgs.each do |msg| -%>
-        <%= ::FlightJob::Prompters::SubmissionPrompter.bulletify(msg) %>
-        <%   end -%>
-        <% end -%>
-      TEMPLATE
+      include Concerns::AnswersOptionsConcern
 
       def run
         # The answers can be provided in a number of different ways.
@@ -97,60 +87,11 @@ module FlightJob
       end
 
       def script
-        @script ||= load_script(args.first)
+        @_script ||= load_script(args.first)
       end
 
       def job_id
         NameGenerator.new_job(script.id).next_name
-      end
-
-      def answers_provided?
-        !answers.nil?
-      end
-
-      def answers_provided_on_stdin?
-        if opts.stdin
-          true
-        elsif opts.answers
-          stdin_flag?(opts.answers)
-        else
-          false
-        end
-      end
-
-      def answers
-        return unless opts.stdin || opts.answers
-        string = if answers_provided_on_stdin?
-                   cached_stdin
-                 elsif opts.answers[0] == '@'
-                   read_file(opts.answers[1..])
-                 else
-                   opts.answers
-                 end
-        JSON.parse(string).tap do |hash|
-          # Inject the defaults if possible
-          if hash.is_a?(Hash)
-            questions.each do |question|
-              next if question.default.nil?
-              next if hash.key? question.id
-              hash[question.id] = question.default
-            end
-          end
-
-          # Validate the answers
-          errors = validate_answers(hash)
-          next if errors.all? { |_, msgs| msgs.empty? }
-
-          # Raise the validation error
-          bind = OpenStruct.new(errors).instance_exec { binding }
-          msg = VALIDATION_ERROR.result(bind)
-          raise InputError, msg.chomp
-        end
-      rescue JSON::ParserError
-        raise InputError, <<~ERROR.chomp
-          Failed to parse the answers as they are not valid JSON:
-          #{$!.message}
-        ERROR
       end
 
       def template
