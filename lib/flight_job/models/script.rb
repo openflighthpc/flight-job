@@ -29,7 +29,7 @@ require 'json'
 require 'securerandom'
 require 'json_schemer'
 
-require_relative '../renderer'
+require_relative '../renderers/script_renderer'
 
 module FlightJob
   class Script < ApplicationModel
@@ -274,7 +274,7 @@ module FlightJob
         raise InternalError, 'Unexpectedly failed to render the script!'
       end
 
-      @renderer ||= FlightJob::Renderer.new(
+      @renderer ||= FlightJob::Renderers::ScriptRenderer.new(
         template: load_template, answers: answers
       )
     end
