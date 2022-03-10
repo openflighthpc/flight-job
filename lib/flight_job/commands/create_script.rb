@@ -38,7 +38,7 @@ module FlightJob
 
         <%= key == :root ? "The root value" : "'" + key + "'" -%> is invalid as it:
         <%   msgs.each do |msg| -%>
-        <%= ::FlightJob::QuestionPrompter.bulletify(msg) %>
+        <%= ::FlightJob::Prompters::ScriptCreationPrompter.bulletify(msg) %>
         <%   end -%>
         <% end -%>
       TEMPLATE
@@ -95,7 +95,7 @@ module FlightJob
             # We're missing something.  It could be the answers, the notes, or
             # the script_id.  Either way, stdin is not used and stdout is a
             # TTY, so we can prompt for what's missing.
-            run_question_prompter(script_id || default_id, answers || {}, notes || "")
+            run_prompter(script_id || default_id, answers || {}, notes || "")
 
           else
             # We may or may not have answers, a script_id or notes.  We use
@@ -113,13 +113,13 @@ module FlightJob
 
       private
 
-      def run_question_prompter(script_id, answers, notes)
-        prompter = QuestionPrompter.new(
+      def run_prompter(script_id, answers, notes)
+        prompter = Prompters::ScriptCreationPrompter.new(
           pastel,
           pager,
           template.generation_questions,
-          script_id,
           answers,
+          script_id,
           notes
         )
         prompter.call

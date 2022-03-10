@@ -62,7 +62,7 @@ module FlightJob
           elsif $stdout.tty?
             # We're missing the answers.  Stdin is not used and stdout is a
             # TTY, so we can prompt for what's missing.
-            run_question_prompter(answers)
+            run_prompter(answers)
 
           else
             # We don't have the answers.  We use the (hopefully) sensible
@@ -79,7 +79,7 @@ module FlightJob
 
       private
 
-      def run_question_prompter(answers)
+      def run_prompter(answers)
         prompter = Prompters::SubmissionPrompter.new(
           pastel,
           pager,
