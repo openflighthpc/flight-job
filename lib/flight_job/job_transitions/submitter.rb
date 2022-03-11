@@ -78,18 +78,15 @@ module FlightJob
         # Duplicate the script into the job's directory
         FileUtils.cp script.script_path, job.metadata["rendered_path"]
 
-        submit_args = script.render_submit_args(job.submission_answers)
-        job.save_submit_args(submit_args)
-        sched_args = submit_args.dig("scheduler", "args")
-        script_args = submit_args.dig("job_script", "args")
+        submit_args = script.generate_submit_args(job)
 
         # Run the submission command
         FlightJob.logger.info("Submitting Job: #{job.id}")
         cmd = [
           FlightJob.config.submit_script_path,
-          *sched_args,
+          *submit_args.scheduler_args,
           job.metadata["rendered_path"],
-          *script_args,
+          *submit_args.job_script_args,
         ]
         execute_command(*cmd, tag: 'submit') do |status, out, err, data|
           job.metadata['submit_status'] = status.exitstatus

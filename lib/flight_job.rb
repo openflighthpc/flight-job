@@ -81,4 +81,10 @@ module FlightJob
       autoload FlightJob.constantize(File.basename(path, '.*')), path
     end
   end
+
+  module Renderers
+    Dir.glob(File.expand_path('flight_job/renderers/*.rb', __dir__)).each do |path|
+      autoload FlightJob.constantize(File.basename(path, '.*')), path
+    end
+  end
 end

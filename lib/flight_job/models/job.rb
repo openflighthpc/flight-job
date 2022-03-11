@@ -353,10 +353,6 @@ module FlightJob
       end
     end
 
-    def save_submit_args(submit_args)
-      File.write(submit_yaml_path, submit_args.to_yaml)
-    end
-
     protected
 
     def <=>(other)

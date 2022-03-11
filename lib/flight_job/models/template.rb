@@ -27,7 +27,6 @@
 
 require "json_schemer"
 
-require_relative "../renderers/submission_renderer"
 require_relative "template/schema_defs"
 require_relative "template/validator"
 
@@ -91,9 +90,14 @@ module FlightJob
 
     attr_accessor :id, :index
 
-    ONE_OF_VALIDATOR = /\A\/\$defs\/validator_def\/oneOf\/(?<index>\d+)/
-
     validates_with Template::Validator
+
+    validate do
+      unless submit_args.valid?
+        messages = submit_args.errors.map { |e| e.message }
+        errors.add(:rendred_submit_yaml_erb, messages.join("; "))
+      end
+    end
 
     def exists?
       File.exists? metadata_path
@@ -109,10 +113,6 @@ module FlightJob
 
     def directives_path
       File.join(FlightJob.config.templates_dir, id, Flight.config.directives_name)
-    end
-
-    def submit_yaml_path
-      File.join(FlightJob.config.templates_dir, id, 'submit.yaml.erb')
     end
 
     def script_template_name
@@ -225,11 +225,12 @@ module FlightJob
       metadata['tags'] || []
     end
 
-    def render_submit_args(answers)
-      renderer = FlightJob::Renderers::SubmissionRenderer.new(
-        template: self, answers: answers
-      )
-      YAML.load(renderer.render)
+    def generate_submit_args(job)
+      submit_args.render_and_save(job)
+    end
+
+    def submit_args
+      @_submit_args ||= SubmitArgs.new(template: self)
     end
 
     protected

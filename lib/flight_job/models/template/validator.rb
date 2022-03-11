@@ -35,7 +35,6 @@ module FlightJob
         validate_paths(template)
         validate_question_sort_order(template, :generation_questions)
         validate_question_sort_order(template, :submission_questions)
-        validate_submit_yaml(template)
       end
 
       private
@@ -155,18 +154,6 @@ module FlightJob
 
         FlightJob.logger.error("The following metadata file is invalid: #{template.metadata_path}")
         JSONSchemaErrorLogger.new(schema_errors, log_level).log
-      end
-
-      def validate_submit_yaml(template)
-        return unless File.exist?(template.submit_yaml_path)
-
-        rendered = template.render_submit_yaml({})
-        schema = JSONSchemer.schema(Template::SchemaDefs::SUBMIT_YAML)
-        schema_errors = schema.validate(rendered).to_a
-        return if schema_errors.empty?
-
-        template.errors.add(:submit_yaml, 'is not valid')
-        JSONSchemaErrorLogger.new(schema_errors, :warn).log
       end
     end
   end

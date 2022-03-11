@@ -29,8 +29,6 @@ require 'json'
 require 'securerandom'
 require 'json_schemer'
 
-require_relative '../renderers/script_renderer'
-
 module FlightJob
   class Script < ApplicationModel
     SCHEMA = JSONSchemer.schema({
@@ -70,7 +68,7 @@ module FlightJob
       end.reject(&:nil?).sort
     end
 
-    delegate :render_submit_args, to: :load_template
+    delegate :generate_submit_args, to: :load_template
 
     attr_accessor :id
     attr_writer :notes

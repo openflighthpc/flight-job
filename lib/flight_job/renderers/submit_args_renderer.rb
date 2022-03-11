@@ -30,37 +30,27 @@ require_relative 'base_renderer'
 module FlightJob
   module Renderers
 
-    # Render the answers to the submission time questions.
-    class SubmissionRenderer
+    # Render the answers to the submission time questions using the given ERb
+    # template.
+    class SubmitArgsRenderer
       class RenderDecorator < BaseRenderer::RenderDecorator
       end
 
-      DEFAULT_SUBMIT_YAML = <<~TEMPLATE.freeze
-      scheduler:
-        args: []
-      job_script:
-        args: []
-      TEMPLATE
-
-      def initialize(template:, answers:)
+      def initialize(answers:, questions:, template_path:)
         @answers = answers
-        @template = template
+        @questions = questions
+        @template_path = template_path
       end
 
       def render
-        return DEFAULT_SUBMIT_YAML.dup unless File.exist?(@template.submit_yaml_path)
-
-        template = File.read(@template.submit_yaml_path)
+        template = File.read(@template_path)
         ERB.new(template, nil, '-').result(generate_binding)
       end
 
       private
 
       def generate_binding
-        decorator = RenderDecorator.new(
-          answers: @answers,
-          questions: @template.submission_questions
-        )
+        decorator = RenderDecorator.new(answers: @answers, questions: @questions)
         decorator.instance_exec { binding }
       end
     end
