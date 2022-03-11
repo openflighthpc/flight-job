@@ -139,6 +139,7 @@ module FlightJob
         'id' => id,
         'path' => workload_path,
         'generation_questions' => generation_questions,
+        'submission_questions' => submission_questions,
       }.merge(metadata.except("generation_questions")).tap do |hash|
         if Flight.config.includes.include? 'scripts'
           hash['scripts'] = Script.load_all.select { |s| s.template_id == id }
@@ -155,7 +156,6 @@ module FlightJob
       end
     end
 
-    # XXX Copy this to the script???
     def submission_questions
       return [] if metadata.nil?
       return [] if metadata['submission_questions'].nil?
