@@ -184,7 +184,7 @@ module FlightJob
           FlightJob.logger.error("Failed to load invalid template: #{template.id}")
           FlightJob.logger.warn(template.errors.full_messages.join("\n"))
           raise InternalError, <<~ERROR.chomp
-            Cannot load the following template as it is invalid: #{template.id}
+            Cannot load invalid template: #{template.id}
           ERROR
         end
         return template

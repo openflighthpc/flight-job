@@ -70,6 +70,8 @@ module FlightJob
       end.reject(&:nil?).sort
     end
 
+    delegate :render_submit_args, to: :load_template
+
     attr_accessor :id
     attr_writer :notes
 
@@ -160,11 +162,6 @@ module FlightJob
 
     def notes_path
       @notes_path ||= File.join(FlightJob.config.scripts_dir, id, 'notes.md')
-    end
-
-    # XXX Wanted???
-    def submit_yaml_path
-      @_submit_yaml_path ||= File.join(FlightJob.config.scripts_dir, id, 'submit.yaml.erb')
     end
 
     def created_at

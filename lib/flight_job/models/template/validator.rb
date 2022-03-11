@@ -33,7 +33,9 @@ module FlightJob
       def validate(template)
         validate_schema(template)
         validate_paths(template)
-        validate_question_sort_order(template)
+        validate_question_sort_order(template, :generation_questions)
+        validate_question_sort_order(template, :submission_questions)
+        validate_submit_yaml(template)
       end
 
       private
@@ -76,27 +78,26 @@ module FlightJob
       # We validate here that (1) dependencies are not cyclic; and (2) the
       # order of the questions in the metadata file asks dependant questions
       # after their dependencies have been asked.
-      def validate_question_sort_order(template)
+      def validate_question_sort_order(template, question_type)
         return unless template.errors.empty?
 
+        questions = template.send(question_type)
         begin
-          sorted = QuestionSort.build(template.generation_questions).tsort
-          unless sorted == template.generation_questions
-            msg = "The questions for template '#{template.id}' have not been " \
-              "topographically sorted! A possible sort order is:\n" 
-            FlightJob.logger.error(msg) do
-              sorted.map(&:id).join(',')
-            end
-            errors.add(:questions, 'have not been topographically sorted')
+          sorted = QuestionSort.build(questions).tsort
+          unless sorted == questions
+            msg = "The #{question_type} for template '#{template.id}' are " \
+              "not been correctly sorted. A possible sort order is:\n" 
+            FlightJob.logger.error(msg) { sorted.map(&:id).join(', ') }
+            errors.add(question_type, 'are not correctly sorted')
           end
         rescue TSort::Cyclic
-          template.errors.add(:questions, 'form a circular loop')
+          template.errors.add(question_type, 'form a circular loop')
         rescue QuestionSort::UnresolvedReference
-          template.errors.add(:questions, "could not locate referenced question: #{$!.message}")
+          template.errors.add(question_type, "could not locate referenced question: #{$!.message}")
         rescue
-          FlightJob.logger.error "Failed to validate the template questions due to another error: #{template.id}"
+          FlightJob.logger.error "Failed to validate the template #{question_type} due to another error: #{template.id}"
           FlightJob.logger.debug("Error:\n") { $!.message }
-          template.errors.add(:questions, 'could not be validated')
+          template.errors.add(question_type, 'could not be validated')
         end
       end
 
@@ -118,21 +119,21 @@ module FlightJob
         # Errors caught on any `generation_questions.validate` objects.
         q_validate_flags = OneOfParser.new(
           'validator_def', 'properties/type',
-          /\A\/generation_questions\/\d+\/validate/,
+          /\A\/(generation)|(submission)_questions\/\d+\/validate/,
           schema_errors
         ).flags
 
         # Errors caught on any `generation_questions.validate.items` objects.
         q_validate_item_flags = OneOfParser.new(
           'array_validator_def', 'properties/type',
-          /\A\/generation_questions\/\d+\/validate\/items/,
+          /\A\/(generation)|(submission)_questions\/\d+\/validate\/items/,
           schema_errors
         ).flags
 
         # Errors caught on any `generation_questions.format.type` objects.
         q_format_flags = OneOfParser.new(
           'question_def', 'properties/format/properties/type',
-          /\A\/generation_questions\/\d+/,
+          /\A\/(generation|submission)_questions\/\d+/,
           schema_errors
         ).flags
 
@@ -154,6 +155,18 @@ module FlightJob
 
         FlightJob.logger.error("The following metadata file is invalid: #{template.metadata_path}")
         JSONSchemaErrorLogger.new(schema_errors, log_level).log
+      end
+
+      def validate_submit_yaml(template)
+        return unless File.exist?(template.submit_yaml_path)
+
+        rendered = template.render_submit_yaml({})
+        schema = JSONSchemer.schema(Template::SchemaDefs::SUBMIT_YAML)
+        schema_errors = schema.validate(rendered).to_a
+        return if schema_errors.empty?
+
+        template.errors.add(:submit_yaml, 'is not valid')
+        JSONSchemaErrorLogger.new(schema_errors, :warn).log
       end
     end
   end

@@ -27,8 +27,9 @@
 
 require "json_schemer"
 
-require_relative "template/validator"
+require_relative "../renderers/submission_renderer"
 require_relative "template/schema_defs"
+require_relative "template/validator"
 
 module FlightJob
   class Template < ApplicationModel
@@ -110,7 +111,6 @@ module FlightJob
       File.join(FlightJob.config.templates_dir, id, Flight.config.directives_name)
     end
 
-    # XXX Wanted???
     def submit_yaml_path
       File.join(FlightJob.config.templates_dir, id, 'submit.yaml.erb')
     end
@@ -223,6 +223,13 @@ module FlightJob
 
     def tags
       metadata['tags'] || []
+    end
+
+    def render_submit_args(answers)
+      renderer = FlightJob::Renderers::SubmissionRenderer.new(
+        template: self, answers: answers
+      )
+      YAML.load(renderer.render)
     end
 
     protected

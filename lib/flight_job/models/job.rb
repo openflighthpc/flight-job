@@ -31,7 +31,6 @@ require 'json_schemer'
 require 'time'
 
 require_relative 'job/validator'
-require_relative '../renderers/submission_renderer'
 
 module FlightJob
   class Job < ApplicationModel
@@ -354,13 +353,8 @@ module FlightJob
       end
     end
 
-    def render_submit_yaml
-      renderer = FlightJob::Renderers::SubmissionRenderer.new(
-        script: load_script, answers: submission_answers
-      )
-      yaml = renderer.render
-      File.write(submit_yaml_path, yaml)
-      YAML.load(yaml)
+    def save_submit_args(submit_args)
+      File.write(submit_yaml_path, submit_args.to_yaml)
     end
 
     protected

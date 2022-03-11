@@ -160,6 +160,23 @@ generation_questions:
     validate:
       type: 'string'
 
+  - id: memory_limit
+    text: Expected hard memory limit
+    description: >
+      Enter the expected memory usage of your job.  Specification of a smaller
+      memory requirement will cause the scheduler to be more likely to
+      schedule your job sooner, but note that your job **may be terminated if
+      it exceeds the specified allocation**.
+
+      Note that this setting is specified in megabytes.  e.g. specify `1024`
+      for 1 gigabyte.
+    default: 1024
+    format:
+      type: number
+    validate:
+      type: integer
+      minimum: 1
+
 submission_questions:
   - id: max_runtime
     text: Expected RUNTIME

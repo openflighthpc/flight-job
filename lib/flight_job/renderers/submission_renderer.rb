@@ -35,14 +35,20 @@ module FlightJob
       class RenderDecorator < BaseRenderer::RenderDecorator
       end
 
-      def initialize(script:, answers:)
+      DEFAULT_SUBMIT_YAML = <<~TEMPLATE.freeze
+      scheduler:
+        args: []
+      job_script:
+        args: []
+      TEMPLATE
+
+      def initialize(template:, answers:)
         @answers = answers
-        @script = script
-        @template = script.load_template
+        @template = template
       end
 
       def render
-        return "scheduler:\n  args: []" unless File.exist?(@template.submit_yaml_path)
+        return DEFAULT_SUBMIT_YAML.dup unless File.exist?(@template.submit_yaml_path)
 
         template = File.read(@template.submit_yaml_path)
         ERB.new(template, nil, '-').result(generate_binding)

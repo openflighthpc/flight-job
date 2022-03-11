@@ -333,6 +333,33 @@ module FlightJob
         }
       }
 
+      SUBMIT_YAML = {
+        "type" => "object",
+        "$comment" => "strip-schema",
+        "additionalProperties" => true,
+        "properties" => {
+          "scheduler" => {
+            "type" => "object",
+            "required" => ["args"],
+            "properties" => {
+              "args" => {
+                "type": "array",
+                "items" => { "type" => "string" }
+              }
+            }
+          },
+          "job_script" => {
+            "type" => "object",
+            "required" => ["args"],
+            "properties" => {
+              "args" => {
+                "type": "array",
+                "items" => { "type" => "string" }
+              }
+            }
+          }
+        }
+      }.freeze
     end
   end
 end
