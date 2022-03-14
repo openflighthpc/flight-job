@@ -129,10 +129,6 @@ module FlightJob
       @metadata_path ||= File.join(job_dir, 'metadata.yaml')
     end
 
-    def submit_yaml_path
-      @_submit_yaml_path ||= File.join(job_dir, 'submit.yaml')
-    end
-
     def active_index_path
       @active_index_path ||= File.join(job_dir, 'active.index')
     end
