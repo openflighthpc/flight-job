@@ -91,18 +91,6 @@ generation_questions:
       type: 'string'
       required: true
 
-  - id: job_name
-    text: "Set the name of your job"
-    description: >
-      This will be shown in the process queue and by default used in the name
-      of the output files.
-    default: 'multislot.sh'
-    format:
-      type: text
-    validate:
-      type: 'string'
-      required: true
-
   - id: notification_wanted
     text: Do you want email notifications for this job?
     description: >
@@ -159,6 +147,7 @@ generation_questions:
       value: question.notification_wanted.answer
       eq: 'yes'
 
+submission_questions:
   - id: max_runtime
     text: Expected RUNTIME
     description: >
@@ -195,6 +184,18 @@ generation_questions:
     validate:
       type: integer
       minimum: 1
+
+  - id: job_name
+    text: "Set the name of your job"
+    description: >
+      This will be shown in the process queue and by default used in the name
+      of the output files.
+    default: 'multislot.sh'
+    format:
+      type: text
+    validate:
+      type: 'string'
+      required: true
 
   - id: number_of_slots
     text: Processing requirements

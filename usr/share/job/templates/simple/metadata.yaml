@@ -82,18 +82,6 @@ generation_questions:
       type: 'string'
       required: true
 
-  - id: job_name
-    text: "Set the name of your job"
-    description: >
-      This will be shown in the process queue and by default used in the name
-      of the output files.
-    default: 'simple.sh'
-    format:
-      type: text
-    validate:
-      type: 'string'
-      required: true
-
   - id: notification_wanted
     text: Do you want email notifications for this job?
     description: >
@@ -149,33 +137,6 @@ generation_questions:
     ask_when:
       value: question.notification_wanted.answer
       eq: 'yes'
-
-  - id: workload
-    text: "Who, or what, should we greet"
-    description: >
-      Who, or what, should we say hello to when your script is ran.
-    default: "World"
-    format:
-      type: text
-    validate:
-      type: 'string'
-
-  - id: memory_limit
-    text: Expected hard memory limit
-    description: >
-      Enter the expected memory usage of your job.  Specification of a smaller
-      memory requirement will cause the scheduler to be more likely to
-      schedule your job sooner, but note that your job **may be terminated if
-      it exceeds the specified allocation**.
-
-      Note that this setting is specified in megabytes.  e.g. specify `1024`
-      for 1 gigabyte.
-    default: 1024
-    format:
-      type: number
-    validate:
-      type: integer
-      minimum: 1
 
 submission_questions:
   - id: max_runtime
@@ -236,4 +197,3 @@ submission_questions:
       type: text
     validate:
       type: 'string'
-

@@ -90,18 +90,6 @@ generation_questions:
       type: 'string'
       required: true
 
-  - id: job_name
-    text: "Set the name of your job"
-    description: >
-      This will be shown in the process queue and by default used in the name
-      of the output files.
-    default: 'multinode.sh'
-    format:
-      type: text
-    validate:
-      type: 'string'
-      required: true
-
   - id: notification_wanted
     text: Do you want email notifications for this job?
     description: >
@@ -158,6 +146,7 @@ generation_questions:
       value: question.notification_wanted.answer
       eq: 'yes'
 
+submission_questions:
   - id: max_runtime
     text: Expected RUNTIME
     description: >
@@ -165,7 +154,7 @@ generation_questions:
       runtime will cause the scheduler to be more likely to schedule your job
       sooner, but note that your job **will be terminated if it is still
       executing after the time specified**.
-      
+
       A time limit of zero requests that no time limit be imposed.  The format
       is one of "minutes", "minutes:seconds", "hours:minutes:seconds",
       "days-hours", "days-hours:minutes" and "days-hours:minutes:seconds".
@@ -185,7 +174,7 @@ generation_questions:
       memory requirement will cause the scheduler to be more likely to
       schedule your job sooner, but note that your job **may be terminated if
       it exceeds the specified allocation**.
-      
+
       Note that this setting is specified in megabytes.  e.g. specify `1024`
       for 1 gigabyte.
     default: 1024
@@ -194,6 +183,18 @@ generation_questions:
     validate:
       type: integer
       minimum: 1
+
+  - id: job_name
+    text: "Set the name of your job"
+    description: >
+      This will be shown in the process queue and by default used in the name
+      of the output files.
+    default: 'multinode.sh'
+    format:
+      type: text
+    validate:
+      type: 'string'
+      required: true
 
   - id: number_of_nodes
     text: Processing requirements

@@ -14,6 +14,10 @@ scheduler:
     - "<%= questions.memory_limit.answer %>"
     - "--job-name"
     - "<%= questions.job_name.answer %>"
+    - "--nodes"
+    - "<%= questions.number_of_nodes.answer %>"
+    - "--ntasks"
+    - "<%= questions.number_of_slots.answer %>"
 
 job_script:
   # An array of command line arguments that will be given to the job script,

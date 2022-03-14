@@ -68,7 +68,11 @@
 # Set the name of your job - this will be shown in the process
 # queue.
 #
+<% if questions.job_name.answer.blank? -%>
+##SBATCH -J 
+<% else -%>
 #SBATCH -J <%= questions.job_name.answer %>
+<% end -%>
 
 #=======================
 #  Email notifications
@@ -116,7 +120,11 @@
 # Format: one of "minutes", "minutes:seconds",
 # "hours:minutes:seconds", "days-hours", "days-hours:minutes" and
 # "days-hours:minutes:seconds". e.g. `3-0` for 3 days.
+<% if questions.max_runtime.answer.blank? -%>
+##SBATCH --time=3-0
+<% else -%>
 #SBATCH --time=<%= questions.max_runtime.answer %>
+<% end -%>
 
 #================
 #  Memory limit
@@ -137,7 +145,11 @@
 #  2. This setting is specified in megabytes. e.g. specify `1024` for
 #     1 gigabyte.
 #
+<% if questions.memory_limit.answer.blank? -%>
+##SBATCH --mem=1024
+<% else -%>
 #SBATCH --mem=<%= questions.memory_limit.answer %>
+<% end -%>
 
 #=========================
 #  Resource requirements
@@ -178,4 +190,8 @@
 # are scheduled on a single node for a SMP job.
 #
 #SBATCH --nodes=1
+<% if questions.number_of_slots.answer.blank? -%>
+##SBATCH --ntasks=2
+<% else -%>
 #SBATCH --ntasks=<%= questions.number_of_slots.answer %>
+<% end -%>
