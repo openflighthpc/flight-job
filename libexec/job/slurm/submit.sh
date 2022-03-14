@@ -42,7 +42,7 @@ source "${DIR}/functions.sh"
 source "${DIR}/parser.sh"
 
 submit_job() {
-    $DIR/sbatch-wrapper.sh "$1"
+    $DIR/sbatch-wrapper.sh "$@"
 }
 
 # Parse the scheduler id from `sbatch` output and set into JOB associative
@@ -75,7 +75,7 @@ main() {
 
     assert_progs jq sbatch
 
-    output="$(submit_job "$1" | tee >(log_command "sbatch wrapper" 1>&2))"
+    output="$(submit_job "$@" | tee >(log_command "sbatch wrapper" 1>&2))"
     exit_status=$?
     if [[ $exit_status -ne 0 ]]; then
         exit $exit_status

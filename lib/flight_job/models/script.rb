@@ -29,8 +29,6 @@ require 'json'
 require 'securerandom'
 require 'json_schemer'
 
-require_relative '../renderer'
-
 module FlightJob
   class Script < ApplicationModel
     SCHEMA = JSONSchemer.schema({
@@ -69,6 +67,8 @@ module FlightJob
         end
       end.reject(&:nil?).sort
     end
+
+    delegate :generate_submit_args, to: :load_template
 
     attr_accessor :id
     attr_writer :notes
@@ -274,7 +274,7 @@ module FlightJob
         raise InternalError, 'Unexpectedly failed to render the script!'
       end
 
-      @renderer ||= FlightJob::Renderer.new(
+      @renderer ||= FlightJob::Renderers::ScriptRenderer.new(
         template: load_template, answers: answers
       )
     end

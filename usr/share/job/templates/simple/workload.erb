@@ -47,6 +47,13 @@ echo "Executing job commands, current working directory is $(pwd)"
 
 # REPLACE THE FOLLOWING WITH YOUR APPLICATION COMMANDS
 
-echo "Hello, <%= questions.workload.answer %>!" > $RESULTS_DIR/test.output
+<%# Set the default workload from the generation questions if present -%>
+friend="<%= questions.workload.answer %>"
+if [[ $# -gt 0 ]] ; then
+  <%# Override the default workload with the answer from the submission_questions questions if present -%>
+  friend="${@}"
+fi
+
+echo "Hello, ${friend}!" > $RESULTS_DIR/test.output
 echo "This is an example job. It ran on `hostname -s` (as `whoami`)." >> $RESULTS_DIR/test.output
 echo "Output file has been generated, please check $RESULTS_DIR/test.output"

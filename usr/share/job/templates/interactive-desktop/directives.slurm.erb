@@ -68,7 +68,11 @@
 # Set the name of your job - this will be shown in the process
 # queue.
 #
+<% if questions.job_name.answer.blank? -%>
+##SBATCH -J 
+<% else -%>
 #SBATCH -J <%= questions.job_name.answer %>
+<% end -%>
 
 #=======================
 #  Email notifications
@@ -132,8 +136,12 @@
 # A time limit of zero requests that no time limit be imposed.
 # Format: one of "minutes", "minutes:seconds",
 # "hours:minutes:seconds", "days-hours", "days-hours:minutes" and
-# "days-hours:minutes:seconds". e.g. `3-0` for 3 days.
+# "days-hours:minutes:seconds". e.g. `30` for 30 minutes.
+<% if questions.max_runtime.answer.blank? -%>
+##SBATCH --time=30
+<% else -%>
 #SBATCH --time=<%= questions.max_runtime.answer %>
+<% end -%>
 
 #================
 #  Memory limit
@@ -148,7 +156,11 @@
 # Note that this setting is specified in megabytes.
 # e.g. specify `1024` for 1 gigabyte.
 #
+<% if questions.memory_limit.answer.blank? -%>
+##SBATCH --mem=1024
+<% else -%>
 #SBATCH --mem=<%= questions.memory_limit.answer %>
+<% end -%>
 
 #=========================
 #  Resource requirements

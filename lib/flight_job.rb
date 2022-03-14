@@ -45,7 +45,6 @@ module FlightJob
   autoload 'JSONSchemaErrorLogger', File.expand_path('flight_job/json_schema_error_logger.rb', __dir__)
   autoload 'NameGenerator', File.expand_path('flight_job/name_generator', __dir__)
   autoload 'OneOfParser', File.expand_path('flight_job/one_of_parser.rb', __dir__)
-  autoload 'QuestionPrompter', File.expand_path('flight_job/question_prompter', __dir__)
   autoload :QuestionGenerators, File.expand_path('flight_job/question_generators.rb', __dir__)
   autoload 'WrapIndentHelper', File.expand_path('flight_job/wrap_indent_helper.rb', __dir__)
 
@@ -73,6 +72,18 @@ module FlightJob
 
   module Outputs
     Dir.glob(File.expand_path('flight_job/outputs/*.rb', __dir__)).each do |path|
+      autoload FlightJob.constantize(File.basename(path, '.*')), path
+    end
+  end
+
+  module Prompters
+    Dir.glob(File.expand_path('flight_job/prompters/*.rb', __dir__)).each do |path|
+      autoload FlightJob.constantize(File.basename(path, '.*')), path
+    end
+  end
+
+  module Renderers
+    Dir.glob(File.expand_path('flight_job/renderers/*.rb', __dir__)).each do |path|
       autoload FlightJob.constantize(File.basename(path, '.*')), path
     end
   end

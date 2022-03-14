@@ -1,5 +1,5 @@
 #==============================================================================
-# Copyright (C) 2021-present Alces Flight Ltd.
+# Copyright (C) 2022-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -25,36 +25,34 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require 'tsort'
+require_relative 'base_renderer'
 
 module FlightJob
-  QuestionSort = Struct.new(:hash) do
-    # NOTE: This is not a user facing error, instead it is used to flag
-    # the missing question ID
-    class UnresolvedReference < RuntimeError; end
+  module Renderers
 
-    include TSort
+    # Render the answers to the submission time questions using the given ERb
+    # template.
+    class SubmitArgsRenderer
+      class RenderDecorator < BaseRenderer::RenderDecorator
+      end
 
-    def self.build(questions)
-      new(questions.map { |q| [q.id, q] }.to_h)
-    end
+      def initialize(answers:, questions:, template_path:)
+        @answers = answers
+        @questions = questions
+        @template_path = template_path
+      end
 
-    attr_accessor :questions
+      def render
+        template = File.read(@template_path)
+        ERB.new(template, nil, '-').result(generate_binding)
+      end
 
-    def tsort_each_node(&b)
-      hash.values.each(&b)
-    end
+      private
 
-    def tsort_each_child(question, &b)
-      id = hash[question.id].related_question_id
-      ids = id.nil? ? [] : [id]
-      ids.map do |id|
-        if hash.key?(id)
-          hash[id]
-        else
-          raise UnresolvedReference, id
-        end
-      end.each(&b)
+      def generate_binding
+        decorator = RenderDecorator.new(answers: @answers, questions: @questions)
+        decorator.instance_exec { binding }
+      end
     end
   end
 end

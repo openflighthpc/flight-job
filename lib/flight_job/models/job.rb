@@ -64,8 +64,8 @@ module FlightJob
         if job.valid?(:load)
           job.tap(&:monitor)
         else
-          FlightJob.logger.error("Failed to load missing/invalid job: #{id}")
-          FlightJob.logger.info(job.errors.full_messages.join("\n"))
+          Flight.logger.error("Failed to load missing/invalid job: #{id}")
+          Flight.logger.info(job.errors.full_messages.join("\n"))
           nil
         end
       end.reject(&:nil?).sort
@@ -79,8 +79,8 @@ module FlightJob
 
         # Ensure it is valid
         unless job.valid?(:load)
-          FlightJob.logger.error "Skipping monitor for invalid job: #{id}"
-          FlightJob.logger.info(job.errors.full_messages.join("\n"))
+          Flight.logger.error "Skipping monitor for invalid job: #{id}"
+          Flight.logger.info(job.errors.full_messages.join("\n"))
           next
         end
 
@@ -144,7 +144,7 @@ module FlightJob
       end
     end
 
-    def initialize_metadata(script)
+    def initialize_metadata(script, answers)
       if @metadata
         raise InternalError, <<~ERROR
           Cannot initialize metadata for job '#{id.to_s}' as it has already been loaded
@@ -156,6 +156,7 @@ module FlightJob
           "script_id" => script.id,
           "rendered_path" => File.join(job_dir, script.script_name),
           "version" => SCHEMA_VERSION,
+          "submission_answers" => answers,
         }
       end
     end
@@ -176,6 +177,10 @@ module FlightJob
 
     def created_at
       metadata['created_at']
+    end
+
+    def submission_answers
+      metadata['submission_answers']
     end
 
     def results_dir
@@ -338,8 +343,8 @@ module FlightJob
         FileUtils.mkdir_p File.dirname(metadata_path)
         File.write metadata_path, YAML.dump(metadata)
       else
-        FlightJob.logger.error("Failed to save job metadata: #{id}")
-        FlightJob.logger.info(errors.full_messages.join("\n"))
+        Flight.logger.error("Failed to save job metadata: #{id}")
+        Flight.logger.info(errors.full_messages.join("\n"))
         raise InternalError, "Unexpectedly failed to save job '#{id}' metadata"
       end
     end
