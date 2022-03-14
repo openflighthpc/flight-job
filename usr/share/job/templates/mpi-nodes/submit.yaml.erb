@@ -1,7 +1,27 @@
 <%
-    # This space can be used to run Ruby code which is then used in the YAML
-    # below.  For instance, exactly which options are passed to scheduler
-    # might depend on the answers.
+  # There are a couple of ways in which arguments to the scheduler and job
+  # script can be specified.
+  #
+  # For simple arguments which are always going to be given it is perhaps
+  # easiest to include them directly in the list below (see `--time` and
+  # `--mem` as examples).
+  #
+  # If the argument is not always going to given, or there is some complexity
+  # in generating its value, it is perhaps best to generate and collect the
+  # args them here and then process the collection below (see `--job-name` as
+  # an example).
+  #
+  scheduler_args = []
+  job_script_args = []
+
+  if !questions.job_name.answer.blank?
+    scheduler_args << "--job-name"
+    scheduler_args << questions.job_name.answer
+  end
+  if !questions.number_of_nodes.answer.blank?
+    scheduler_args << "--nodes"
+    scheduler_args << questions.number_of_nodes.answer
+  end
 -%>
 ---
 scheduler:
@@ -12,14 +32,15 @@ scheduler:
     - "<%= questions.max_runtime.answer %>"
     - "--mem"
     - "<%= questions.memory_limit.answer %>"
-    - "--job-name"
-    - "<%= questions.job_name.answer %>"
-    - "--nodes"
-    - "<%= questions.number_of_nodes.answer %>"
+<% scheduler_args.each do |arg| -%>
+    - "<%= arg %>"
+<% end -%>
 
 job_script:
   # An array of command line arguments that will be given to the job script,
   # (assuming that the scheduler supports this functionality).
   args:
     - "<%= questions.workload.answer %>"
-
+<% job_script_args.each do |arg| -%>
+    - "<%= arg %>"
+<% end -%>
