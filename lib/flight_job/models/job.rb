@@ -180,7 +180,7 @@ module FlightJob
     end
 
     def submission_answers
-      metadata['submission_answers']
+      metadata['submission_answers'] || {}
     end
 
     def results_dir
