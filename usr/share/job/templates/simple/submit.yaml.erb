@@ -8,7 +8,7 @@
   #
   # If the argument is not always going to given, or there is some complexity
   # in generating its value, it is perhaps best to generate and collect the
-  # args them here and then process the collection below (see `--job-name` as
+  # args here and then process the collection below (see `--job-name` as
   # an example).
   #
   scheduler_args = []
@@ -24,10 +24,26 @@ scheduler:
   # An array of command line arguments that will be given to the scheduler
   # submission tool, e.g., `sbatch`.
   args:
+<%#
+      The `--time` flag is always given. Its value will be the value
+      provided by the user, or the default set for that question.  If neither
+      of those exist, the `--time` flag will not have a value given and the
+      submission will likely fail.
+
+      In short, specifying a flag without making sure it has a value, is
+      probably not a good idea.
+    -%>
     - "--time"
     - "<%= questions.max_runtime.answer %>"
+
+<%#
+      The `--mem` flag is always given. Its value will be the value provided
+      by the user, the default set for that question, or the value hardcoded
+      here as `2048`.
+    -%>
     - "--mem"
-    - "<%= questions.memory_limit.answer %>"
+    - "<%= questions.memory_limit.answer(when_blank: '2048') %>"
+
 <% scheduler_args.each do |arg| -%>
     - "<%= arg %>"
 <% end -%>

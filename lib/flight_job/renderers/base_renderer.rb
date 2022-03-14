@@ -64,8 +64,8 @@ module FlightJob
           @answer = answer
         end
 
-        def answer
-          @answer || @question.default
+        def answer(when_blank: nil)
+          @answer.presence || @question.default.presence || when_blank
         end
 
         def default

@@ -120,11 +120,7 @@
 # Format: one of "minutes", "minutes:seconds",
 # "hours:minutes:seconds", "days-hours", "days-hours:minutes" and
 # "days-hours:minutes:seconds". e.g. `3-0` for 3 days.
-<% if questions.max_runtime.answer.blank? -%>
-##SBATCH --time=3-0
-<% else -%>
-#SBATCH --time=<%= questions.max_runtime.answer %>
-<% end -%>
+#SBATCH --time=<%= questions.max_runtime.answer(when_blank: '3-0') %>
 
 #================
 #  Memory limit
@@ -139,11 +135,7 @@
 # Note that this setting is specified in megabytes.
 # e.g. specify `1024` for 1 gigabyte.
 #
-<% if questions.memory_limit.answer.blank? -%>
-##SBATCH --mem=1024
-<% else -%>
-#SBATCH --mem=<%= questions.memory_limit.answer %>
-<% end -%>
+#SBATCH --mem=<%= questions.memory_limit.answer(when_blank: 1024) %>
 
 #=========================
 #  Resource requirements
@@ -175,8 +167,4 @@
 # For example 1-10%4 will run 10 jobs, numbered from 1 to 10 and limit
 # the number of simultaneous jobs to 4.
 #
-<% if questions.array_configuration.answer.blank? -%>
-##SBATCH --array=1-10%4
-<% else -%>
-#SBATCH --array=<%= questions.array_configuration.answer %>
-<% end -%>
+#SBATCH --array=<%= questions.array_configuration.answer(when_blank: '1-10%4') %>
