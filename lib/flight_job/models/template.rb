@@ -135,12 +135,13 @@ module FlightJob
 
     def serializable_hash(opts = nil)
       opts ||= {}
-      {
+      md = metadata.except("generation_questions", "submission_questions", "__meta__")
+      md.merge(
         'id' => id,
         'path' => workload_path,
         'generation_questions' => generation_questions,
         'submission_questions' => submission_questions,
-      }.merge(metadata.except("generation_questions")).tap do |hash|
+      ).tap do |hash|
         if Flight.config.includes.include? 'scripts'
           hash['scripts'] = Script.load_all.select { |s| s.template_id == id }
         end
