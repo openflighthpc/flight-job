@@ -13,8 +13,14 @@ if [ "${CONTROLS_DIR}" != "" ]; then
 fi
 
 register_control() {
-  name=$1
-  value=$2
+  local name
+  local value
+  name="$1"
+  if [[ -p /dev/stdin ]]; then
+      value="$( cat - )"
+  else
+      value="$2"
+  fi
   if [ -d "${CONTROLS_DIR}" ]; then
     echo "${value}" > "${CONTROLS_DIR}/${name}"
   else
@@ -24,13 +30,69 @@ register_control() {
 }
 
 <% if template.tag('script:type') == 'interactive' -%>
+<% if template.tag('session:host') == 'login' -%>
 #=========================
 #  Session orchestration
 #-------------------------
-# Functions used to orchestrate the creation of your interactive session with
-# Flight Desktop.
+# Functions used to orchestrate the creation of your interactive session on a
+# login node with X11 forwarding to a compute node.
+# XXX RESULTS_DIR might not be set yet.  Or could be wrong.
+SESSION_OUTPUT="${RESULTS_DIR}/session.output"
+
+on_login_host() {
+    [ -z $SLURM_JOBID ]
+}
+
+prepare_x11_forwarding() {
+    # Add our short hostname to the DISPLAY variable if we need to
+    if [ `echo $DISPLAY | cut -d: -f1 | egrep -c [a-z]` -lt 1 ] ; then
+        export DISPLAYNAME=`hostname -s`$DISPLAY
+    else
+        export DISPLAYNAME=$DISPLAY
+    fi
+}
+
+register_scheduler_id() {
+    stdbuf -oL sed -n 's/.*job \([0-9]*\) queued.*/\1/p' \
+        | head -n 1 \
+        | tee /dev/stderr \
+        | register_control "scheduler_id" 
+}
+
+request_allocation() {
+    # Request a slurm command-line session with any supplied variables, and
+    # run this job script on the allocation.
+    echo srun --pty "$@" "${BASH_SOURCE[0]}" $DISPLAYNAME
+    register_control "job_type" "BOOTSTRAPPING"
+    srun --pty "$@" "${BASH_SOURCE[0]}" $DISPLAYNAME \
+        2> >( tee >( register_scheduler_id ) )
+}
+
+configure_x11_forwarding() {
+    # Setup the originator to expect our X connection.
+    DISPLAYNAME=$1
+    DISPLAYHOST=`echo $DISPLAYNAME | cut -d: -f1`
+    this_hostname=`hostname -s`
+    setxhost="ssh $DISPLAYHOST 'export DISPLAY=$DISPLAYNAME && xhost $this_hostname'"
+    echo -ne "Enabling $DISPLAYHOST to accept our X-connection... "
+    eval $setxhost
+    export DISPLAY=$DISPLAYNAME
+}
+
+flight_job_book_keeping() {
+    register_control "scheduler_id" "$SLURM_JOB_ID"
+    register_control "job_type" "SINGLETON"
+}
+
+<% else -%>
+#=========================
+#  Session orchestration
+#-------------------------
+# Functions used to orchestrate the creation of your interactive session on a
+# compute node with Flight Desktop.
 FLIGHT_SESSION_ID_PATH="${CONTROLS_DIR}"/flight_desktop_id
 FLIGHT_SESSION_STATUS_PATH="${CONTROLS_DIR}"/flight_desktop_status
+# XXX RESULTS_DIR might not be set yet.  Or could be wrong.
 SESSION_OUTPUT="${RESULTS_DIR}/session.output"
 
 create_session_script() {
@@ -95,4 +157,5 @@ session_await() {
     done
     echo "Session is no longer running."
 }
+<% end -%>
 <% end -%>

@@ -1,0 +1,70 @@
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+#  >>>> SET TASK ENVIRONMENT VARIABLES
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+# If necessary, set up further environment variables that are not
+# specific to your workload here.
+#
+# Several standard variables, such as SLURM_JOB_ID, SLURM_JOB_NAME and
+# SLURM_NTASKS, are made available by the scheduler.
+
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+#  >>>> YOUR WORKLOAD
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
+#===============================
+#  Activate Flight Environment
+#-------------------------------
+source "${flight_ROOT:-/opt/flight}"/etc/setup.sh
+
+if on_login_host ; then
+    # Request an allocation from the scheduler.  The allocation will run this
+    # script again on the allocated node.
+    prepare_x11_forwarding
+    # XXX "$@" is likely to contain a mixture of scheduler args and job script
+    # args.  Need some mechanism to separate them.  Or leave this for later.
+    request_allocation "$@"
+else
+    # The script is running on a compute node inside of a scheduler
+    # allocation.
+    flight_job_book_keeping
+    configure_x11_forwarding "$1"
+    shift
+
+    #===========================
+    #  Create results directory
+    #---------------------------
+    # By convention, job's submitted with `flight-job` are expected to save their
+    # results to RESULTS_DIR.  `flight-job` provides easy access to any files
+    # saved there.
+    #
+    # Your job can save its results anywhere you want, but if the results are
+    # saved outside of RESULTS_DIR, 'flight-job' will be unable to help you access
+    # your results.
+    RESULTS_DIR="$(pwd)/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
+    register_control "results_dir" "${RESULTS_DIR}"
+    echo "Your results will be stored in: $RESULTS_DIR"
+    mkdir -p "$RESULTS_DIR"
+    SESSION_OUTPUT="${RESULTS_DIR}/session.output"
+
+    #==============================
+    #  Activate Package Ecosystem
+    #------------------------------
+    {
+    # e.g.:
+    # flight env activate gridware
+    # module load apps/R
+    :
+    } >> "${SESSION_OUTPUT}" 2>&1
+
+    #===============================
+    #  Application launch commands
+    #-------------------------------
+    # Customize this section to suit your needs.
+
+    echo "Executing job commands, current working directory is $(pwd)" >> "${SESSION_OUTPUT}" 2>&1
+
+    # REPLACE THE FOLLOWING WITH YOUR APPLICATION COMMANDS
+
+    echo "This is an example interactive job running a bash shell." >> "${SESSION_OUTPUT}" 2>&1
+    bash
+fi
