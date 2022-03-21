@@ -37,21 +37,27 @@ module FlightJob
           return unless job.persisted?
           return unless job.metadata.is_a?(Hash)
 
-          merge_control_file(job, "scheduler_id")
-          merge_control_file(job, "submit_status", transform: :to_i)
-          merge_job_type(job)
+          merge_control_file job, "scheduler_id"
+          merge_control_file job, "submit_status",
+            transform: :to_i
+          merge_control_file job, "job_type",
+            if: ->(meta_job_type) { meta_job_type.blank? || meta_job_type == "SUBMITTING" }
         end
 
         private
 
-        def merge_control_file(job, key, transform: nil)
-          job.metadata[key] ||=
-            begin
-              value = job.controls_file(key).read
-              value = transform_value(value, transform)
-              Flight.logger.debug("Setting #{key} from controls file to #{value.inspect}")
-              value
-            end
+        def merge_control_file(job, key, transform: nil, **options)
+          meta_val = job.metadata[key]
+          return unless should_merge?(meta_val, options[:if])
+
+          value = job.controls_file(key).read
+          value = transform_value(value, transform)
+          if value.blank?
+            Flight.logger.debug("Not setting #{key} from controls file to #{value.inspect}")
+          else
+            Flight.logger.debug("Setting #{key} from controls file to #{value.inspect}")
+            job.metadata[key] = value
+          end
         end
 
         def transform_value(value, transform)
@@ -64,14 +70,13 @@ module FlightJob
           end
         end
 
-        def merge_job_type(job)
-          meta_job_type = job.metadata["job_type"]
-          if meta_job_type.blank? || meta_job_type == "SUBMITTING"
-            controls_job_type = job.controls_file("job_type").read
-            if controls_job_type.present?
-              Flight.logger.debug("Setting job_type from controls file to #{controls_job_type.inspect}")
-              job.metadata["job_type"] = controls_job_type
-            end
+        def should_merge?(value, merge_if)
+          if merge_if.nil?
+            !value
+          elsif merge_if.respond_to?(:call)
+            merge_if.call(value)
+          else
+            value.send(merge_if)
           end
         end
       end

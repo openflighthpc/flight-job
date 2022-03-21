@@ -62,11 +62,17 @@ request_allocation() {
     # Request a slurm command-line session with any supplied variables, and
     # run this job script on the allocation.
     echo srun --pty "$@" "${BASH_SOURCE[0]}" $DISPLAYNAME
+    local submit_status
     register_control "job_type" "BOOTSTRAPPING"
     register_control "submit_status" "0"
     srun --pty "$@" "${BASH_SOURCE[0]}" $DISPLAYNAME \
         2> >( tee >( register_scheduler_id ) )
-    register_control "submit_status" $?
+    submit_status=$?
+    if [[ $submit_status -ne 0 ]] ; then
+        register_control "submit_status" $submit_status
+        register_control "job_type" "FAILED_SUBMISSION"
+        register_control "submit_stderr" "srun failed to submit job"
+    fi
 }
 
 configure_x11_forwarding() {
