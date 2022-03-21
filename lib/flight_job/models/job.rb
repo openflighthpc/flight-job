@@ -109,6 +109,7 @@ module FlightJob
       metadata['script_id']
     end
 
+    # XXX Is this used?
     def submit_script=(script)
       # Initialize the job with the script
       if metadata.empty?
@@ -277,6 +278,14 @@ module FlightJob
 
     def controls_file(name)
       controls_dir.file(name)
+    end
+
+    def desktop_id
+      controls_file('flight_desktop_id').read
+    end
+
+    def desktop_id=(id)
+      controls_file('flight_desktop_id').write(id)
     end
 
     def submit

@@ -74,6 +74,11 @@ module FlightJob
       return nil unless exists?
       File.read(@path).force_encoding('UTF-8').strip
     end
+
+    def write(content)
+      FileUtils.mkdir_p(File.dirname(@path))
+      File.write(@path, content)
+    end
   end
 
   class NullControlsFile
@@ -87,6 +92,11 @@ module FlightJob
 
     def read
       nil
+    end
+
+    def write(content)
+      FileUtils.mkdir_p(File.dirname(@path))
+      File.write(@path, content)
     end
   end
 end

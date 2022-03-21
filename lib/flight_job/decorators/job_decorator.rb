@@ -80,7 +80,7 @@ module FlightJob
         @object = object
       end
 
-      delegate :id, :results_dir, :job_type, to: :object
+      delegate :desktop_id, :id, :results_dir, :job_type, to: :object
       delegate_metadata :script_id, :scheduler_id, :scheduler_state,
         :stdout_path, :stderr_path, :reason, :created_at,
         :submit_status, :submit_stdout, :submit_stderr, :estimated_start_time, :estimated_end_time
@@ -160,10 +160,6 @@ module FlightJob
           (last_non_terminal_task&.metadata ||{})['estimated_end_time']
         end
         time && !stringify ? Time.parse(time) : time
-      end
-
-      def desktop_id
-        object.controls_file('flight_desktop_id').read
       end
 
       def serializable_hash(opts = nil)

@@ -17,7 +17,6 @@
 source "${flight_ROOT:-/opt/flight}"/etc/setup.sh
 
 if on_login_host ; then
-    register_control "flight_desktop_id" "${flight_DESKTOP_id}"
     # Request an allocation from the scheduler.  The allocation will run this
     # script again on the allocated node.
     prepare_x11_forwarding

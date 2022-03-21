@@ -127,10 +127,13 @@ module FlightJob
           env = {
             'CONTROLS_DIR' => job.controls_dir.path,
           }
-          FlightJob::DesktopCLI.start_session(
+          result = FlightJob::DesktopCLI.start_session(
             env: env,
             script: script_command.join(" "),
           )
+          if result.success?
+            job.desktop_id = result.desktop_id
+          end
         else
           # Submit the job via sbatch.
           job.submit

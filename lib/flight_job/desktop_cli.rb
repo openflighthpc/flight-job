@@ -33,7 +33,25 @@ module FlightJob
   class DesktopCLI
     class << self
       def start_session(env:, script:)
-        new(*flight_desktop, 'start', '--no-override-env', '--script', script, '--kill-on-script-exit', env: env).run_local
+        args = [
+          "start",
+          "--no-override-env",
+          "--script", script,
+          "--kill-on-script-exit",
+        ]
+        new(*flight_desktop, *args, env: env).run_local.tap do |result|
+          desktop_id = nil
+          if result.success?
+            result.stdout.split("\n").each do |line|
+              key, value = line.split(/\t/, 2)
+              if key == 'Identity'
+                desktop_id = value
+                break
+              end
+            end
+          end
+          result.define_singleton_method(:desktop_id) { desktop_id }
+        end
       end
 
       private
