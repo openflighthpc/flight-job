@@ -33,7 +33,7 @@ module FlightJob
   class DesktopCLI
     class << self
       def start_session(env:, script:)
-        new(*flight_desktop, 'start', '--no-override-env', '--script', script, env: env).run_local
+        new(*flight_desktop, 'start', '--no-override-env', '--script', script, '--kill-on-script-exit', env: env).run_local
       end
 
       private

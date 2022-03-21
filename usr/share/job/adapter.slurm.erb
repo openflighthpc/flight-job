@@ -72,6 +72,9 @@ request_allocation() {
         register_control "submit_status" $submit_status
         register_control "job_type" "FAILED_SUBMISSION"
         register_control "submit_stderr" "srun failed to submit job"
+    else
+        echo "Scheduler allocation has completed. Exiting..."
+        sleep 2
     fi
 }
 
