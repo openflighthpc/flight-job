@@ -212,8 +212,9 @@
 
 # ==============================================================================
 # Submission Period
-# The minimum amount of time to wait before a job that is "pending submission"
-# is considered failed.
+#
+# The minimum time in seconds to wait before a job that is "pending
+# submission" is considered to have failed to be submitted.
 #
 # The environment variable flight_JOB_submission_period takes precedence.
 # ==============================================================================
