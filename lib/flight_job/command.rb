@@ -243,7 +243,7 @@ module FlightJob
 
     def load_job(id)
       Job.new(id: id).tap do |job|
-        unless File.exists? job.metadata_path
+        unless File.exists?(job.metadata_path)
           raise MissingJobError, "Could not locate job: #{id}"
         end
         unless job.valid?(:load)

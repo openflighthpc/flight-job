@@ -55,7 +55,6 @@ prepare_x11_forwarding() {
 register_scheduler_id() {
     stdbuf -oL sed -n 's/.*job \([0-9]*\) queued.*/\1/p' \
         | head -n 1 \
-        | tee /dev/stderr \
         | register_control "scheduler_id" 
 }
 
@@ -64,8 +63,10 @@ request_allocation() {
     # run this job script on the allocation.
     echo srun --pty "$@" "${BASH_SOURCE[0]}" $DISPLAYNAME
     register_control "job_type" "BOOTSTRAPPING"
+    register_control "submit_status" "0"
     srun --pty "$@" "${BASH_SOURCE[0]}" $DISPLAYNAME \
         2> >( tee >( register_scheduler_id ) )
+    register_control "submit_status" $?
 }
 
 configure_x11_forwarding() {
@@ -81,7 +82,7 @@ configure_x11_forwarding() {
 
 flight_job_book_keeping() {
     register_control "scheduler_id" "$SLURM_JOB_ID"
-    register_control "job_type" "SINGLETON"
+    register_control "job_type" "BOOTSTRAPPING"
 }
 
 <% else -%>

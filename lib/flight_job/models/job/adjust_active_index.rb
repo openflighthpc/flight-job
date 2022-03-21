@@ -1,5 +1,5 @@
 #==============================================================================
-# Copyright (C) 2020-present Alces Flight Ltd.
+# Copyright (C) 2021-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -25,19 +25,18 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require 'active_model'
-
 module FlightJob
-  class ApplicationModel
-    include ActiveModel::Model
-    include ActiveModel::Serializers::JSON
-    extend ActiveModel::Callbacks
-
-    define_model_callbacks :initialize, only: :after
-
-    def initialize(**attributes)
-      run_callbacks :initialize do
-        super
+  class Job < ApplicationModel
+    class AdjustActiveIndex
+      def self.after_initialize(job)
+        return unless job.persisted?
+        if job.terminal?
+          Flight.logger.debug("Removing active index file for terminal job #{job.id}")
+          FileUtils.rm_f job.active_index_path
+        else
+          Flight.logger.debug("Touching active index file for non-terminal job #{job.id}")
+          FileUtils.touch job.active_index_path
+        end
       end
     end
   end

@@ -31,6 +31,8 @@ require 'json_schemer'
 require 'time'
 
 require_relative 'job/validator'
+require_relative 'job/adjust_active_index'
+require_relative 'job/merge_controls_with_metadata'
 
 module FlightJob
   class Job < ApplicationModel
@@ -58,7 +60,8 @@ module FlightJob
     end
 
     def self.load_all
-      Dir.glob(new(id: '*').metadata_path).map do |path|
+      glob = File.join(Flight.config.jobs_dir, "*", "metadata.yaml")
+      Dir.glob(glob).map do |path|
         id = File.basename(File.dirname(path))
         job = new(id: id)
         if job.valid?(:load)
@@ -89,8 +92,10 @@ module FlightJob
       end
     end
 
+    after_initialize AdjustActiveIndex, if: :persisted?
+    after_initialize MergeControlsWithMetadata, if: :persisted?
+
     validates_with Job::Validator, on: :load,
-      adjust_active_index: true,
       migrate_metadata: true
     validates_with Job::Validator, on: :save_metadata
 
@@ -133,13 +138,18 @@ module FlightJob
       @active_index_path ||= File.join(job_dir, 'active.index')
     end
 
+    def persisted?
+      File.exists?(metadata_path)
+    end
+
     def metadata
-      @metadata ||= if File.exists? metadata_path
-        YAML.load File.read(metadata_path)
+      @metadata ||= if File.exists?(metadata_path)
+        YAML.load(File.read(metadata_path))
       else
         # NOTE: This is almost always an error condition, however it is up
         # to the validation to handle it. New jobs should use the submit
         # method
+        Flight.logger.warn("Setting metadata to empty hash; this probably isn't right")
         {}
       end
     end
