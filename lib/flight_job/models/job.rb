@@ -303,6 +303,10 @@ module FlightJob
         JobTransitions::SingletonMonitor.new(self).run
       when 'ARRAY'
         JobTransitions::ArrayMonitor.new(self).run
+      when 'FAILED_SUBMISSION'
+        # There is nothing to do in this case.  Return true to avoid logging a
+        # confusing warning below.
+        true
       end
       unless success
         Flight.logger.warn "Resetting metadata for job '#{id}'"
