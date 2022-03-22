@@ -109,22 +109,6 @@ module FlightJob
       metadata['script_id']
     end
 
-    # XXX Is this used?
-    def submit_script=(script)
-      # Initialize the job with the script
-      if metadata.empty?
-        metadata["created_at"] = Time.now.rfc3339
-        metadata["job_type"] = "SUBMITTING"
-        metadata["rendered_path"] = File.join(job_dir, script.script_name)
-        metadata["script_id"] = script.id
-        metadata["version"] = SCHEMA_VERSION
-
-      # Error has the job already exists
-      else
-        raise InternalError, "Cannot set the 'script' as the metadata is already loaded"
-      end
-    end
-
     def failed_migration_path
       @failed_migration_path ||= File.join(
         job_dir, ".migration-failed.#{SCHEMA_VERSION}.0"
