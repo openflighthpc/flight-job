@@ -88,6 +88,25 @@ register_scheduler_id() {
 request_allocation() {
     if on_login_host ; then
         local submit_status
+        declare -a scheduler_args
+        declare -a job_script_args
+        declare arg_type=scheduler_args
+
+        # Extract scheduler arguments from job script argument.
+        for i in "$@" ; do
+            case "$i" in
+                "--")
+                    arg_type=job_script_args
+                    ;;
+                *)
+                    if [ "${arg_type}" == "scheduler_args" ] ; then
+                        scheduler_args+=($i)
+                    else
+                        job_script_args+=($i)
+                    fi
+                    ;;
+            esac
+        done
 
         # Prepare X11 forwarding
         # Add our short hostname to the DISPLAY variable if we need to
@@ -102,16 +121,28 @@ request_allocation() {
         register_control "job_type" "BOOTSTRAPPING"
         register_control "submit_status" "0"
 
+        # Long-winded construction of `srun` arguments to ensure that we don't
+        # lose any quoting along the way.
+        declare -a srun_args
+        srun_args+=("--pty")
+        for i in "${scheduler_args[@]}" ; do
+            srun_args+=("$i")
+        done
+        srun_args+=("${BASH_SOURCE[0]}")
+        srun_args+=("$DISPLAYNAME")
+        for i in "${job_script_args[@]}" ; do
+            srun_args+=("$i")
+        done
+
         # Request an allocation from the scheduler.  The allocation will run
         # this script again on the allocated node.
-        echo srun --pty "$@" "${BASH_SOURCE[0]}" $DISPLAYNAME | tee_session_output
-        srun --pty "$@" "${BASH_SOURCE[0]}" $DISPLAYNAME \
-            2> >( tee >( register_scheduler_id ) | tee_session_output )
+        echo "srun ${srun_args[@]}" | tee_session_output
+        srun "${srun_args[@]}" 2> >( tee >( register_scheduler_id ) | tee_session_output )
         submit_status=$?
         if [[ $submit_status -ne 0 ]] ; then
-            # More Flight Job bookkeeping.  As the job didn't successfully get
+            # More Flight Job bookkeeping.  As the job wasn't successfully
             # submitted, Flight Job cannot query the scheduler to discover its
-            # status.
+            # status.  We set its status here.
             register_control "submit_status" ${submit_status}
             register_control "job_type" "FAILED_SUBMISSION"
             register_control "submit_stderr" "srun failed to submit job"
@@ -141,8 +172,6 @@ request_allocation() {
         echo -ne "Enabling $DISPLAYHOST to accept our X-connection... " | tee_session_output
         eval $setxhost | tee_session_output
         export DISPLAY=$DISPLAYNAME
-
-        shift
 
         # We return here to allow the rest of the job script, i.e., the
         # actualy workload to continue.

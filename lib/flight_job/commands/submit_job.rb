@@ -122,6 +122,8 @@ module FlightJob
           script_command = [
             script_path,
             *submit_args.scheduler_args,
+            "--",
+            *submit_args.job_script_args,
           ]
 
           env = {

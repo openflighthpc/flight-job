@@ -190,3 +190,14 @@ submission_questions:
     validate:
       type: 'string'
       required: true
+
+  - id: workload
+    text: "What application do you wish to run?"
+    description: |
+      Enter the full path to the application that you wish to run including
+      any command line arguments to pass to it.
+    default: "bash"
+    format:
+      type: text
+    validate:
+      type: 'string'

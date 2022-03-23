@@ -52,6 +52,7 @@ job_script:
   # An array of command line arguments that will be given to the job script,
   # (assuming that the scheduler supports this functionality).
   args:
+    - "<%= questions.workload.answer %>"
 <% job_script_args.each do |arg| -%>
     - "<%= arg %>"
 <% end -%>

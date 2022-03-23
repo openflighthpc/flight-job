@@ -26,8 +26,8 @@
 # session and the node that is allocated by the scheduler.
 RESULTS_DIR="$(pwd)/${FLIGHT_JOB_NAME}-outputs/${FLIGHT_JOB_ID}"
 register_control "results_dir" "${RESULTS_DIR}"
-echo "Your results will be stored in: $RESULTS_DIR" | tee_session_output
 mkdir -p "$RESULTS_DIR"
+echo "Your results will be stored in: $RESULTS_DIR" | tee_session_output
 
 #===============================
 #  Activate Flight Environment
@@ -38,6 +38,7 @@ source "${flight_ROOT:-/opt/flight}"/etc/setup.sh 2>&1 | tee_session_output
 # Request an allocation from the scheduler.  When this function returns, the
 # script will be running on the allocated node.
 request_allocation "$@"
+shift
 
 # The script is now running on a node inside of a scheduler allocation.
 # We can continue with the job commands.
@@ -62,6 +63,12 @@ echo "Executing job commands, current working directory is $(pwd)" 2>&1 \
 
 # REPLACE THE FOLLOWING WITH YOUR APPLICATION COMMANDS
 
-echo "This is an example interactive job running a bash shell." 2>&1 \
-    | tee_session_output
-bash
+if [ "$#" -gt 0 ] ; then
+    echo "This is an example interactive job running a user given command: $@" 2>&1 \
+        | tee_session_output
+    "$@"
+else
+    echo "This is an example interactive job running a bash shell." 2>&1 \
+        | tee_session_output
+    bash
+fi
