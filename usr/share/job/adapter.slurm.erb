@@ -39,7 +39,7 @@ register_control() {
 }
 
 <% if template.tag('script:type') == 'interactive' -%>
-<% if template.tag('session:host') == 'login' -%>
+<% if template.tag('session:order') == 'desktop:alloc' -%>
 #=========================
 #  Session orchestration
 #-------------------------

@@ -1,4 +1,4 @@
-name: Interactive desktop session (login node)
+name: Interactive desktop session on login node
 copyright: Copyright (C) 2021 Alces Flight Ltd.
 license: Creative Commons Attribution-ShareAlike 4.0 International
 script_template: interactive-desktop.sh
@@ -7,11 +7,12 @@ version: 0
 tags:
   - script:type=interactive
   - session:type=desktop
-  - session:host=login
+  - session:order=desktop:alloc
 synopsis: Start an interactive desktop session on a login node and submit a job to run on a compute node.
 description: |
-  An interactive session will start on a login node; a compute node will be
-  allocated to run an interactive application.
+  An interactive desktop session will start on a login node.  Once that
+  session is running, resources will be requested from the scheduler to run
+  that job script.
 
 __meta__:
   SLURM_TIME: &SLURM_TIME "^\

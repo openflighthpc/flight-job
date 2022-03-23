@@ -87,7 +87,7 @@ module FlightJob
       end
 
       def submit(job)
-        if script.tags.include?('script:type=interactive') && script.tags.include?('session:host=login')
+        if script.tags.include?('script:type=interactive') && script.tags.include?('session:order=desktop:alloc')
           # XXX Submit the job via flight desktop.
           # 
           # We have this job, what we need to do is:

@@ -1,4 +1,4 @@
-name: Interactive desktop session
+name: Interactive desktop session on compute node
 copyright: Copyright (C) 2021 Alces Flight Ltd.
 license: Creative Commons Attribution-ShareAlike 4.0 International
 script_template: interactive-desktop.sh
@@ -7,7 +7,7 @@ version: 0
 tags:
   - script:type=interactive
   - session:type=desktop
-  - session:host=node
+  - session:order=alloc:desktop
 synopsis: Submit a job to run an interactive desktop session.
 description: |
   Your job will start an interactive session on the first available node.  You
