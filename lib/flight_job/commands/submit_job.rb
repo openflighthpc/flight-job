@@ -87,57 +87,8 @@ module FlightJob
       end
 
       def submit(job)
-        if script.tags.include?('script:type=interactive') && script.tags.include?('session:order=desktop:alloc')
-          # XXX Submit the job via flight desktop.
-          # 
-          # We have this job, what we need to do is:
-          #
-          # 1. Run `flight desktop start ... --script ...`
-          # 2. Collect data from the `srun` command.
-          # 3. Update this job's metadata from the `srun` command somehow.
-          #
-          # Want to be able to
-          #
-          # 1. View the job.
-          # 2. Have the job linked to the desktop session.
-          # 3. Be able to cancel the job.
-          # 4. Have the job updated.
-          #
-          # SOLUTION:
-          #
-          # 1. Port subprocess, et al to Flight Job.
-          # 2. Implement a DesktopCLI class.
-          # 3. Process srun to save job id when queued.
-          #    /opt/flight/opt/slurm/bin/srun --pty /bin/bash 2> >( tee >( sed 's/.*srun : job \([0-9]*\).*/\1/' > /tmp/queued  ) )
-          # 4. Have the job script write out its SLURM_JOB_ID and its job_type
-          #    (SINGLETON).
-          # 5. We can then monitor the process.
-
-          job.save_metadata
-          FileUtils.touch(job.active_index_path)
-          script_path = job.metadata["rendered_path"]
-          FileUtils.cp(script.script_path, script_path)
-          submit_args = script.generate_submit_args(job)
-          # script_command = [script_path, *submit_args.scheduler_args]
-          script_command = [
-            script_path,
-            *submit_args.scheduler_args,
-            "--",
-            *submit_args.job_script_args,
-          ]
-
-          env = {
-            'CONTROLS_DIR' => job.controls_dir.path,
-            'FLIGHT_JOB_ID' => job.id,
-            'FLIGHT_JOB_NAME' => job.name,
-          }
-          result = FlightJob::DesktopCLI.start_session(
-            env: env,
-            script: script_command.join(" "),
-          )
-          if result.success?
-            job.desktop_id = result.desktop_id
-          end
+        if submit_job_via_desktop_session?(job)
+          submit_job_via_desktop_session(job)
         else
           # Submit the job via sbatch.
           job.submit
@@ -162,6 +113,45 @@ module FlightJob
 
       def validate_answers(hash)
         template.validate_submission_questions_values(hash)
+      end
+
+      def submit_job_via_desktop_session?(job)
+        tags = script.tags
+        tags.include?('script:type=interactive') && tags.include?('session:order=desktop:alloc')
+      end
+
+      def submit_job_via_desktop_session(job)
+        # XXX This contains much duplicated code with
+        # JobTransitions::Submitter.  When the JobTransitions are reworked, we
+        # should look at a better abstraction than this.
+        job.save_metadata
+        FileUtils.touch(job.active_index_path)
+        script_path = job.metadata["rendered_path"]
+        FileUtils.cp(script.script_path, script_path)
+        submit_args = script.generate_submit_args(job)
+        script_command = [
+          script_path,
+          *submit_args.scheduler_args,
+          "--",
+          *submit_args.job_script_args,
+        ]
+
+        env = {
+          'CONTROLS_DIR' => job.controls_dir.path,
+          'FLIGHT_JOB_ID' => job.id,
+          'FLIGHT_JOB_NAME' => job.name,
+        }
+        result = FlightJob::DesktopCLI.start_session(
+          env: env,
+          script: script_command.join(" "),
+        )
+        if result.success?
+          job.desktop_id = result.desktop_id
+        else
+          job.metadata['job_type'] = 'FAILED_SUBMISSION'
+          job.save_metadata
+          FileUtils.rm_f(job.active_index_path)
+        end
       end
     end
   end
