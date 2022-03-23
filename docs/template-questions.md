@@ -1,11 +1,19 @@
 # Template questions
 
-A template also contains a number of questions that are asked when a job
-script is generated from it.  The questions are listed in `metadata.yaml`
-under the key `generation_questions`.  The questions will be asked in the
-order that they are listed in the `metadata.yaml` file.
+A template contains a number of questions that are asked when a job script is
+generated from it and a number of questions that are asked when the script is
+submitted.
 
-The basic format for questions is:
+The questions asked when a job script is generated are listed in
+`metadata.yaml` under the key `generation_questions` whilst those asked when a
+job script is submitted are under the key `submission_questions`.
+
+In both cases, the questions will be asked in the order that they are listed
+in the `metadata.yaml` file.
+
+The format for questions is the same for both generation and submission
+questions.  For brevity, the rest of this document refers to generation
+questions alone, but everything applies equally to submission questions.
 
 ```yaml
 generation_questions:
