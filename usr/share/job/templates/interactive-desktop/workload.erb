@@ -22,8 +22,9 @@
 # saved outside of RESULTS_DIR, 'flight-job' will be unable to help you access
 # your results.
 RESULTS_DIR="$(pwd)/${FLIGHT_JOB_NAME}-outputs/${FLIGHT_JOB_ID}"
+SESSION_OUTPUT="${RESULTS_DIR}/session.output"
 register_control "results_dir" "${RESULTS_DIR}"
-echo "Your results will be stored in: $RESULTS_DIR" | tee_session_output
+echo "Your results will be stored in: $RESULTS_DIR"
 mkdir -p "$RESULTS_DIR"
 
 create_session_script <<SESSION
@@ -32,7 +33,7 @@ create_session_script <<SESSION
 #===============================
 #  Activate Flight Environment
 #-------------------------------
-source "${flight_ROOT:-/opt/flight}"/etc/setup.sh 2>&1 | tee_session_output
+source "${flight_ROOT:-/opt/flight}"/etc/setup.sh >> "${SESSION_OUTPUT}" 2>&1
 
 #==============================
 #  Activate Package Ecosystem
@@ -42,18 +43,18 @@ source "${flight_ROOT:-/opt/flight}"/etc/setup.sh 2>&1 | tee_session_output
 # flight env activate gridware
 # module load apps/R
 :
-} 2>&1 | tee_session_output
+} >> "${SESSION_OUTPUT}" 2>&1
 
 #===============================
 #  Application launch commands
 #-------------------------------
 # Customize this section to suit your needs.
 
-echo "Executing job commands, current working directory is $(pwd)" 2>&1 | tee_session_output
+echo "Executing job commands, current working directory is $(pwd)" >> "${SESSION_OUTPUT}" 2>&1
 
 # REPLACE THE FOLLOWING WITH YOUR APPLICATION COMMANDS
 
-echo "This is an example interactive job running a bash shell." 2>&1 | tee_session_output
+echo "This is an example interactive job running a bash shell." >> "${SESSION_OUTPUT}" 2>&1
 bash
 SESSION
 

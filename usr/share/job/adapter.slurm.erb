@@ -157,13 +157,6 @@ request_allocation() {
 # Functions used to orchestrate the creation of your interactive session on a
 # compute node with Flight Desktop.
 
-tee_session_output() {
-    if [ "${SESSION_OUTPUT}" == "" ] ; then
-        SESSION_OUTPUT="${RESULTS_DIR}/session.output"
-    fi
-    tee -a "${SESSION_OUTPUT}"
-}
-
 create_session_script() {
     SESSION_SCRIPT=$( mktemp --tmpdir session-script.XXXXXX.sh )
     echo "Creating session script ${SESSION_SCRIPT}"
