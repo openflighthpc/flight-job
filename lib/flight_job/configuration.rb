@@ -66,6 +66,16 @@ module FlightJob
     attribute :additional_paths, default: '',
               transform: ->(paths) { paths.empty? || paths[0] == ':' ? paths : ":#{paths}" }
 
+    attribute :desktop_command,
+      default: File.join(ENV.fetch('flight_ROOT', '/opt/flight'), 'bin/flight desktop'),
+      transform: ->(value) { value.split(' ') }
+    validates :desktop_command, presence: true
+    validate { is_array(:desktop_command) }
+
+    attribute :command_timeout, default: 30,
+      transform: :to_f
+    validates :command_timeout, numericality: true, allow_blank: false
+
     attribute :submit_script_path,
               default: ->(config) { File.join('libexec/job', config.scheduler, 'submit.sh') },
               transform: relative_to(root_path)
@@ -144,6 +154,17 @@ module FlightJob
 
     def directives_name
       "directives.#{scheduler}.erb"
+    end
+
+    def command_path
+      ENV['PATH'] + Flight.config.additional_paths
+    end
+
+    private
+
+    def is_array(attr)
+      value = send(attr)
+      errors.add(attr, "must be an array") unless value.is_a?(Array)
     end
   end
 end

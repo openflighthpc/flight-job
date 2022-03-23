@@ -6,7 +6,6 @@
 #
 # Several standard variables, such as SLURM_JOB_ID, SLURM_JOB_NAME and
 # SLURM_NTASKS, are made available by the scheduler.
-SESSION_OUTPUT="${RESULTS_DIR}/session.output"
 
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 #  >>>> YOUR WORKLOAD
@@ -22,10 +21,11 @@ SESSION_OUTPUT="${RESULTS_DIR}/session.output"
 # Your job can save its results anywhere you want, but if the results are
 # saved outside of RESULTS_DIR, 'flight-job' will be unable to help you access
 # your results.
-RESULTS_DIR="$(pwd)/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
+RESULTS_DIR="$(pwd)/${FLIGHT_JOB_NAME}-outputs/${FLIGHT_JOB_ID}"
 register_control "results_dir" "${RESULTS_DIR}"
-echo "Your results will be stored in: $RESULTS_DIR"
 mkdir -p "$RESULTS_DIR"
+echo "Your results will be stored in: $RESULTS_DIR"
+SESSION_OUTPUT="${RESULTS_DIR}/session.output"
 
 create_session_script <<SESSION
 #!/bin/bash
@@ -33,7 +33,7 @@ create_session_script <<SESSION
 #===============================
 #  Activate Flight Environment
 #-------------------------------
-source "${flight_ROOT:-/opt/flight}"/etc/setup.sh > "${SESSION_OUTPUT}" 2>&1
+source "${flight_ROOT:-/opt/flight}"/etc/setup.sh >> "${SESSION_OUTPUT}" 2>&1
 
 #==============================
 #  Activate Package Ecosystem

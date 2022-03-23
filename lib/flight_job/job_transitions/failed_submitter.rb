@@ -50,8 +50,6 @@ module FlightJob
           job.metadata['submit_stdout'] = ''
           job.metadata['submit_stderr'] = 'Failed to run the submission command for an unknown reason'
           job.save_metadata
-        else
-          FlightJob.logger.info "Ignoring the following job as it is pending submission: #{job.id}"
         end
       end
     end

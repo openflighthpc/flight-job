@@ -29,7 +29,6 @@ module FlightJob
   class Job < ApplicationModel
     class Validator < ActiveModel::Validator
       def validate(job)
-        adjust_active_index(job) if options[:adjust_active_index]
         validate_schema(job)
         migrate_metadata(job) if options[:migrate_metadata]
         add_and_log_errors(job)
@@ -53,21 +52,9 @@ module FlightJob
       end
 
       # This isn't really validation, but we want to run it every time a job
-      # loads.
+      # loads, but only after it has been validated.
       #
-      # XXX Extract to an `on_loaded` hook/callback?
-      def adjust_active_index(job)
-        if job.terminal?
-          FileUtils.rm_f job.active_index_path
-        else
-          FileUtils.touch job.active_index_path
-        end
-      end
-
-      # This isn't really validation, but we want to run it every time a job
-      # loads.
-      #
-      # XXX Extract to an `on_loaded` hook/callback?
+      # XXX Extract to an after_validate callback.
       def migrate_metadata(job)
         if @schema_errors.empty?
           FileUtils.rm_f job.failed_migration_path

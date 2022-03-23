@@ -31,6 +31,8 @@ require 'json_schemer'
 require 'time'
 
 require_relative 'job/validator'
+require_relative 'job/adjust_active_index'
+require_relative 'job/merge_controls_with_metadata'
 
 module FlightJob
   class Job < ApplicationModel
@@ -58,7 +60,8 @@ module FlightJob
     end
 
     def self.load_all
-      Dir.glob(new(id: '*').metadata_path).map do |path|
+      glob = File.join(Flight.config.jobs_dir, "*", "metadata.yaml")
+      Dir.glob(glob).map do |path|
         id = File.basename(File.dirname(path))
         job = new(id: id)
         if job.valid?(:load)
@@ -89,8 +92,10 @@ module FlightJob
       end
     end
 
+    after_initialize AdjustActiveIndex, if: :persisted?
+    after_initialize MergeControlsWithMetadata, if: :persisted?
+
     validates_with Job::Validator, on: :load,
-      adjust_active_index: true,
       migrate_metadata: true
     validates_with Job::Validator, on: :save_metadata
 
@@ -102,21 +107,6 @@ module FlightJob
 
     def script_id
       metadata['script_id']
-    end
-
-    def submit_script=(script)
-      # Initialize the job with the script
-      if metadata.empty?
-        metadata["created_at"] = Time.now.rfc3339
-        metadata["job_type"] = "SUBMITTING"
-        metadata["rendered_path"] = File.join(job_dir, script.script_name)
-        metadata["script_id"] = script.id
-        metadata["version"] = SCHEMA_VERSION
-
-      # Error has the job already exists
-      else
-        raise InternalError, "Cannot set the 'script' as the metadata is already loaded"
-      end
     end
 
     def failed_migration_path
@@ -133,13 +123,18 @@ module FlightJob
       @active_index_path ||= File.join(job_dir, 'active.index')
     end
 
+    def persisted?
+      File.exists?(metadata_path)
+    end
+
     def metadata
-      @metadata ||= if File.exists? metadata_path
-        YAML.load File.read(metadata_path)
+      @metadata ||= if File.exists?(metadata_path)
+        YAML.load(File.read(metadata_path))
       else
         # NOTE: This is almost always an error condition, however it is up
         # to the validation to handle it. New jobs should use the submit
         # method
+        Flight.logger.warn("Setting metadata to empty hash; this probably isn't right")
         {}
       end
     end
@@ -181,6 +176,21 @@ module FlightJob
 
     def submission_answers
       metadata['submission_answers'] || {}
+    end
+
+    # Return a job name that is independent from the scheduler.
+    #
+    # Ideally this will 1) be sensible; 2) be the same as the name used by the
+    # scheduler; and 3) be consistent for identical submissions from the same
+    # script.
+    def name
+      if submission_answers['job_name']
+        submission_answers['job_name']
+      elsif script = load_script
+        script.answers['job_name'].present || script.script_name
+      else
+        id
+      end
     end
 
     def results_dir
@@ -269,6 +279,14 @@ module FlightJob
       controls_dir.file(name)
     end
 
+    def desktop_id
+      controls_file('flight_desktop_id').read
+    end
+
+    def desktop_id=(id)
+      controls_file('flight_desktop_id').write(id)
+    end
+
     def submit
       JobTransitions::Submitter.new(self).run!
     end
@@ -284,6 +302,10 @@ module FlightJob
         JobTransitions::SingletonMonitor.new(self).run
       when 'ARRAY'
         JobTransitions::ArrayMonitor.new(self).run
+      when 'FAILED_SUBMISSION'
+        # There is nothing to do in this case.  Return true to avoid logging a
+        # confusing warning below.
+        true
       end
       unless success
         Flight.logger.warn "Resetting metadata for job '#{id}'"

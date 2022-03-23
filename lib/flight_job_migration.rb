@@ -42,8 +42,8 @@ module FlightJobMigration
         Jobs::MigrateV2.new(dir),
       ]
       migrations.all? do |migration|
-        if migratation.applicable?
-          migratation.migrate
+        if migration.applicable?
+          migration.migrate
         else
           false
         end

@@ -81,9 +81,7 @@
         },
         {
           "required": [
-            "submit_status",
-            "submit_stdout",
-            "submit_stderr"
+            "submit_status"
           ]
         },
         {
@@ -141,9 +139,7 @@
         },
         {
           "required": [
-            "submit_status",
-            "submit_stdout",
-            "submit_stderr"
+            "submit_status"
           ]
         }
       ],
@@ -192,9 +188,7 @@
         },
         {
           "required": [
-            "submit_status",
-            "submit_stdout",
-            "submit_stderr"
+            "submit_status"
           ]
         },
         {
@@ -322,9 +316,7 @@
         },
         {
           "required": [
-            "submit_status",
-            "submit_stdout",
-            "submit_stderr"
+            "submit_status"
           ]
         },
         {

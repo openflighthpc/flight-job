@@ -41,12 +41,14 @@ module FlightJob
     sym.to_s.dup.split(/[-_]/).each { |c| c[0] = c[0].upcase }.join
   end
 
+  autoload 'DesktopCLI', File.expand_path('flight_job/desktop_cli', __dir__)
   autoload 'FancyIdOrdering', File.expand_path('flight_job/fancy_id_ordering', __dir__)
   autoload 'JSONSchemaErrorLogger', File.expand_path('flight_job/json_schema_error_logger.rb', __dir__)
   autoload 'NameGenerator', File.expand_path('flight_job/name_generator', __dir__)
   autoload 'OneOfParser', File.expand_path('flight_job/one_of_parser.rb', __dir__)
-  autoload :QuestionGenerators, File.expand_path('flight_job/question_generators.rb', __dir__)
+  autoload 'Subprocess', File.expand_path('flight_job/subprocess', __dir__)
   autoload 'WrapIndentHelper', File.expand_path('flight_job/wrap_indent_helper.rb', __dir__)
+  autoload :QuestionGenerators, File.expand_path('flight_job/question_generators.rb', __dir__)
 
   module Commands
     Dir.glob(File.expand_path('flight_job/commands/*.rb', __dir__)).each do |path|

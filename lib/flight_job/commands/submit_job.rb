@@ -63,7 +63,7 @@ module FlightJob
             create_job(answers)
           end
 
-        job.submit
+        submit(job)
         puts render_output(Outputs::InfoJob, job.decorate)
       end
 
@@ -86,6 +86,15 @@ module FlightJob
         job
       end
 
+      def submit(job)
+        if submit_job_via_desktop_session?(job)
+          submit_job_via_desktop_session(job)
+        else
+          # Submit the job via sbatch.
+          job.submit
+        end
+      end
+
       def script
         @_script ||= load_script(args.first)
       end
@@ -104,6 +113,45 @@ module FlightJob
 
       def validate_answers(hash)
         template.validate_submission_questions_values(hash)
+      end
+
+      def submit_job_via_desktop_session?(job)
+        tags = script.tags
+        tags.include?('script:type=interactive') && tags.include?('session:order=desktop:alloc')
+      end
+
+      def submit_job_via_desktop_session(job)
+        # XXX This contains much duplicated code with
+        # JobTransitions::Submitter.  When the JobTransitions are reworked, we
+        # should look at a better abstraction than this.
+        job.save_metadata
+        FileUtils.touch(job.active_index_path)
+        script_path = job.metadata["rendered_path"]
+        FileUtils.cp(script.script_path, script_path)
+        submit_args = script.generate_submit_args(job)
+        script_command = [
+          script_path,
+          *submit_args.scheduler_args,
+          "--",
+          *submit_args.job_script_args,
+        ]
+
+        env = {
+          'CONTROLS_DIR' => job.controls_dir.path,
+          'FLIGHT_JOB_ID' => job.id,
+          'FLIGHT_JOB_NAME' => job.name,
+        }
+        result = FlightJob::DesktopCLI.start_session(
+          env: env,
+          script: script_command.join(" "),
+        )
+        if result.success?
+          job.desktop_id = result.desktop_id
+        else
+          job.metadata['job_type'] = 'FAILED_SUBMISSION'
+          job.save_metadata
+          FileUtils.rm_f(job.active_index_path)
+        end
       end
     end
   end

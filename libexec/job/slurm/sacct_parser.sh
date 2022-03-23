@@ -30,12 +30,42 @@
 # sacct parsers
 #
 # All sacct parsers are designed for a single row with:
-#       --format State,Reason,START,END,AllocTRES,JobID,JobIDRaw
+#    --format State,Reason,START,END,AllocTRES,JobID,JobIDRaw,JobName,WorkDir
 # ==============================================================================
 
 parse_field() {
     local field
     field="$1"
+    case "${field}" in
+        State)
+            field="1"
+            ;;
+        Reason)
+            field="2"
+            ;;
+        START)
+            field="3"
+            ;;
+        END)
+            field="4"
+            ;;
+        AllocTRES)
+            field="5"
+            ;;
+        JobID)
+            field="6"
+            ;;
+        JobIDRaw)
+            field="7"
+            ;;
+        JobName)
+            field="8"
+            ;;
+        WorkDir)
+            field="9"
+            ;;
+        *)
+    esac
     cat | cut -d'|' -f${field}
 }
 
@@ -101,6 +131,18 @@ parse_task_index() {
 # own JobID.  This function returns the latter of those.
 parse_job_id() {
     parse_field 7
+}
+
+parse_job_type() {
+    local input job_id raw_job_id
+    input=$(cat)
+    job_id=$(parse_field "JobID" <<< "${input}")
+    raw_job_id=$(parse_field "JobIDRaw" <<< "${input}")
+    if [ "${job_id}" == "${raw_job_id}" ] ; then
+        printf "SINGLETON"
+    else
+        printf "ARRAY"
+    fi
 }
 
 parse_stdout() {

@@ -43,12 +43,19 @@ source "${DIR}/parser.sh"
 
 # There are multiple definitions of run_scontrol in the Slurm integration.
 #
-# XXX Find a mechanism to remove the difference and extract to a common
-# location (scontrol_parser.sh).
+# XXX Extract to a common location (scontrol_parser.sh?).
 run_scontrol() {
-    scontrol show job "${1}" --oneline | head -n1 | tr ' ' '\n'
+    scontrol show job "${1}" --oneline 2>&1
 }
 
+# There are multiple definitions of run_sacct in the Slurm integration.
+#
+# XXX Remove the difference and extract to a common location
+# (scontrol_parser.sh?).
+run_sacct() {
+  sacct --noheader --parsable --jobs "$1" \
+      --format State,Reason,START,END,AllocTRES,JobId,JobIDRaw,JobName,WorkDir
+}
 
 parse_job() {
     assert_assoc_array_var JOB
@@ -91,12 +98,26 @@ main() {
 
     output=$(run_scontrol "${JOB_ID}" | tee >(log_command "scontrol" 1>&2))
     exit_status=$?
-    if [[ $exit_status -ne 0 ]]; then
+
+    if [[ $exit_status -eq 0 ]]; then
+        output="$(echo "$output" | head -n 1 | tr ' ' '\n')"
+        source_parsers "scontrol"
+        parse_job "${JOB_ID}" <<< "${output}"
+    elif [[ "${output}" == "slurm_load_jobs error: Invalid job id specified" ]] ; then
+        output=$(run_sacct "${JOB_ID}" | tee >(log_command "sacct" 1>&2))
+        exit_status=$?
+        output=$(echo "$output" | head -n1)
+        if [[ $exit_status -eq 0 ]]; then
+            source_parsers "sacct"
+            parse_job "${JOB_ID}" <<< "${output}"
+        else
+            exit $exit_status
+        fi
+    else
         exit $exit_status
     fi
-    source_parsers "scontrol"
-    parse_job "${JOB_ID}" <<< "${output}"
-    declare -p JOB >&2
+
+    # declare -p JOB >&2
 
     generate_template | report_metadata
     exit 0

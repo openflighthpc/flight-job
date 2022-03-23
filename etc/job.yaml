@@ -172,6 +172,29 @@
 # ==============================================================================
 # adapter_script_path: usr/share/job/adapter.<scheduler>.erb
 
+# =============================================================================
+# Desktop Command
+#
+# The command to used to run the Flight Desktop executable.
+#
+# The default value uses the 'flight_ROOT' environment variable.  Expanding
+# environment variables is only supported when using the default value.  You
+# will need to use explicit full path if you override this value.
+#
+# The environment variable flight_JOB_desktop_command takes precedence.
+# =============================================================================
+# desktop_command: ${flight_ROOT}/bin/flight desktop
+
+# ==============================================================================
+# Command Timeout
+#
+# The maximum time to wait when starting a desktop session. Commands which
+# take longer then this period will be terminated.
+#
+# The environment variable flight_JOB_command_timeout takes precedence.
+# ==============================================================================
+# command_timeout: 30
+
 # ==============================================================================
 # Minimum Terminal Width
 # The minimum terminal width when wrapping output text. This prevents various
@@ -212,8 +235,9 @@
 
 # ==============================================================================
 # Submission Period
-# The minimum amount of time to wait before a job that is "pending submission"
-# is considered failed.
+#
+# The minimum time in seconds to wait before a job that is "pending
+# submission" is considered to have failed to be submitted.
 #
 # The environment variable flight_JOB_submission_period takes precedence.
 # ==============================================================================

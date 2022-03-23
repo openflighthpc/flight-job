@@ -28,3 +28,4 @@ log_path: null
 log_level: info
 jobs_dir: var/jobs
 scripts_dir: var/scripts
+additional_paths: /opt/flight/opt/jq/bin:/opt/flight/opt/slurm/bin

@@ -11,25 +11,6 @@
 #  >>>> YOUR WORKLOAD
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
-#===============================
-#  Activate Flight Environment
-#-------------------------------
-source "${flight_ROOT:-/opt/flight}"/etc/setup.sh
-
-#==============================
-#  Activate Package Ecosystem
-#------------------------------
-# e.g.:
-# Load the Gridware OpenMPI module for access to `mpirun` command (requires
-# installing an mpirun with gridware)
-# flight env activate gridware
-# module load mpi/openmpi
-
-if ! command -v mpirun ; then
-    echo "No mpirun command found, ensure that a version of MPI is installed and available in PATH" >&2
-    exit 1
-fi
-
 #===========================
 #  Create results directory
 #---------------------------
@@ -40,32 +21,54 @@ fi
 # Your job can save its results anywhere you want, but if the results are
 # saved outside of RESULTS_DIR, 'flight-job' will be unable to help you access
 # your results.
+#
+# This directory should be accessible from both the node running the desktop
+# session and the node that is allocated by the scheduler.
 RESULTS_DIR="$(pwd)/${FLIGHT_JOB_NAME}-outputs/${FLIGHT_JOB_ID}"
 register_control "results_dir" "${RESULTS_DIR}"
-echo "Your results will be stored in: $RESULTS_DIR"
 mkdir -p "$RESULTS_DIR"
+echo "Your results will be stored in: $RESULTS_DIR" | tee_session_output
+
+#===============================
+#  Activate Flight Environment
+#-------------------------------
+source "${flight_ROOT:-/opt/flight}"/etc/setup.sh 2>&1 | tee_session_output
+
+
+# Request an allocation from the scheduler.  When this function returns, the
+# script will be running on the allocated node.
+request_allocation "$@"
+shift
+
+# The script is now running on a node inside of a scheduler allocation.
+# We can continue with the job commands.
+
+#==============================
+#  Activate Package Ecosystem
+#------------------------------
+{
+# e.g.:
+# flight env activate gridware
+# module load apps/R
+:
+} 2>&1 | tee_session_output
 
 #===============================
 #  Application launch commands
 #-------------------------------
 # Customize this section to suit your needs.
 
-echo "Executing job commands, current working directory is $(pwd)"
+echo "Executing job commands, current working directory is $(pwd)" 2>&1 \
+    | tee_session_output
 
 # REPLACE THE FOLLOWING WITH YOUR APPLICATION COMMANDS
 
-<%# Set the default workload from the generation questions if present -%>
-friend="<%= questions.workload.answer %>"
-if [[ $# -gt 0 ]] ; then
-  <%# Override the default workload with the answer from the submission_questions questions if present -%>
-  friend="${@}"
+if [ "$#" -gt 0 ] ; then
+    echo "This is an example interactive job running a user given command: $@" 2>&1 \
+        | tee_session_output
+    "$@"
+else
+    echo "This is an example interactive job running a bash shell." 2>&1 \
+        | tee_session_output
+    bash
 fi
-
-echo "Hello, ${friend}!" > $RESULTS_DIR/test.output
-echo "This is an example job. It was allocated $SLURM_NTASKS slot(s) across $SLURM_JOB_NUM_NODES node(s). The master process ran on `hostname -s` (as `whoami`)." >> $RESULTS_DIR/test.output
-mpirun \
-    /bin/bash -c \
-    'echo "This process was executed on `hostname -s` with rank $OMPI_COMM_WORLD_RANK."' \
-    >> $RESULTS_DIR/test.output
-
-echo "Output file has been generated, please check $RESULTS_DIR/test.output"
