@@ -23,7 +23,7 @@
 # your results.
 RESULTS_DIR="$(pwd)/${FLIGHT_JOB_NAME}-outputs/${FLIGHT_JOB_ID}"
 register_control "results_dir" "${RESULTS_DIR}"
-echo "Your results will be stored in: $RESULTS_DIR"
+echo "Your results will be stored in: $RESULTS_DIR" | tee_session_output
 mkdir -p "$RESULTS_DIR"
 
 create_session_script <<SESSION

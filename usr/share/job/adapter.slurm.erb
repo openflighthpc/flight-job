@@ -57,55 +57,97 @@ on_login_host() {
     [ -z $SLURM_JOBID ]
 }
 
-prepare_x11_forwarding() {
-    # Add our short hostname to the DISPLAY variable if we need to
-    if [ `echo $DISPLAY | cut -d: -f1 | egrep -c [a-z]` -lt 1 ] ; then
-        export DISPLAYNAME=`hostname -s`$DISPLAY
-    else
-        export DISPLAYNAME=$DISPLAY
-    fi
-}
-
 register_scheduler_id() {
     stdbuf -oL sed -n 's/.*job \([0-9]*\) queued.*/\1/p' \
         | head -n 1 \
         | register_control "scheduler_id" 
 }
 
+# This function is ran twice.
+#
+# The first time it runs, it is on the login node, where it 
+#
+# 1. performs X11 forwarding preparation
+# 2. performs Flight Job bookkeeping
+# 3. requests an allocation from the scheduler such that this script (and
+#    hence this function) will be executed on the allocated node.
+# 4. `exit`s out of the entire job script thus preventing the job commands
+#    from running on the login node.
+#
+# The second time it runs, it is on the compute node, where it
+#
+# 1. performs Flight Job bookkeeping
+# 2. completes the X11 forwarding configuration
+# 3. `return`s from the function, allowing the job commands to run on the
+#    compute node.
+#
+# This might seem like a complicated way of doing things but it greatly
+# reduces the complexity of the job workload presented to the job script
+# author, and keeps a high level of consistency between the job scripts
+# workloads.
 request_allocation() {
-    # Request a slurm command-line session with any supplied variables, and
-    # run this job script on the allocation.
-    echo srun --pty "$@" "${BASH_SOURCE[0]}" $DISPLAYNAME | tee_session_output
-    local submit_status
-    register_control "job_type" "BOOTSTRAPPING"
-    register_control "submit_status" "0"
-    srun --pty "$@" "${BASH_SOURCE[0]}" $DISPLAYNAME \
-        2> >( tee >( register_scheduler_id ) | tee_session_output )
-    submit_status=$?
-    if [[ $submit_status -ne 0 ]] ; then
-        register_control "submit_status" $submit_status
-        register_control "job_type" "FAILED_SUBMISSION"
-        register_control "submit_stderr" "srun failed to submit job"
+    if on_login_host ; then
+        local submit_status
+
+        # Prepare X11 forwarding
+        # Add our short hostname to the DISPLAY variable if we need to
+        if [ `echo $DISPLAY | cut -d: -f1 | egrep -c [a-z]` -lt 1 ] ; then
+            export DISPLAYNAME=`hostname -s`$DISPLAY
+        else
+            export DISPLAYNAME=$DISPLAY
+        fi
+
+        # Some Flight Job bookkeeping to allow the job to be monitored /
+        # controlled.
+        register_control "job_type" "BOOTSTRAPPING"
+        register_control "submit_status" "0"
+
+        # Request an allocation from the scheduler.  The allocation will run
+        # this script again on the allocated node.
+        echo srun --pty "$@" "${BASH_SOURCE[0]}" $DISPLAYNAME | tee_session_output
+        srun --pty "$@" "${BASH_SOURCE[0]}" $DISPLAYNAME \
+            2> >( tee >( register_scheduler_id ) | tee_session_output )
+        submit_status=$?
+        if [[ $submit_status -ne 0 ]] ; then
+            # More Flight Job bookkeeping.  As the job didn't successfully get
+            # submitted, Flight Job cannot query the scheduler to discover its
+            # status.
+            register_control "submit_status" ${submit_status}
+            register_control "job_type" "FAILED_SUBMISSION"
+            register_control "submit_stderr" "srun failed to submit job"
+        else
+            echo "Scheduler allocation has completed. Exiting..." | tee_session_output
+            sleep 2
+        fi
+
+        # Either the allocation was succesful and has now completed or it was
+        # rejected.  Either way we're done with this script on the login node.
+        exit ${submit_status}
+
     else
-        echo "Scheduler allocation has completed. Exiting..." | tee_session_output
-        sleep 2
+        # The scheduler has allocated resources and the script is running for
+        # a second time on one of the allocated nodes.
+
+        # Some Flight Job bookkeeping to allow the job to be monitored /
+        # controlled.
+        register_control "scheduler_id" "$SLURM_JOB_ID"
+        register_control "job_type" "BOOTSTRAPPING"
+
+        # Setup the originator to expect our X connection.
+        DISPLAYNAME=$1
+        DISPLAYHOST=`echo $DISPLAYNAME | cut -d: -f1`
+        this_hostname=`hostname -s`
+        setxhost="ssh $DISPLAYHOST 'export DISPLAY=$DISPLAYNAME && xhost $this_hostname'"
+        echo -ne "Enabling $DISPLAYHOST to accept our X-connection... " | tee_session_output
+        eval $setxhost | tee_session_output
+        export DISPLAY=$DISPLAYNAME
+
+        shift
+
+        # We return here to allow the rest of the job script, i.e., the
+        # actualy workload to continue.
+        return 0
     fi
-}
-
-configure_x11_forwarding() {
-    # Setup the originator to expect our X connection.
-    DISPLAYNAME=$1
-    DISPLAYHOST=`echo $DISPLAYNAME | cut -d: -f1`
-    this_hostname=`hostname -s`
-    setxhost="ssh $DISPLAYHOST 'export DISPLAY=$DISPLAYNAME && xhost $this_hostname'"
-    echo -ne "Enabling $DISPLAYHOST to accept our X-connection... " | tee_session_output
-    eval $setxhost | tee_session_output
-    export DISPLAY=$DISPLAYNAME
-}
-
-flight_job_book_keeping() {
-    register_control "scheduler_id" "$SLURM_JOB_ID"
-    register_control "job_type" "BOOTSTRAPPING"
 }
 
 <% else -%>
