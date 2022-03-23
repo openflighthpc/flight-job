@@ -42,6 +42,8 @@ module FlightJob
       def execute_command(*cmd, tag:)
         env = ENV.slice('PATH', 'HOME', 'USER', 'LOGNAME').tap do |h|
           h['CONTROLS_DIR'] = job.controls_dir.path
+          h['FLIGHT_JOB_NAME'] = job.name
+          h['FLIGHT_JOB_ID'] = job.id
           h['PATH'] += Flight.config.additional_paths
         end
         cmd_stdout, cmd_stderr, status = Open3.capture3(env, *cmd, unsetenv_others: true, close_others: true)

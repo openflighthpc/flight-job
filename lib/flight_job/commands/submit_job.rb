@@ -126,6 +126,8 @@ module FlightJob
 
           env = {
             'CONTROLS_DIR' => job.controls_dir.path,
+            'FLIGHT_JOB_ID' => job.id,
+            'FLIGHT_JOB_NAME' => job.name,
           }
           result = FlightJob::DesktopCLI.start_session(
             env: env,

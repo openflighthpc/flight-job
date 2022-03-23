@@ -40,7 +40,7 @@ fi
 # Your job can save its results anywhere you want, but if the results are
 # saved outside of RESULTS_DIR, 'flight-job' will be unable to help you access
 # your results.
-RESULTS_DIR="$(pwd)/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
+RESULTS_DIR="$(pwd)/${FLIGHT_JOB_NAME}-outputs/${FLIGHT_JOB_ID}"
 register_control "results_dir" "${RESULTS_DIR}"
 echo "Your results will be stored in: $RESULTS_DIR"
 mkdir -p "$RESULTS_DIR"

@@ -2,6 +2,15 @@
 #  >>>> FLIGHT JOB ADAPTER
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
+#=================================
+#  Standard Flight Job variables
+#---------------------------------
+# Standard environment variables.  When the job script is submitted through
+# Flight Job, these variables will be set by Flight Job.  If not set, they
+# default to sensible variables set by the scheduler.
+FLIGHT_JOB_NAME="${FLIGHT_JOB_NAME:-$SLURM_JOB_NAME}"
+FLIGHT_JOB_ID="${FLIGHT_JOB_ID:-${SLURM_ARRAY_JOB_ID:-$SLURM_JOB_ID}}"
+
 #======================
 #  Controls directory
 #----------------------
@@ -36,8 +45,13 @@ register_control() {
 #-------------------------
 # Functions used to orchestrate the creation of your interactive session on a
 # login node with X11 forwarding to a compute node.
-# XXX RESULTS_DIR might not be set yet.  Or could be wrong.
-SESSION_OUTPUT="${RESULTS_DIR}/session.output"
+
+tee_session_output() {
+    if [ "${SESSION_OUTPUT}" == "" ] ; then
+        SESSION_OUTPUT="${RESULTS_DIR}/session.output"
+    fi
+    tee -a "${SESSION_OUTPUT}"
+}
 
 on_login_host() {
     [ -z $SLURM_JOBID ]
@@ -61,19 +75,19 @@ register_scheduler_id() {
 request_allocation() {
     # Request a slurm command-line session with any supplied variables, and
     # run this job script on the allocation.
-    echo srun --pty "$@" "${BASH_SOURCE[0]}" $DISPLAYNAME
+    echo srun --pty "$@" "${BASH_SOURCE[0]}" $DISPLAYNAME | tee_session_output
     local submit_status
     register_control "job_type" "BOOTSTRAPPING"
     register_control "submit_status" "0"
     srun --pty "$@" "${BASH_SOURCE[0]}" $DISPLAYNAME \
-        2> >( tee >( register_scheduler_id ) )
+        2> >( tee >( register_scheduler_id ) | tee_session_output )
     submit_status=$?
     if [[ $submit_status -ne 0 ]] ; then
         register_control "submit_status" $submit_status
         register_control "job_type" "FAILED_SUBMISSION"
         register_control "submit_stderr" "srun failed to submit job"
     else
-        echo "Scheduler allocation has completed. Exiting..."
+        echo "Scheduler allocation has completed. Exiting..." | tee_session_output
         sleep 2
     fi
 }
@@ -84,8 +98,8 @@ configure_x11_forwarding() {
     DISPLAYHOST=`echo $DISPLAYNAME | cut -d: -f1`
     this_hostname=`hostname -s`
     setxhost="ssh $DISPLAYHOST 'export DISPLAY=$DISPLAYNAME && xhost $this_hostname'"
-    echo -ne "Enabling $DISPLAYHOST to accept our X-connection... "
-    eval $setxhost
+    echo -ne "Enabling $DISPLAYHOST to accept our X-connection... " | tee_session_output
+    eval $setxhost | tee_session_output
     export DISPLAY=$DISPLAYNAME
 }
 
@@ -100,10 +114,13 @@ flight_job_book_keeping() {
 #-------------------------
 # Functions used to orchestrate the creation of your interactive session on a
 # compute node with Flight Desktop.
-FLIGHT_SESSION_ID_PATH="${CONTROLS_DIR}"/flight_desktop_id
-FLIGHT_SESSION_STATUS_PATH="${CONTROLS_DIR}"/flight_desktop_status
-# XXX RESULTS_DIR might not be set yet.  Or could be wrong.
-SESSION_OUTPUT="${RESULTS_DIR}/session.output"
+
+tee_session_output() {
+    if [ "${SESSION_OUTPUT}" == "" ] ; then
+        SESSION_OUTPUT="${RESULTS_DIR}/session.output"
+    fi
+    tee -a "${SESSION_OUTPUT}"
+}
 
 create_session_script() {
     SESSION_SCRIPT=$( mktemp --tmpdir session-script.XXXXXX.sh )
@@ -130,11 +147,11 @@ session_start() {
             start \
             --script ${SESSION_SCRIPT} \
             --no-override-env \
-            | tee >( grep '^Identity' | cut -f2 > "${FLIGHT_SESSION_ID_PATH}" )
+            | tee >( grep '^Identity' | cut -f2 | register_control "flight_desktop_id" )
     )
 
     SESSION_STARTED=$?
-    echo ${SESSION_STARTED} > "$FLIGHT_SESSION_STATUS_PATH"
+    register_control "flight_desktop_status" ${SESSION_STARTED}
 }
 
 session_is_active() {
@@ -153,7 +170,9 @@ session_await() {
         echo "Session failed to start. Aborting." >&2
         exit 1
     fi
-    SESSION_ID=$(cat "${FLIGHT_SESSION_ID_PATH}")
+    local flight_session_id_path
+    session_id_path="${CONTROLS_DIR}"/flight_desktop_id
+    SESSION_ID=$(cat "${session_id_path}")
     SESSION_ID=${SESSION_ID##[[:space:]]}
     SESSION_ID=${SESSION_ID%%[[:space:]]}
     if [ "${SESSION_ID}" == "" ] ; then

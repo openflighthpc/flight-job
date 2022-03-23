@@ -178,6 +178,21 @@ module FlightJob
       metadata['submission_answers'] || {}
     end
 
+    # Return a job name that is independent from the scheduler.
+    #
+    # Ideally this will 1) be sensible; 2) be the same as the name used by the
+    # scheduler; and 3) be consistent for identical submissions from the same
+    # script.
+    def name
+      if submission_answers['job_name']
+        submission_answers['job_name']
+      elsif script = load_script
+        script.answers['job_name'].present || script.script_name
+      else
+        id
+      end
+    end
+
     def results_dir
       controls_file("results_dir").read || metadata['results_dir']
     end

@@ -6,7 +6,6 @@
 #
 # Several standard variables, such as SLURM_JOB_ID, SLURM_JOB_NAME and
 # SLURM_NTASKS, are made available by the scheduler.
-SESSION_OUTPUT="${RESULTS_DIR}/session.output"
 
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 #  >>>> YOUR WORKLOAD
@@ -22,7 +21,7 @@ SESSION_OUTPUT="${RESULTS_DIR}/session.output"
 # Your job can save its results anywhere you want, but if the results are
 # saved outside of RESULTS_DIR, 'flight-job' will be unable to help you access
 # your results.
-RESULTS_DIR="$(pwd)/${SLURM_JOB_NAME}-outputs/$SLURM_JOB_ID"
+RESULTS_DIR="$(pwd)/${FLIGHT_JOB_NAME}-outputs/${FLIGHT_JOB_ID}"
 register_control "results_dir" "${RESULTS_DIR}"
 echo "Your results will be stored in: $RESULTS_DIR"
 mkdir -p "$RESULTS_DIR"
@@ -33,7 +32,7 @@ create_session_script <<SESSION
 #===============================
 #  Activate Flight Environment
 #-------------------------------
-source "${flight_ROOT:-/opt/flight}"/etc/setup.sh > "${SESSION_OUTPUT}" 2>&1
+source "${flight_ROOT:-/opt/flight}"/etc/setup.sh 2>&1 | tee_session_output
 
 #==============================
 #  Activate Package Ecosystem
@@ -43,18 +42,18 @@ source "${flight_ROOT:-/opt/flight}"/etc/setup.sh > "${SESSION_OUTPUT}" 2>&1
 # flight env activate gridware
 # module load apps/R
 :
-} >> "${SESSION_OUTPUT}" 2>&1
+} 2>&1 | tee_session_output
 
 #===============================
 #  Application launch commands
 #-------------------------------
 # Customize this section to suit your needs.
 
-echo "Executing job commands, current working directory is $(pwd)" >> "${SESSION_OUTPUT}" 2>&1
+echo "Executing job commands, current working directory is $(pwd)" 2>&1 | tee_session_output
 
 # REPLACE THE FOLLOWING WITH YOUR APPLICATION COMMANDS
 
-echo "This is an example interactive job running a bash shell." >> "${SESSION_OUTPUT}" 2>&1
+echo "This is an example interactive job running a bash shell." 2>&1 | tee_session_output
 bash
 SESSION
 
