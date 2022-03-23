@@ -53,10 +53,6 @@ tee_session_output() {
     tee -a "${SESSION_OUTPUT}"
 }
 
-on_login_host() {
-    [ -z $SLURM_JOBID ]
-}
-
 register_scheduler_id() {
     stdbuf -oL sed -n 's/.*job \([0-9]*\) queued.*/\1/p' \
         | head -n 1 \
@@ -86,7 +82,10 @@ register_scheduler_id() {
 # author, and keeps a high level of consistency between the job scripts
 # workloads.
 request_allocation() {
-    if on_login_host ; then
+    if [ -z $SLURM_JOBID ] ; then
+        # This script is running on a login node.  We wan't to submit this
+        # script to the scheduler via srun and then exit the script.
+
         local submit_status
         declare -a scheduler_args
         declare -a job_script_args
