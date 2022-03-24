@@ -6,7 +6,6 @@ priority: 300
 version: 0
 tags:
   - script:type=batch
-  - script:workload=mpi-multislot
 synopsis: Submit a single job that has multiple processes that may span multiple nodes.
 description: |
   This allows you to specify the total number of cores required for a job whilst

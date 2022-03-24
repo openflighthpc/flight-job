@@ -6,7 +6,6 @@ priority: 400
 version: 0
 tags:
   - script:type=batch
-  - script:workload=mpi-multinode
 synopsis: Submit a single job that spans multiple nodes where you want exclusive use of each node allocated. 
 description: |
   This may be because you intend to spawn multiple threads yourself or intend

@@ -25,14 +25,17 @@ contains the following files:
 * `directives.<scheduler>.erb`: an
   [ERb](https://ruby-doc.org/stdlib-2.7.1/libdoc/erb/rdoc/ERB.html) file
   rendering to directives suitable for `<scheduler>`.
+* `submit.yaml.erb`: an ERb file rendering to a YAML file specifying command
+  line arguments to the scheduler submission tool (e.g., `sbatch`) and the job
+  script.
 * `workload.erb`: an ERb file rendering to the job script workload.
 
 ### `metadata.yaml`
 
-`metadata.yaml` contains two sections.  The first is the general metadata
-about template, and the second are the template's questions.  [Full
-documentation for the template questions](template-questions.md) is
-elsewhere.
+`metadata.yaml` contains three sections:  general metadata about template, the
+template's "generation-time" questions and the template's "submission-time"
+questions.  [Full documentation for the template
+questions](template-questions.md) is elsewhere.
 
 A commented example of the metadata is below.  The required keys are
 `version`, `name`, `synopsis`, `copyright`, `license` and
@@ -75,32 +78,27 @@ script_template: simple.sh
 
 # Used to control some aspects of how a template is rendered into a job
 # script.  The Flight Job Webapp also uses these to control some visual
-# identifiers.
-#
-# If the template is for an interactive job it should set the tags:
-# `script:type=interactive` and `session:type=desktop`.
-#
-# If the template is for an array batch job it should set the tags:
-# `script:type=batch` and `script:workload=array`.
-#
-# If the template is for a non-array batch job it should set the tags:
-# `script:type=batch`.
+# identifiers.  More documentation is given below.
 tags:
   - script:type=batch
 
 generation_questions: ...
+submission_questions: ...
 ```
+
+[Complete documentation of template tags](template-tags.md) can be found
+elsewhere.
 
 ### `directives.<scheduler>.erb`
 
 The `directives.<scheduler>.erb` file is an ERb template.  When it is rendered
-the questions and their answers will be available.  It is expected to render
-to a set of scheduler directives suitable for inclusion in a job script
-submitted to `<scheduler>`.  It will be used as the initial section of the
-generated job script.
+the generation questions and their answers will be available.  It is expected
+to render to a set of scheduler directives suitable for inclusion in a job
+script submitted to `<scheduler>`.  It will be used as the initial section of
+the generated job script.
 
-The questions and the answers to them are made available under the following
-keys.
+The generation questions and the answers to them are made available under the
+following keys.
 
 * `questions.<question id>.answer`: evaluates to the answer provided to the
   question with `id` `<question id>`.
@@ -207,4 +205,82 @@ WC_OPTIONS="-w"
 echo "There are..."
 wc ${WC_OPTIONS} "${INPUT_FILE}" | cut -f 1 -d ' '
 echo "words in ${INPUT_FILE}."
+```
+
+### `submit.yaml.erb`
+
+The `submit.yaml.erb` file is an ERb template will will be rendered in a
+similar environment as `directives.<scheduler>.erb`.  However, the template's
+submission questions and their answers are made available instead of the
+template's generation questions.
+
+The resultant YAML is expected to have the following structure:
+
+```yaml
+scheduler:
+  # An array of command line arguments that will be given to the scheduler
+  # submission tool, e.g., `sbatch`.
+  args: []
+job_script:
+  # An array of command line arguments that will be given to the job script.
+  args: []
+```
+
+An example `submit.yaml.erb` file is given below:
+
+```yaml
+<%
+  scheduler_args = []
+  job_script_args = []
+
+  if !questions.job_name.answer.blank?
+    scheduler_args << "--job-name"
+    scheduler_args << questions.job_name.answer
+  end
+
+  if !questions.max_runtime.answer.blank?
+    scheduler_args << "--time"
+    scheduler_args << questions.max_runtime.answer
+  end
+
+  if !questions.sim_file.answer.blank?
+    job_script_args << questions.sim_file.answer
+  end
+-%>
+---
+scheduler:
+  args:
+<% scheduler_args.each do |arg| -%>
+    - "<%= arg %>"
+<% end -%>
+
+job_script:
+  args:
+<% job_script_args.each do |arg| -%>
+    - "<%= arg %>"
+<% end -%>
+```
+
+If this file were to be rendered with the following answers:
+
+* `max_runtime` = `3`.
+* `sim_file` = `/tmp/my.sim`
+
+The resultant YAML file would be
+
+```yaml
+scheduler:
+  args:
+    - "--time"
+    - "3"
+job_script:
+  args:
+    - "/tmp/my.sim"
+```
+
+Such a file would result in a job script being submitted with the following
+command line:
+
+```sh
+sbatch --time 3 /path/to/job/script.sh /tmp/my.sim
 ```
