@@ -35,7 +35,8 @@ contains the following files:
 `metadata.yaml` contains three sections:  general metadata about template, the
 template's "generation-time" questions and the template's "submission-time"
 questions.  [Full documentation for the template
-questions](template-questions.md) is elsewhere.
+questions](template-questions.md) is elsewhere.  [Complete documentation of
+template tags](template-tags.md) can be found elsewhere.
 
 A commented example of the metadata is below.  The required keys are
 `version`, `name`, `synopsis`, `copyright`, `license` and
@@ -78,16 +79,13 @@ script_template: simple.sh
 
 # Used to control some aspects of how a template is rendered into a job
 # script.  The Flight Job Webapp also uses these to control some visual
-# identifiers.  More documentation is given below.
+# identifiers.  A link to more documentation on tags is given above.
 tags:
   - script:type=batch
 
 generation_questions: ...
 submission_questions: ...
 ```
-
-[Complete documentation of template tags](template-tags.md) can be found
-elsewhere.
 
 ### `directives.<scheduler>.erb`
 
