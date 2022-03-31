@@ -47,6 +47,7 @@ module FlightJob
   autoload 'NameGenerator', File.expand_path('flight_job/name_generator', __dir__)
   autoload 'OneOfParser', File.expand_path('flight_job/one_of_parser.rb', __dir__)
   autoload 'QuestionGenerators', File.expand_path('flight_job/question_generators.rb', __dir__)
+  autoload 'RemoteHostSelector', File.expand_path('flight_job/remote_host_selector', __dir__)
   autoload 'WrapIndentHelper', File.expand_path('flight_job/wrap_indent_helper.rb', __dir__)
 
   module Commands

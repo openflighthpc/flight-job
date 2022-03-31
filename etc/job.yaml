@@ -244,6 +244,83 @@
 # submission_period: 300
 
 # ==============================================================================
+# SSH Connection Timeout
+#
+# The maximum time to wait to establish an SSH connection to run a job command
+# on a remote host.
+#
+# The environment variable flight_JOB_ssh_connection_timeout takes precedence.
+# ==============================================================================
+# ssh_connection_timeout: 5
+
+# ==============================================================================
+# Remote Hosts
+#
+# A list of remote hosts that Flight Job will start "login node" interactive
+# sessions on.
+#
+# When Flight Job starts an interactive job that first launches a desktop
+# session and then submits the job to the scheduler, this is the list of nodes
+# on which the desktop session is started.
+#
+# Flight Job will SSH as the user running Flight Job into one of the hosts and
+# run the Flight Desktop CLI to start the desktop session.
+#
+# This requires 
+#
+# 1. Passwordless SSH access to be setup for each user of Flight Job on each
+#    host.  The passwordless SSH access will use the key
+#    specified in ssh_private_key_path.  The public key specified by
+#    ssh_public_key_path will be automatically installed for each user.
+# 2. The Flight Desktop CLI and Flight Job CLI to be installed on each of the
+#    remote hosts.
+#
+# Additionally the following assumptions are made:
+#
+# 1. Each user's home directory is shared across each remote host *and*
+#    localhost (i.e., the host that Flight Job is running on).
+# 2. The same set of desktops have been prepared on each of the remote hosts.
+# 3. Either (a) the same set of desktops have been prepared on localhost.
+#
+# The host running Flight Job can appear in this list.
+#
+# If this list is empty, all sessions will be started on localhost.  In this
+# case there is no need for passwordless SSH to be setup.
+#
+# The environment variable flight_JOB_remote_hosts takes
+# precedence and is interpreted as a space separated list of hostnames.
+# ==============================================================================
+# remote_hosts: []
+
+# ============================================================================== 
+# SSH Private Key Path
+#
+# The path to the private SSH key that is used for passwordless SSH access to
+# the remote hosts.
+#
+# Relative paths are expanded according to the "Relative path expansion" rules
+# described below.
+#
+# The environment variable flight_JOB_ssh_private_key_path takes
+# precedence.
+# ============================================================================== 
+# ssh_private_key_path: "etc/job/id_rsa"
+
+# ============================================================================== 
+# SSH Public Key Path
+#
+# The path to the public SSH key that is automatically installed for
+# passwordless SSH access to the remote hosts.
+#
+# Relative paths are expanded according to the "Relative path expansion" rules
+# described below.
+#
+# The environment variable flight_JOB_ssh_public_key_path takes
+# precedence.
+# ============================================================================== 
+# ssh_public_key_path: "etc/job/id_rsa.pub"
+
+# ==============================================================================
 # Log Path
 # The file the logger will write to. It will write to standard error if
 # omitted.

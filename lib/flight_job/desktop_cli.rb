@@ -40,7 +40,12 @@ module FlightJob
           "--script", script,
           "--kill-on-script-exit",
         ]
-        new(*flight_desktop, *args, env: env).run_local.tap do |result|
+        cmd = new(*flight_desktop, *args, env: env)
+        if remote_host = select_remote_host(cmd.username)
+          cmd.run_remote(remote_host)
+        else
+          cmd.run_local
+        end.tap do |result|
           desktop_id = nil
           if result.success?
             result.stdout.split("\n").each do |line|
@@ -56,6 +61,11 @@ module FlightJob
       end
 
       private
+
+      def select_remote_host(user)
+        return nil if user == "root"
+        Flight.config.remote_host_selector.call
+      end
 
       def flight_desktop
         Flight.config.desktop_command
@@ -88,11 +98,31 @@ module FlightJob
       result
     end
 
-    private
+    def run_remote(host, &block)
+      Flight.logger.debug("Running remote process (#{@user}@#{host}): #{stringified_cmd}")
+      public_key_path = Flight.config.ssh_public_key_path
+
+      process = Flight::Subprocess::Remote.new(
+        connection_timeout: Flight.config.ssh_connection_timeout,
+        env: @env,
+        host: host,
+        keys: [Flight.config.ssh_private_key_path],
+        logger: Flight.logger,
+        public_key_path: public_key_path,
+        timeout: @timeout,
+        username: @user,
+      )
+      result = process.run(@cmd, @stdin, &block)
+      parse_result(result)
+      log_command(result)
+      result
+    end
 
     def username
       @user || passwd.name
     end
+
+    private
 
     def passwd
       @passwd ||= @user.nil? ? Etc.getpwuid : Etc.getpwnam(@user)
