@@ -222,6 +222,10 @@ module FlightJob
       metadata['priority']
     end
 
+    def name
+       metadata['name']
+    end
+
     def tags
       metadata['tags'] || []
     end

@@ -31,8 +31,8 @@ module FlightJob
   class Outputs::ListTemplates < OutputMode::Formatters::Index
     # Override "render" method to add invalid template footnote
     def render(*a, **o)
-      super.tap do |txt|
-        next unless humanize?
+	super.tap do |txt|
+	next unless humanize?
         next unless @invalid_template
         txt << "\n"
         txt << pastel.yellow(" * Invalid template")
@@ -43,7 +43,7 @@ module FlightJob
       register(header: 'Index', row_color: :yellow) do |template|
         template.index
       end
-      register(header: 'Name') do |template|
+      register(header: 'ID') do |template|
         if template.errors.any?
           @invalid_template = true
           pastel.yellow "#{template.id}*"
@@ -51,9 +51,16 @@ module FlightJob
           template.id
         end
       end
-      file_header = "File (Dir: #{FlightJob.config.templates_dir})"
 
-      if verbose?
+      file_header = "File (Dir: #{FlightJob.config.templates_dir})"
+	
+      name_column = Proc.new do
+        register(header: 'Name') do |template|
+	  template.name
+        end
+      end
+      
+      file_column = Proc.new do
         register(header: file_header) do |template|
           if humanize?
             Pathname.new(template.workload_path).relative_path_from FlightJob.config.templates_dir
@@ -61,6 +68,14 @@ module FlightJob
             template.workload_path
           end
         end
+      end
+            
+      if $stdout.tty? 
+	name_column.call
+	file_column.call if verbose?
+      else
+	file_column.call
+	name_column.call
       end
     end
 
