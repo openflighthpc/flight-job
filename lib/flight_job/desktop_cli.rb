@@ -28,6 +28,7 @@
 require 'etc'
 require 'pathname'
 require 'securerandom'
+require 'flight/subprocess'
 
 module FlightJob
   class DesktopCLI
@@ -76,7 +77,7 @@ module FlightJob
 
     def run_local(&block)
       Flight.logger.debug("Running subprocess (#{username}): #{stringified_cmd}")
-      process = Subprocess.new(
+      process = Flight::Subprocess::Local.new(
         env: @env,
         logger: Flight.logger,
         timeout: @timeout,
