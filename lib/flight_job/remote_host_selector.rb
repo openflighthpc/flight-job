@@ -1,5 +1,5 @@
 #==============================================================================
-# Copyright (C) 2021-present Alces Flight Ltd.
+# Copyright (C) 2022-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -23,11 +23,32 @@
 #
 # For more information on Flight Job, please visit:
 # https://github.com/openflighthpc/flight-job
-#==============================================================================
-log_path: null
-log_level: info
-jobs_dir: var/jobs
-scripts_dir: var/scripts
-additional_paths: /opt/flight/opt/jq/bin:/opt/flight/opt/slurm/bin
-ssh_private_key_path: etc/id_rsa
-ssh_public_key_path: etc/id_rsa.pub
+#===============================================================================
+
+require 'etc'
+require 'pathname'
+require 'securerandom'
+
+module FlightJob
+  class RemoteHostSelector
+    def initialize(hosts)
+      @hosts = hosts
+    end
+
+    def call
+      # Each Flight Job process is short-lived and per-user. Implementing a
+      # round-robin over the hosts would require some shared storage that each
+      # process can read/write to.
+      #
+      # That seems like a lot of work for little gain.  Instead selecting a
+      # random host should be sufficient.
+      random_host
+    end
+
+    private
+
+    def random_host
+      @hosts.shuffle.first
+    end
+  end
+end
