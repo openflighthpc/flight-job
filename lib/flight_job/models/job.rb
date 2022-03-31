@@ -187,7 +187,7 @@ module FlightJob
       if submission_answers['job_name']
         submission_answers['job_name']
       elsif script = load_script
-        script.answers['job_name'].present || script.script_name
+        script.answers['job_name'].presence || script.script_name
       else
         id
       end
