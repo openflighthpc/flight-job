@@ -123,6 +123,22 @@ module FlightJob
     attribute :includes, default: '', transform: ->(v) { v.to_s.split(',') }
     validates :includes, presence: true, allow_blank: true
 
+    attribute :remote_hosts, default: [],
+      transform: ->(v) { v.is_a?(Array) ? v : v.to_s.split }
+    validate { is_array(:remote_hosts) }
+
+    attribute :ssh_connection_timeout, default: 5,
+      transform: :to_i
+    validates :ssh_connection_timeout, numericality: { greater_than: 0 }, allow_blank: false
+
+    attribute :ssh_private_key_path, default: "etc/job/id_rsa",
+      transform: relative_to(root_path)
+    validates :ssh_private_key_path, presence: true
+    # XXX Validate that the path exists and is readable.
+    attribute :ssh_public_key_path, default: "etc/job/id_rsa.pub",
+      transform: relative_to(root_path)
+    validates :ssh_public_key_path, presence: true
+
     attribute :log_path, required: false,
               default: '~/.cache/flight/log/share/job.log',
               transform: ->(path) do
@@ -158,6 +174,10 @@ module FlightJob
 
     def command_path
       ENV['PATH'] + Flight.config.additional_paths
+    end
+
+    def remote_host_selector
+      @_remote_host_selector ||= RemoteHostSelector.new(remote_hosts)
     end
 
     private
