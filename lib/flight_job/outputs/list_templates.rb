@@ -40,9 +40,30 @@ module FlightJob
     end
 
     def register_all
+      register_index
+      register_id
+      if humanize? 
+        register_name
+        register_file if verbose?
+      else
+        register_file
+        register_name
+      end
+    end
+
+    def pastel
+      @pastel ||= Pastel.new(enabled: color?)
+    end
+
+    private
+
+    def register_index
       register(header: 'Index', row_color: :yellow) do |template|
         template.index
       end
+    end
+
+    def register_id
       register(header: 'ID') do |template|
         if template.errors.any?
           @invalid_template = true
@@ -51,36 +72,23 @@ module FlightJob
           template.id
         end
       end
-
-      file_header = "File (Dir: #{FlightJob.config.templates_dir})"
-
-      name_column = Proc.new do
-        register(header: 'Name') do |template|
-          template.name
-        end
-      end
-
-      file_column = Proc.new do
-        register(header: file_header) do |template|
-          if humanize?
-            Pathname.new(template.workload_path).relative_path_from FlightJob.config.templates_dir
-          else
-            template.workload_path
-          end
-        end
-      end
-
-      if humanize? 
-        name_column.call
-        file_column.call if verbose?
-      else
-        file_column.call
-        name_column.call
-      end
     end
 
-    def pastel
-      @pastel ||= Pastel.new(enabled: color?)
+    def register_name
+      register(header: 'Name') do |template|
+        template.name
+      end
+    end
+    
+    def register_file
+      file_header = "File (Dir: #{FlightJob.config.templates_dir})"
+      register(header: file_header) do |template|
+        if humanize?
+          Pathname.new(template.workload_path).relative_path_from FlightJob.config.templates_dir
+        else
+          template.workload_path
+        end
+      end
     end
   end
 end
