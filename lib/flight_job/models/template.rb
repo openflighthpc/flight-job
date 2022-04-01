@@ -226,6 +226,18 @@ module FlightJob
        metadata['name']
     end
 
+    def copyright
+       metadata['copyright']
+    end
+    
+    def license
+       metadata['license']
+    end
+    
+    def description
+       metadata['description']
+    end
+    
     def tags
       metadata['tags'] || []
     end
