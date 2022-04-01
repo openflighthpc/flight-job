@@ -70,7 +70,7 @@ module FlightJob
         end
       end
 
-      if $stdout.tty? 
+      if humanize? 
         name_column.call
         file_column.call if verbose?
       else
