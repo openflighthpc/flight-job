@@ -117,7 +117,7 @@ module FlightJob
 
       process = Flight::Subprocess::Remote.new(
         connection_timeout: Flight.config.ssh_connection_timeout,
-        env: env,
+        env: @env,
         host: host,
         keys: [Flight.config.ssh_private_key_path],
         logger: Flight.logger,
