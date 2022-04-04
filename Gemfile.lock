@@ -1,7 +1,7 @@
 GIT
   remote: https://github.com/openflighthpc/flight-subprocess.git
-  revision: 1d1d60da9f6d31dbf32ec82b2484a248593c03a4
-  tag: 0.1.1
+  revision: 3c4268dca47bcf4100f89fb222142e2c846e09ce
+  tag: 0.1.2
   specs:
     flight-subprocess (0.1.0)
       bcrypt_pbkdf (~> 1.1.0)
