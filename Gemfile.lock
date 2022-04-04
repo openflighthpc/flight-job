@@ -1,12 +1,13 @@
 GIT
   remote: https://github.com/openflighthpc/flight-subprocess.git
-  revision: 3c4268dca47bcf4100f89fb222142e2c846e09ce
-  tag: 0.1.2
+  revision: 674d7f11200ebda501902936aa7d6853166b4924
+  tag: 0.1.3
   specs:
     flight-subprocess (0.1.0)
       bcrypt_pbkdf (~> 1.1.0)
       ed25519 (~> 1.3.0)
       net-ssh (~> 6.1)
+      x25519 (~> 1.0.9)
 
 GIT
   remote: https://github.com/openflighthpc/flight_configuration.git
@@ -110,6 +111,7 @@ GEM
     uri_template (0.7.0)
     wisper (2.0.1)
     word_wrap (1.0.0)
+    x25519 (1.0.9)
     zeitwerk (2.4.2)
 
 PLATFORMS
