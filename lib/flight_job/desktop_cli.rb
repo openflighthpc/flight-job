@@ -86,7 +86,7 @@ module FlightJob
     end
 
     def run_local(&block)
-      Flight.logger.debug("Running subprocess (#{username}): #{stringified_cmd}")
+      Flight.logger.debug("Running subprocess (#{username}): #{@cmd.inspect}")
       process = Flight::Subprocess::Local.new(
         env: @env,
         logger: Flight.logger,
@@ -99,7 +99,7 @@ module FlightJob
     end
 
     def run_remote(host, &block)
-      Flight.logger.debug("Running remote process (#{@user}@#{host}): #{stringified_cmd}")
+      Flight.logger.debug("Running remote process (#{@user}@#{host}): #{@cmd.inspect}")
       public_key_path = Flight.config.ssh_public_key_path
 
       process = Flight::Subprocess::Remote.new(
@@ -147,7 +147,6 @@ module FlightJob
     def log_command(result)
       Flight.logger.info <<~INFO.chomp
         COMMAND: #{@cmd.inspect}
-        COMMAND: #{stringified_cmd}
         USER: #{@user}
         PID: #{result.pid}
         STATUS: #{result.exitstatus}
@@ -162,11 +161,6 @@ module FlightJob
         STDERR:
         #{result.stderr}
       DEBUG
-    end
-
-    def stringified_cmd
-      @stringified_cmd ||= @cmd
-        .map { |s| s.empty? ? '""' : s }.join(' ')
     end
   end
 end
