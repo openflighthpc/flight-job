@@ -26,9 +26,11 @@
 #==============================================================================
 
 require 'output_mode'
+require_relative '../markdown_renderer'
 
 module FlightJob
   class Outputs::InfoScript < OutputMode::Formatters::Show
+
     def register_all
       template(<<~ERB) if humanize?
         <% each(:main) do |value, field:, padding:, **_| -%>
@@ -51,7 +53,13 @@ module FlightJob
         Time.parse script.created_at
       end
 
-      register(section: :notes, header: 'Notes') { |s| s.notes }
+      if humanize?
+        notes = MarkdownRenderer.new(object.notes).wrap_markdown
+      else
+        notes = object.notes
+      end
+      register(section: :notes, header: 'Notes') { notes }
     end
   end
 end
+
