@@ -31,7 +31,9 @@ register_control() {
       value="$2"
   fi
   if [ -d "${CONTROLS_DIR}" ]; then
-    echo "${value}" > "${CONTROLS_DIR}/${name}"
+    if [ -n ${value} ]; then
+        echo "${value}" > "${CONTROLS_DIR}/${name}"
+    fi
   else
     echo "CONTROLS_DIR has not been set or is not a directory" >&2
     echo "${name} ${value}"
