@@ -112,13 +112,7 @@ module FlightJob
           notes
         )
         prompter.call
-
-        # Set default notes if none given to prompter
-        if File.file?(template.default_notes) && prompter.notes.empty? && opts.notes.nil?
-          create_script(prompter.id, prompter.answers, read_file(template.default_notes))
-        else
-          create_script(prompter.id, prompter.answers, prompter.notes)
-        end
+        create_script(prompter.id, prompter.answers, prompter.notes)
       end
 
       def create_script(script_id, answers, notes)
@@ -173,13 +167,16 @@ module FlightJob
       end
 
       def notes
-        return unless opts.notes
-        if notes_provided_on_stdin?
-          cached_stdin
-        elsif opts.notes[0] == '@'
-          read_file(opts.notes[1..])
+        if opts.notes
+          if notes_provided_on_stdin?
+            cached_stdin
+          elsif opts.notes[0] == '@'
+            read_file(opts.notes[1..])
+          else
+            opts.notes
+          end
         else
-          opts.notes
+          File.file?(template.default_notes) ? read_file(template.default_notes) : nil
         end
       end
 
