@@ -167,13 +167,16 @@ module FlightJob
       end
 
       def notes
-        return unless opts.notes
-        if notes_provided_on_stdin?
-          cached_stdin
-        elsif opts.notes[0] == '@'
-          read_file(opts.notes[1..])
+        if opts.notes
+          if notes_provided_on_stdin?
+            cached_stdin
+          elsif opts.notes[0] == '@'
+            read_file(opts.notes[1..])
+          else
+            opts.notes
+          end
         else
-          opts.notes
+          File.file?(template.default_notes) ? read_file(template.default_notes) : nil
         end
       end
 
