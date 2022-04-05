@@ -1,1 +1,1 @@
-Example notes
+Default notes for the template.
