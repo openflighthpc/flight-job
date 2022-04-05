@@ -30,31 +30,26 @@ require_relative '../markdown_renderer'
 
 module FlightJob
   class Outputs::InfoTemplate < OutputMode::Formatters::Show
-    def self.render(template, **config)
-      text = super
-      MarkdownRenderer.new(text).wrap_markdown
-    end
-
     def register_all
       # Intentionally overwrite the template in all modes
-      template(<<~ERB)
-        # <%= workload_path -%> -- <%= id %>
+      template(<<~ERB) if humanize?
+        <% each(:main) do |value, field:, padding:, **_| -%>
+        <%= padding -%><%= pastel.blue.bold field -%><%= pastel.bold ':' -%> <%= pastel.green value %>
+        <% end -%>
 
-        ## DESCRIPTION
-
-        <%= metadata['synopsis'] %>
-        <%= metadata['description'] -%><%= "\n" if metadata['description'] -%>
-
-        ## LICENSE
-
-        This work is licensed under a <%= metadata['license'] -%> License.
-
-        ## COPYRIGHT
-
-        <%= metadata['copyright'] -%>
+        <%= pastel.blue.bold 'DESCRIPTION' -%><%= pastel.bold ':' %>
+        <% each(:notes) do |value, **_| -%>
+        <%= pastel.green value.chomp %>
+        <% end -%>
       ERB
 
-      scope object
+      register(section: :main, header: 'ID') { |s| s.id }
+      
+      # NOTE: The verbose output is at the end to avoid the order changing
+      register(section: :main, header: 'Name') { |s| s.name }
+      register(section: :main, header: 'Copyright') { |s| s.copyright } if verbose?
+      register(section: :main, header: 'License') { |s| s.license } if verbose?
+      register(section: :notes, header: 'Description') { |s| s.description }
     end
   end
 end

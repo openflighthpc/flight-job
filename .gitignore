@@ -5,3 +5,4 @@ vendor
 .env.development.local
 /log
 tags
+*.swp
