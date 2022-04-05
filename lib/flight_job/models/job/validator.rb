@@ -37,9 +37,9 @@ module FlightJob
       private
 
       def validate_schema(job)
-        @schema_errors = SCHEMAS[:common].validate(job.metadata).to_a
+        @schema_errors = SCHEMAS[:common].validate(job.metadata.to_hash).to_a
         if @schema_errors.empty?
-          @schema_errors = SCHEMAS[job.metadata['job_type']].validate(job.metadata).to_a
+          @schema_errors = SCHEMAS[job.metadata['job_type']].validate(job.metadata.to_hash).to_a
         end
       end
 
@@ -63,9 +63,9 @@ module FlightJob
         else
           if FlightJobMigration::Jobs.migrate(job.job_dir)
             job.reload_metadata
-            @schema_errors = SCHEMAS[:common].validate(job.metadata).to_a
+            @schema_errors = SCHEMAS[:common].validate(job.metadata.to_hash).to_a
             if @schema_errors.empty?
-              @schema_errors = SCHEMAS[job.metadata['job_type']].validate(job.metadata).to_a
+              @schema_errors = SCHEMAS[job.metadata['job_type']].validate(job.metadata.to_hash).to_a
             end
           else
             # Flag the failure

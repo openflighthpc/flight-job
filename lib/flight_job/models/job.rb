@@ -30,9 +30,10 @@ require 'securerandom'
 require 'json_schemer'
 require 'time'
 
-require_relative 'job/validator'
 require_relative 'job/adjust_active_index'
 require_relative 'job/merge_controls_with_metadata'
+require_relative 'job/metadata'
+require_relative 'job/validator'
 
 module FlightJob
   class Job < ApplicationModel
@@ -100,14 +101,14 @@ module FlightJob
       migrate_metadata: true
     validates_with Job::Validator, on: :save_metadata
 
+    delegate :created_at, :job_type, :lazy, :results_dir, :scheduler_id,
+      :script_id, :stdout_path, :stderr_path, :submission_answers,
+      to: :metadata
+
     attr_writer :id
     def id
       return @id if @id
       raise InternalError, "Job#id was called before being set"
-    end
-
-    def script_id
-      metadata['script_id']
     end
 
     def failed_migration_path
@@ -130,30 +131,23 @@ module FlightJob
 
     def metadata
       @metadata ||= if File.exist?(metadata_path)
-        YAML.load(File.read(metadata_path))
+        Metadata.load_from_path(metadata_path)
       else
         # NOTE: This is almost always an error condition, however it is up
         # to the validation to handle it. New jobs should use the submit
         # method
         Flight.logger.warn("Setting metadata to empty hash; this probably isn't right")
-        {}
+        Metadata.blank(metadata_path)
       end
     end
 
     def initialize_metadata(script, answers)
-      if @metadata
+      if defined?(@metadata) && !@metadata.nil?
         raise InternalError, <<~ERROR
           Cannot initialize metadata for job '#{id.to_s}' as it has already been loaded
         ERROR
       else
-        @metadata = {
-          "created_at" => Time.now.rfc3339,
-          "job_type" => "SUBMITTING",
-          "script_id" => script.id,
-          "rendered_path" => File.join(job_dir, script.script_name),
-          "version" => SCHEMA_VERSION,
-          "submission_answers" => answers,
-        }
+        @metadata = Metadata.from_script(script, answers, self)
       end
     end
 
@@ -163,14 +157,6 @@ module FlightJob
 
     def load_script
       Script.new(id: script_id)
-    end
-
-    def created_at
-      metadata['created_at']
-    end
-
-    def submission_answers
-      metadata['submission_answers'] || {}
     end
 
     # Return a job name that is independent from the scheduler.
@@ -189,7 +175,7 @@ module FlightJob
     end
 
     def results_dir
-      controls_file("results_dir").read || metadata['results_dir']
+      controls_file("results_dir").read || metadata.results_dir
     end
 
     # DEPRECATED: This method belongs on the decorator!
@@ -205,7 +191,7 @@ module FlightJob
       when 'FAILED_SUBMISSION'
         'FAILED'
       else
-        metadata['state'] || 'UNKNOWN'
+        metadata.state || 'UNKNOWN'
       end
     rescue
       # Various validations require the 'state', which depends on the
@@ -218,39 +204,27 @@ module FlightJob
     end
 
     def stdout_path
-      stdout_path!
-    rescue
-      Flight.logger.debug $!
-      nil
-    end
-
-    def stdout_path!
       case job_type
       when 'SINGLETON'
-        metadata['stdout_path']
+        metadata.stdout_path
       else
         raise InvalidOperation, failure_message("Could not get the standard output")
       end
-    end
-
-    def stderr_path
-      stderr_path!
     rescue
       Flight.logger.debug $!
       nil
     end
 
-    def stderr_path!
+    def stderr_path
       case job_type
       when 'SINGLETON'
-        metadata['stderr_path']
+        metadata.stderr_path
       else
         raise InvalidOperation, failure_message("Could not get the standard error")
       end
-    end
-
-    def scheduler_id
-      metadata['scheduler_id']
+    rescue
+      Flight.logger.debug $!
+      nil
     end
 
     def stdout_readable?
@@ -336,9 +310,9 @@ module FlightJob
       when 'FAILED_SUBMISSION'
         true
       when 'SINGLETON'
-        STATES_LOOKUP[metadata['state']] == :terminal
+        STATES_LOOKUP[metadata.state] == :terminal
       when 'ARRAY'
-        if metadata['lazy']
+        if lazy
           false
         else
           !Task.load_last_non_terminal(id)
@@ -346,13 +320,6 @@ module FlightJob
       else
         false
       end
-    end
-
-    # NOTE: The job_type is used within the validation, thus the metadata
-    # may not be hash
-    def job_type
-      hash = metadata.is_a?(Hash) ? metadata : {}
-      hash['job_type']
     end
 
     def save_metadata
