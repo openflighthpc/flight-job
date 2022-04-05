@@ -1,0 +1,6 @@
+---
+created_at: '2022-03-10T14:55:43+00:00'
+job_type: SUBMITTING
+# script_id: valid-script
+# rendered_path: "/code/flight-job/spec/fixtures/jobs/invalid-job/simple.sh"
+version: 2
