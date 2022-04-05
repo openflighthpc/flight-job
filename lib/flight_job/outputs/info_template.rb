@@ -51,7 +51,7 @@ module FlightJob
       register(section: :main, header: 'License') { |s| s.license } if verbose?
 
       if humanize?
-        description = MarkdownRenderer.new(object.description_markdown).wrap_markdown
+        description = MarkdownRenderer.new(object.description).wrap_markdown
       else
         description = object.description
       end
