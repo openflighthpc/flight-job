@@ -112,7 +112,13 @@ module FlightJob
           notes
         )
         prompter.call
-        create_script(prompter.id, prompter.answers, prompter.notes)
+
+        # Set default notes if none given to prompter
+        if File.file?(template.default_notes) && prompter.notes.empty? && opts.notes.nil?
+          create_script(prompter.id, prompter.answers, read_file(template.default_notes))
+        else
+          create_script(prompter.id, prompter.answers, prompter.notes)
+        end
       end
 
       def create_script(script_id, answers, notes)
