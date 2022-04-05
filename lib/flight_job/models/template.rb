@@ -112,6 +112,10 @@ module FlightJob
       File.join(FlightJob.config.templates_dir, id, "workload.erb")
     end
 
+    def default_notes
+      File.join(FlightJob.config.templates_dir, id, "notes.md")
+    end
+    
     def directives_path
       File.join(FlightJob.config.templates_dir, id, Flight.config.directives_name)
     end
