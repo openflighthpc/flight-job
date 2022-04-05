@@ -47,7 +47,6 @@ module FlightJob
       "properties" => {
         "copyright" => { "type" => "string" },
         "description" => { "type" => "string" },
-        "description_markdown" => { "type" => "string" },
         "generation_questions" => {
           "type" => "array",
           "items" => { "$ref" => "#/$defs/question_def" }
@@ -243,10 +242,6 @@ module FlightJob
        metadata['description']
     end
 
-    def description_markdown
-      metadata['description_markdown'] ||= metadata['description']
-    end
-    
     def tags
       metadata['tags'] || []
     end
