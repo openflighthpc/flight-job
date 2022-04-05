@@ -102,15 +102,22 @@ module FlightJob
       Flight.logger.debug("Running remote process (#{@user}@#{host}): #{@cmd.inspect}")
       public_key_path = Flight.config.ssh_public_key_path
 
+      # HACK alert!
       # net/ssh which the Flight::Subprocess::Remote depends on has to be able
       # to find the Gemfile to determine whether optional dependencies are
       # installed or not.  Let's make sure that it can be found here.
-      gemfile = File.expand_path(File.join(__FILE__, '../../../Gemfile'))
-      env = @env.merge('BUNDLE_GEMFILE' => ENV.fetch('BUNDLE_GEMFILE', gemfile))
+      original = ENV['BUNDLE_GEMFILE']
+      begin
+        gemfile = File.expand_path(File.join(__FILE__, '../../../Gemfile'))
+        ENV['BUNDLE_GEMFILE'] ||= gemfile
+        Flight::Subprocess::Remote
+      ensure
+        ENV['BUNDLE_GEMFILE'] = original
+      end
 
       process = Flight::Subprocess::Remote.new(
         connection_timeout: Flight.config.ssh_connection_timeout,
-        env: env,
+        env: @env,
         host: host,
         keys: [Flight.config.ssh_private_key_path],
         logger: Flight.logger,
