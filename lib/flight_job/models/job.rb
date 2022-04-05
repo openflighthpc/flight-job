@@ -161,12 +161,6 @@ module FlightJob
       @metadata = nil
     end
 
-    # NOTE: This is a subset of the full metadata file which is stored in the active file
-    # It stores rudimentary information about the job if the metadata file is never saved
-    def active_metadata
-      metadata.is_a?(Hash) ? metadata.slice('version', 'created_at', 'script_id') : {}
-    end
-
     def load_script
       Script.new(id: script_id)
     end
