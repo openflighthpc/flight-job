@@ -91,10 +91,10 @@ module FlightJob
 
       def open_path(path)
         # Wait for the file to become available with --retry
-        if retry_file && !File.exists?(path)
+        if retry_file && !File.exist?(path)
           $stderr.puts pastel.yellow("Waiting for: #{path}")
-          sleep 1 until File.exists?(path)
-        elsif !File.exists?(path)
+          sleep 1 until File.exist?(path)
+        elsif !File.exist?(path)
           return false
         end
 
@@ -138,7 +138,7 @@ module FlightJob
 
     # Ensures the file exists before reading
     def read_file(path)
-      if File.exists?(path)
+      if File.exist?(path)
         File.read(path)
       else
         raise InputError, "Could not locate file: #{path}"
@@ -243,7 +243,7 @@ module FlightJob
 
     def load_job(id)
       Job.new(id: id).tap do |job|
-        unless File.exists?(job.metadata_path)
+        unless File.exist?(job.metadata_path)
           raise MissingJobError, "Could not locate job: #{id}"
         end
         unless job.valid?(:load)

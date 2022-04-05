@@ -61,10 +61,10 @@ module FlightJob
         #
         # After this migration/validation runs `template.workload_path` will
         # exist or validation will fail.
-        return if File.exists?(template.workload_path)
+        return if File.exist?(template.workload_path)
 
         legacy_path = File.join(FlightJob.config.templates_dir, template.id, "#{template.script_template_name}.erb")
-        if File.exists?(legacy_path)
+        if File.exist?(legacy_path)
           # Symlink the legacy script path into place, if required
           FileUtils.ln_s(File.basename(legacy_path), template.workload_path)
         else

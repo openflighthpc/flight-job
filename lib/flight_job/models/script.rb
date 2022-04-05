@@ -85,7 +85,7 @@ module FlightJob
       next if validation_context == :id_check
 
       unless (schema_errors = SCHEMA.validate(metadata).to_a).empty?
-        path_tag = File.exists?(metadata_path) ? metadata_path : id
+        path_tag = File.exist?(metadata_path) ? metadata_path : id
         FlightJob.logger.info("Invalid metadata: #{path_tag}\n")
         JSONSchemaErrorLogger.new(schema_errors, :info).log
         errors.add(:metadata, 'is not valid')
@@ -94,15 +94,15 @@ module FlightJob
 
     validate on: :load do
       # Ensures the metadata file exists
-      unless File.exists? metadata_path
+      unless File.exist? metadata_path
         errors.add(:metadata_path, 'does not exist')
         next
       end
 
       # Ensures the script file exists
-      unless File.exists? script_path
+      unless File.exist? script_path
         legacy_path = File.join(Flight.config.scripts_dir, id, script_name)
-        if File.exists?(legacy_path)
+        if File.exist?(legacy_path)
           # Migrate legacy scripts to the script_path
           FileUtils.ln_s script_name, script_path
         else
@@ -136,11 +136,11 @@ module FlightJob
     # NOTE: Only used for a shorthand existence check, full validation is required in
     # before it can be used
     def exists?
-      File.exists? metadata_path
+      File.exist? metadata_path
     end
 
     def notes
-      @notes ||= if File.exists? notes_path
+      @notes ||= if File.exist? notes_path
                    File.read notes_path
                  else
                    ''
@@ -302,7 +302,7 @@ module FlightJob
     # This allows it to be directly passed to the API layer.
     # Consider refactoring when introducing a non-backwards compatible change
     def metadata
-      @metadata ||= if metadata_path && File.exists?(metadata_path)
+      @metadata ||= if metadata_path && File.exist?(metadata_path)
         YAML.load File.read(metadata_path)
       else
         { 'version' => 0, 'created_at' => DateTime.now.rfc3339 }

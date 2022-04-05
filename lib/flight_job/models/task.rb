@@ -106,7 +106,7 @@ module FlightJob
 
     def self.load(job_id, index)
       new(job_id: job_id, index: index).tap do |task|
-        unless File.exists? task.metadata_path
+        unless File.exist? task.metadata_path
           raise MissingError, "Could not locate task: #{task.tag}"
         end
         unless task.valid?(:load)
@@ -184,7 +184,7 @@ module FlightJob
     end
 
     def metadata
-      @metadata ||= if File.exists? metadata_path
+      @metadata ||= if File.exist? metadata_path
         YAML.load File.read(metadata_path)
       else
         { "version" => 1 }

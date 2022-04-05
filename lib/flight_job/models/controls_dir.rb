@@ -42,7 +42,7 @@ module FlightJob
     end
 
     def exists?
-      File.exists?(@path)
+      File.exist?(@path)
     end
 
     def file(name)
@@ -67,7 +67,7 @@ module FlightJob
     end
 
     def exists?
-      File.exists?(@path)
+      File.exist?(@path)
     end
 
     def read

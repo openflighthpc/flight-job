@@ -57,7 +57,7 @@ module FlightJob
           # Allow copies to a directory with the original filename
           path = File.join(path, template.script_template_name) if Dir.exists?(path)
 
-          if File.exists?(path)
+          if File.exist?(path)
             # Identifies the used copy indices
             regex = /(?<=\.)[0-9]+\Z/
             copies = Dir.glob("#{path}\.*")
