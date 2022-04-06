@@ -245,26 +245,28 @@ module FlightJob
     end
 
     def monitor
-      original_metadata = metadata.deep_dup
-      success = case job_type
-      when 'SUBMITTING'
-        JobTransitions::FailedSubmitter.new(self).run
-      when 'BOOTSTRAPPING'
-        JobTransitions::BootstrapMonitor.new(self).run
-      when 'SINGLETON'
-        JobTransitions::SingletonMonitor.new(self).run
-      when 'ARRAY'
-        JobTransitions::ArrayMonitor.new(self).run
-      when 'FAILED_SUBMISSION'
-        # There is nothing to do in this case.  Return true to avoid logging a
-        # confusing warning below.
-        true
+      metadata.with_save_point do
+        success =
+          case job_type
+          when 'SUBMITTING'
+            JobTransitions::FailedSubmitter.new(self).run
+          when 'BOOTSTRAPPING'
+            JobTransitions::BootstrapMonitor.new(self).run
+          when 'SINGLETON'
+            JobTransitions::SingletonMonitor.new(self).run
+          when 'ARRAY'
+            JobTransitions::ArrayMonitor.new(self).run
+          when 'FAILED_SUBMISSION'
+            # There is nothing to do in this case.  Return true to avoid logging a
+            # confusing warning below.
+            true
+          end
+        unless success
+          Flight.logger.warn "Resetting metadata for job '#{id}'"
+          metadata.restore_save_point
+        end
+        success
       end
-      unless success
-        Flight.logger.warn "Resetting metadata for job '#{id}'"
-        @metadata = original_metadata
-      end
-      success
     end
 
     def cancel

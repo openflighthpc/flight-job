@@ -86,6 +86,19 @@ module FlightJob
         new(initial_metadata, path, job)
       end
 
+      def with_save_point(&block)
+        raise "Nested calls to with_save_point unsupported" unless @save_point.nil?
+        @save_point = @hash.deep_dup
+        yield
+      ensure
+        @save_point = nil
+      end
+
+      def restore_save_point
+        @hash = @save_point
+        @save_point = nil
+      end
+
       def persisted?
         File.exist?(path)
       end
