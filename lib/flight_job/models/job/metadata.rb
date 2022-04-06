@@ -26,6 +26,7 @@
 #==============================================================================
 
 require_relative "../metadata_base"
+require_relative "validator"
 
 module FlightJob
   class Job
@@ -55,6 +56,10 @@ module FlightJob
 
       attribute :submission_answers, default: {}
 
+      validates_with Job::Validator, on: :load,
+        migrate_metadata: false
+      validates_with Job::Validator, on: :save
+
       def self.from_script(script, answers, job)
         initial_metadata = {
           "created_at" => Time.now.rfc3339,
@@ -65,7 +70,7 @@ module FlightJob
           "submission_answers" => answers,
         }
         path = File.join(job.job_dir, "metadata.yaml")
-        new(initial_metadata, path)
+        new(initial_metadata, path, job)
       end
 
       def persisted?
@@ -76,6 +81,10 @@ module FlightJob
         # The job_type is used within the validation, thus the metadata may
         # not be hash.
         @hash.is_a?(Hash) ? @hash["job_type"] : nil
+      end
+
+      def job
+        @parent
       end
     end
   end

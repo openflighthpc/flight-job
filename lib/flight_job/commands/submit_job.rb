@@ -124,7 +124,7 @@ module FlightJob
         # XXX This contains much duplicated code with
         # JobTransitions::Submitter.  When the JobTransitions are reworked, we
         # should look at a better abstraction than this.
-        job.save_metadata
+        job.metadata.save
         FileUtils.touch(job.active_index_path)
         script_path = job.metadata["rendered_path"]
         FileUtils.cp(script.script_path, script_path)
@@ -149,7 +149,7 @@ module FlightJob
           job.desktop_id = result.desktop_id
         else
           job.metadata['job_type'] = 'FAILED_SUBMISSION'
-          job.save_metadata
+          job.metadata.save
           FileUtils.rm_f(job.active_index_path)
         end
       end

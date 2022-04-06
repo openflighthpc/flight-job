@@ -8,22 +8,38 @@ RSpec.describe "FlightJob::Job", type: :model do
   subject(:job) { FlightJob::Job.new(id: job_id) }
 
   describe "validations" do
-    context "when job is valid" do
+    context "when job is valid when loaded" do
       let(:job_id) { "valid-job" }
 
       before(:each) { subject.valid?(:load) }
 
-      it { expect(subject.valid?(:load)).to be true }
       it { expect(subject.errors).to be_empty }
       it { is_expected.not_to have_error(:metadata, 'is invalid') }
     end
 
-    context "when job is invalid" do
+    context "when job is valid when saved" do
+      let(:job_id) { "valid-job" }
+
+      before(:each) { subject.valid?(:save) }
+
+      it { expect(subject.errors).to be_empty }
+      it { is_expected.not_to have_error(:metadata, 'is invalid') }
+    end
+
+    context "when job is invalid when loaded" do
       let(:job_id) { "invalid-job" }
 
       before(:each) { subject.valid?(:load) }
 
-      it { expect(subject.valid?(:load)).to be false }
+      it { expect(subject.errors).not_to be_empty }
+      it { is_expected.to have_error(:metadata, 'is invalid') }
+    end
+
+    context "when job is invalid when saved" do
+      let(:job_id) { "invalid-job" }
+
+      before(:each) { subject.valid?(:save) }
+
       it { expect(subject.errors).not_to be_empty }
       it { is_expected.to have_error(:metadata, 'is invalid') }
     end

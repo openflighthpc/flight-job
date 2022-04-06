@@ -155,7 +155,7 @@ module FlightJob
           ERROR
           job.metadata['reason'] = "Did not report it's scheduler ID"
           job.metadata['state'] = "FAILED"
-          job.save_metadata
+          job.metadata.save
           return
         end
 
@@ -169,7 +169,7 @@ module FlightJob
 
             # Update the attributes
             apply_task_attributes(job, data)
-            job.save_metadata
+            job.metadata.save
 
             # Remove the indexing file in terminal state
             FileUtils.rm_f job.active_index_path if job.terminal?

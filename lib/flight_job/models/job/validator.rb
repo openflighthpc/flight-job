@@ -28,26 +28,26 @@
 module FlightJob
   class Job < ApplicationModel
     class Validator < ActiveModel::Validator
-      def validate(job)
-        validate_schema(job)
-        migrate_metadata(job) if options[:migrate_metadata]
-        add_and_log_errors(job)
+      def validate(metadata)
+        validate_schema(metadata)
+        migrate_metadata(metadata) if options[:migrate_metadata]
+        add_and_log_errors(metadata)
       end
 
       private
 
-      def validate_schema(job)
-        @schema_errors = SCHEMAS[:common].validate(job.metadata.to_hash).to_a
+      def validate_schema(metadata)
+        @schema_errors = SCHEMAS[:common].validate(metadata.to_hash).to_a
         if @schema_errors.empty?
-          @schema_errors = SCHEMAS[job.metadata['job_type']].validate(job.metadata.to_hash).to_a
+          @schema_errors = SCHEMAS[metadata['job_type']].validate(metadata.to_hash).to_a
         end
       end
 
-      def add_and_log_errors(job)
+      def add_and_log_errors(metadata)
         unless @schema_errors.empty?
-          Flight.logger.info "Job '#{job.id.to_s}' metadata is invalid"
+          Flight.logger.info "Job '#{metadata.job.id.to_s}' metadata is invalid"
           JSONSchemaErrorLogger.new(@schema_errors, :info).log
-          job.errors.add(:metadata, 'is invalid')
+          metadata.errors.add(:metadata, 'is invalid')
         end
       end
 
@@ -55,18 +55,16 @@ module FlightJob
       # loads, but only after it has been validated.
       #
       # XXX Extract to an after_validate callback.
-      def migrate_metadata(job)
+      def migrate_metadata(metadata)
+        job = metadata.job
         if @schema_errors.empty?
-          FileUtils.rm_f job.failed_migration_path
-        elsif File.exist? job.failed_migration_path
+          FileUtils.rm_f(job.failed_migration_path)
+        elsif File.exist?(job.failed_migration_path)
           Flight.logger.warn "Skipping job '#{job.id}' migration as it previously failed!"
         else
           if FlightJobMigration::Jobs.migrate(job.job_dir)
-            job.reload_metadata
-            @schema_errors = SCHEMAS[:common].validate(job.metadata.to_hash).to_a
-            if @schema_errors.empty?
-              @schema_errors = SCHEMAS[job.metadata['job_type']].validate(job.metadata.to_hash).to_a
-            end
+            metadata.reload
+            validate_schema(metadata)
           else
             # Flag the failure
             FileUtils.touch job.failed_migration_path

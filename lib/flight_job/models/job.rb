@@ -33,7 +33,6 @@ require 'time'
 require_relative 'job/adjust_active_index'
 require_relative 'job/merge_controls_with_metadata'
 require_relative 'job/metadata'
-require_relative 'job/validator'
 
 module FlightJob
   class Job < ApplicationModel
@@ -97,9 +96,19 @@ module FlightJob
     after_initialize AdjustActiveIndex, if: :persisted?
     after_initialize MergeControlsWithMetadata, if: :persisted?
 
-    validates_with Job::Validator, on: :load,
-      migrate_metadata: true
-    validates_with Job::Validator, on: :save_metadata
+    validate on: :load do
+      unless metadata.valid?(:load)
+        messages = metadata.errors.map { |e| e.message }
+        errors.add(:metadata, messages.join("; "))
+      end
+    end
+
+    validate on: :save do
+      unless metadata.valid?(:save)
+        messages = metadata.errors.map { |e| e.message }
+        errors.add(:metadata, messages.join("; "))
+      end
+    end
 
     delegate :created_at, :job_type, :lazy, :results_dir, :scheduler_id,
       :script_id, :stdout_path, :stderr_path, :submission_answers,
@@ -131,13 +140,13 @@ module FlightJob
 
     def metadata
       @metadata ||= if File.exist?(metadata_path)
-        Metadata.load_from_path(metadata_path)
+        Metadata.load_from_path(metadata_path, self)
       else
         # NOTE: This is almost always an error condition, however it is up
         # to the validation to handle it. New jobs should use the submit
         # method
         Flight.logger.warn("Setting metadata to empty hash; this probably isn't right")
-        Metadata.blank(metadata_path)
+        Metadata.blank(metadata_path, self)
       end
     end
 
@@ -319,17 +328,6 @@ module FlightJob
         end
       else
         false
-      end
-    end
-
-    def save_metadata
-      if valid?(:save_metadata)
-        FileUtils.mkdir_p File.dirname(metadata_path)
-        File.write metadata_path, YAML.dump(metadata)
-      else
-        Flight.logger.error("Failed to save job metadata: #{id}")
-        Flight.logger.info(errors.full_messages.join("\n"))
-        raise InternalError, "Unexpectedly failed to save job '#{id}' metadata"
       end
     end
 

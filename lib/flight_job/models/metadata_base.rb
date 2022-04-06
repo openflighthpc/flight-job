@@ -41,14 +41,16 @@ module FlightJob
     extend AttributesConcern
     include ActiveModel::Model
 
-    def self.load_from_path(path)
+    attr_reader :path
+
+    def self.load_from_path(path, parent)
       # XXX Handle Errno::ENOENT and Psych::SyntaxError errors here???
       md = YAML.load_file(path)
-      new(md, path)
+      new(md, path, parent)
     end
 
-    def self.blank(path)
-      new({}, path)
+    def self.blank(path, parent)
+      new({}, path, parent)
     end
 
     def [](attr)
@@ -59,15 +61,33 @@ module FlightJob
       send("#{attr}=", val)
     end
 
+    def reload
+      @hash = YAML.load_file(path)
+    end
+
+    def save
+      if valid?(:save)
+        FileUtils.mkdir_p(File.dirname(@path))
+        File.write(@path, YAML.dump(@hash))
+      else
+        parent_name = @parent.class.name.demodulize.downcase
+        id = @parent.id
+        Flight.logger.error("Failed to save #{parent_name} metadata: #{id}")
+        Flight.logger.info(errors.full_messages.join("\n"))
+        raise InternalError, "Unexpectedly failed to save #{parent_name} '#{id}' metadata"
+      end
+    end
+
     def to_hash
       @hash.deep_dup
     end
 
     private
 
-    def initialize(hash, path)
+    def initialize(hash, path, parent)
       @hash = hash
       @path = path
+      @parent = parent
     end
   end
 end
