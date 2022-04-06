@@ -75,7 +75,8 @@ module FlightJob
     end
 
     def self.monitor_all
-      Dir.glob(new(id: '*').active_index_path).each do |path|
+      glob = File.join(Flight.config.jobs_dir, "*", "active.index")
+      Dir.glob(glob).each do |path|
         # Load the job
         id = File.basename(File.dirname(path))
         job = new(id: id)
