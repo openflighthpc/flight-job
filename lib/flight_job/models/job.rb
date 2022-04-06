@@ -128,7 +128,7 @@ module FlightJob
         # NOTE: This is almost always an error condition, however it is up
         # to the validation to handle it. New jobs should use the submit
         # method
-        Flight.logger.warn("Setting metadata to empty hash; this probably isn't right")
+        Flight.logger.warn("Setting metadata to empty hash for job #{id}; this probably isn't right")
         Metadata.blank(metadata_path, self)
       end
     end
