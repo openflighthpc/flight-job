@@ -234,6 +234,10 @@ module FlightJob
        metadata['license']
     end
     
+    def synopsis
+       metadata['synopsis']
+    end
+
     def description
        metadata['description']
     end
