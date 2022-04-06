@@ -5,7 +5,6 @@ RSpec.describe "FlightJob::Job::Metadata", type: :model do
   let(:job_id) { "valid-job" }
   let(:job_dir) { File.join(config.jobs_dir, job_id) }
   let(:metadata_path) { File.join(job_dir, "metadata.yaml") }
-  let(:metadata) { YAML.load_file(metadata_path) }
   let(:job) { double("A job", job_dir: job_dir, id: job_id) }
   subject(:metadata) { FlightJob::Job::Metadata.load_from_path(metadata_path, job) }
 

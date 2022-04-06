@@ -29,7 +29,7 @@ require_relative "../metadata_base"
 require_relative "validator"
 
 module FlightJob
-  class Job
+  class Job < ApplicationModel
     class Metadata < MetadataBase
 
       RAW_SCHEMA = JSON.parse File.read(Flight.config.job_schema_path)

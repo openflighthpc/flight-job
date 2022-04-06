@@ -41,8 +41,24 @@ module FlightJob
         end
 
         def attribute(attr, default: nil)
-          define_method(attr) { @hash.fetch(attr.to_s, default) }
-          define_method(:"#{attr}=") { |val| @hash[attr.to_s] = val }
+          define_method(attr) do
+            if @hash.is_a?(Hash)
+              @hash.fetch(attr.to_s, default)
+            else
+              msg = "Attempting to read metadata attribute #{attr} but @hash is a #{@hash.class.name}"
+              Flight.logger.debug(msg)
+              nil
+            end
+          end
+          define_method(:"#{attr}=") do |val|
+            if @hash.is_a?(Hash)
+              @hash[attr.to_s] = val
+            else
+              msg = "Attempting to set metadata attribute #{attr} but @hash is a #{@hash.class.name}"
+              Flight.logger.debug(msg)
+              nil
+            end
+          end
           self.attribute_names << attr
         end
       end

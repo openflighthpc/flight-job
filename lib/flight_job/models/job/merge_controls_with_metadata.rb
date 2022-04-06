@@ -35,7 +35,7 @@ module FlightJob
       class << self
         def after_initialize(job)
           return unless job.persisted?
-          return unless job.metadata.is_a?(Hash)
+          return unless job.metadata.valid?(:load)
 
           merge_control_file job, "scheduler_id"
           merge_control_file job, "submit_status",
