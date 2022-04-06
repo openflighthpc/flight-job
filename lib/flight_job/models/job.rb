@@ -137,10 +137,8 @@ module FlightJob
     end
 
     def initialize_metadata(script, answers)
-      if defined?(@metadata) && !@metadata.nil?
-        raise InternalError, <<~ERROR
-          Cannot initialize metadata for job '#{id.to_s}' as it has already been loaded
-        ERROR
+      if persisted?
+        raise InternalError, "Cannot initialize metadata for persisted job '#{id.to_s}'"
       else
         @metadata = Metadata.from_script(script, answers, self)
       end
