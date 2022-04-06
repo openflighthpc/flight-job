@@ -28,17 +28,27 @@
 module FlightJob
   class MetadataBase
     module AttributesConcern
-      def attributes(*attrs, default: nil)
-        attrs.each { |attr| attribute(attr, default: default) }
+      extend ActiveSupport::Concern
+
+      included do
+        class_attribute :attribute_names, instance_accessor: false
+        self.attribute_names = []
       end
 
-      def attribute(attr, default: nil)
-        define_method(attr) { @hash.fetch(attr.to_s, default) }
-        define_method(:"#{attr}=") { |val| @hash[attr.to_s] = val }
+      module ClassMethods
+        def attributes(*attrs, default: nil)
+          attrs.each { |attr| attribute(attr, default: default) }
+        end
+
+        def attribute(attr, default: nil)
+          define_method(attr) { @hash.fetch(attr.to_s, default) }
+          define_method(:"#{attr}=") { |val| @hash[attr.to_s] = val }
+          self.attribute_names << attr
+        end
       end
     end
 
-    extend AttributesConcern
+    include AttributesConcern
     include ActiveModel::Model
 
     attr_reader :path

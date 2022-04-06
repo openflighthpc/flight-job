@@ -96,9 +96,8 @@ module FlightJob
       end
     end
 
-    delegate :created_at, :job_type, :lazy, :results_dir, :scheduler_id,
-      :script_id, :stdout_path, :stderr_path, :submission_answers,
-      to: :metadata
+    delegate(*Metadata.attribute_names, to: :metadata)
+    delegate :persisted?, to: :metadata
 
     attr_writer :id
     def id
@@ -118,10 +117,6 @@ module FlightJob
 
     def active_index_path
       @active_index_path ||= File.join(job_dir, 'active.index')
-    end
-
-    def persisted?
-      File.exist?(metadata_path)
     end
 
     def metadata
