@@ -10,9 +10,9 @@ tags:
   - session:order=alloc:desktop
 synopsis: Submit a job to run an interactive desktop session.
 description: |
-  Your job will start an interactive session on the first available node.  You
-  can optionally provide a session script to configure and launch an
-  interactive application.
+  Your job will start an interactive desktop session on the first available
+  node.  You can optionally provide a session script to configure and launch
+  an interactive or graphical application.
 
 __meta__:
   SLURM_TIME: &SLURM_TIME "^\
