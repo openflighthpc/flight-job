@@ -160,10 +160,6 @@ module FlightJob
       end
     end
 
-    def reload_metadata
-      @metadata = nil
-    end
-
     def load_script
       Script.new(id: script_id)
     end
