@@ -37,9 +37,9 @@ module FlightJob
       private
 
       def validate_schema(metadata)
-        @schema_errors = SCHEMAS[:common].validate(metadata.to_hash).to_a
+        @schema_errors = Metadata::SCHEMAS[:common].validate(metadata.to_hash).to_a
         if @schema_errors.empty?
-          @schema_errors = SCHEMAS[metadata['job_type']].validate(metadata.to_hash).to_a
+          @schema_errors = Metadata::SCHEMAS[metadata['job_type']].validate(metadata.to_hash).to_a
         end
       end
 

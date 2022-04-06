@@ -31,6 +31,19 @@ require_relative "validator"
 module FlightJob
   class Job
     class Metadata < MetadataBase
+
+      RAW_SCHEMA = JSON.parse File.read(Flight.config.job_schema_path)
+      SCHEMA_VERSION = RAW_SCHEMA['oneOf'][0]["properties"]['version']['const']
+      # Break up the raw schema into its components
+      # This makes slightly nicer error reporting by removing the oneOf
+      SCHEMAS = {
+        common: JSONSchemer.schema(RAW_SCHEMA.dup.tap { |s| s.delete("oneOf") })
+      }
+      RAW_SCHEMA['oneOf'].each do |schema|
+        type = schema['properties']['job_type']['const']
+        SCHEMAS.merge!({ type => JSONSchemer.schema(schema) })
+      end
+
       attributes \
         :cancelling,
         :created_at,
@@ -66,7 +79,7 @@ module FlightJob
           "job_type" => "SUBMITTING",
           "script_id" => script.id,
           "rendered_path" => File.join(job.job_dir, script.script_name),
-          "version" => Job::SCHEMA_VERSION,
+          "version" => SCHEMA_VERSION,
           "submission_answers" => answers,
         }
         path = File.join(job.job_dir, "metadata.yaml")

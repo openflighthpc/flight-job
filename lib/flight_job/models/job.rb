@@ -36,28 +36,14 @@ require_relative 'job/metadata'
 
 module FlightJob
   class Job < ApplicationModel
-    RAW_SCHEMA = JSON.parse File.read(Flight.config.job_schema_path)
-    SCHEMA_VERSION = RAW_SCHEMA['oneOf'][0]["properties"]['version']['const']
-
     PENDING_STATES = ['PENDING']
     TERMINAL_STATES = ['FAILED', 'COMPLETED', 'CANCELLED', 'UNKNOWN']
     RUNNING_STATES = ['RUNNING', 'COMPLETING']
     NON_TERMINAL_STATES = [*PENDING_STATES, *RUNNING_STATES]
     STATES = [*NON_TERMINAL_STATES, *TERMINAL_STATES]
-
     STATES_LOOKUP = {}.merge(PENDING_STATES.map { |s| [s, :pending] }.to_h)
                       .merge(RUNNING_STATES.map { |s| [s, :running] }.to_h)
                       .merge(TERMINAL_STATES.map { |s| [s, :terminal] }.to_h)
-
-    # Break up the raw schema into its components
-    # This makes slightly nicer error reporting by removing the oneOf
-    SCHEMAS = {
-      common: JSONSchemer.schema(RAW_SCHEMA.dup.tap { |s| s.delete("oneOf") })
-    }
-    RAW_SCHEMA['oneOf'].each do |schema|
-      type = schema['properties']['job_type']['const']
-      SCHEMAS.merge!({ type => JSONSchemer.schema(schema) })
-    end
 
     def self.load_all
       glob = File.join(Flight.config.jobs_dir, "*", "metadata.yaml")
@@ -122,7 +108,7 @@ module FlightJob
 
     def failed_migration_path
       @failed_migration_path ||= File.join(
-        job_dir, ".migration-failed.#{SCHEMA_VERSION}.0"
+        job_dir, ".migration-failed.#{Metadata::SCHEMA_VERSION}.0"
       )
     end
 
