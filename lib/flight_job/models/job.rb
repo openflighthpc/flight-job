@@ -33,6 +33,7 @@ require 'time'
 require_relative 'job/adjust_active_index'
 require_relative 'job/merge_controls_with_metadata'
 require_relative 'job/metadata'
+require_relative 'job/migrate_metadata'
 
 module FlightJob
   class Job < ApplicationModel
@@ -81,6 +82,7 @@ module FlightJob
 
     after_initialize AdjustActiveIndex, if: :persisted?
     after_initialize MergeControlsWithMetadata, if: :persisted?
+    after_initialize MigrateMetadata, if: :persisted?
 
     validate on: :load do
       unless metadata.valid?(:load)

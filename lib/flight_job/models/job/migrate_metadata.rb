@@ -27,26 +27,22 @@
 
 module FlightJob
   class Job < ApplicationModel
-    class Validator < ActiveModel::Validator
-      def validate(metadata)
-        validate_schema(metadata)
-        add_and_log_errors(metadata)
-      end
+    class MigrateMetadata
+      def self.after_initialize(job)
+        return unless job.persisted?
 
-      private
-
-      def validate_schema(metadata)
-        @schema_errors = Metadata::SCHEMAS[:common].validate(metadata.to_hash).to_a
-        if @schema_errors.empty?
-          @schema_errors = Metadata::SCHEMAS[metadata['job_type']].validate(metadata.to_hash).to_a
-        end
-      end
-
-      def add_and_log_errors(metadata)
-        unless @schema_errors.empty?
-          Flight.logger.info "Job '#{metadata.job.id.to_s}' metadata is invalid"
-          JSONSchemaErrorLogger.new(@schema_errors, :info).log
-          metadata.errors.add(:metadata, 'is invalid')
+        if job.valid?(:load)
+          FileUtils.rm_f(job.failed_migration_path)
+        elsif File.exist?(job.failed_migration_path)
+          Flight.logger.info "Skipping job '#{job.id}' migration as it previously failed!"
+        else
+          if FlightJobMigration::Jobs.migrate(job.job_dir)
+            job.metadata.reload
+            job.validate(:load)
+          else
+            # Flag the failure
+            FileUtils.touch(job.failed_migration_path)
+          end
         end
       end
     end
