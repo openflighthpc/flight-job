@@ -12,7 +12,8 @@ synopsis: Start an interactive desktop session on a login node and submit a job 
 description: |
   An interactive desktop session will start on a login node.  Once that
   session is running, resources will be requested from the scheduler to run
-  that job script.
+  the job script.  If the job script starts a graphical application it will be
+  available from inside the desktop session.
 
 __meta__:
   SLURM_TIME: &SLURM_TIME "^\

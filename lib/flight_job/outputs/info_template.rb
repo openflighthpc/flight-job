@@ -30,6 +30,7 @@ require_relative '../markdown_renderer'
 
 module FlightJob
   class Outputs::InfoTemplate < OutputMode::Formatters::Show
+    
     def register_all
       # Intentionally overwrite the template in all modes
       template(<<~ERB) if humanize?
@@ -43,13 +44,20 @@ module FlightJob
         <% end -%>
       ERB
 
-      register(section: :main, header: 'ID') { |s| s.id }
-      
       # NOTE: The verbose output is at the end to avoid the order changing
+      register(section: :main, header: 'ID') { |s| s.id }
       register(section: :main, header: 'Name') { |s| s.name }
+      register(section: :main, header: 'Synopsis') { |s| s.synopsis }
       register(section: :main, header: 'Copyright') { |s| s.copyright } if verbose?
       register(section: :main, header: 'License') { |s| s.license } if verbose?
-      register(section: :notes, header: 'Description') { |s| s.description }
+
+      if humanize?
+        description = MarkdownRenderer.new(object.description).wrap_markdown
+      else
+        description = object.description
+      end
+      register(section: :notes, header: 'Description') { description }
+
     end
   end
 end

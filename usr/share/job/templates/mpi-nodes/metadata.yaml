@@ -9,8 +9,9 @@ tags:
 synopsis: Submit a single job that spans multiple nodes where you want exclusive use of each node allocated. 
 description: |
   This may be because you intend to spawn multiple threads yourself or intend
-  to run an MPI application. This method is often used for MPI jobs where you
-  need to specify the number of processes, machine file and process allocation
+  to run an [MPI](https://en.wikipedia.org/wiki/Message_Passing_Interface)
+  application. This method is often used for MPI jobs where you need to
+  specify the number of processes, machine file and process allocation
   manually, rather than leave this up to the scheduler.
 
   Your job will be allocated the requested number of empty nodes. This method

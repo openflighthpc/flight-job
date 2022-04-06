@@ -12,8 +12,8 @@ description: |
   single node. The remaining cores will be shared with other jobs.
 
   As this method allocates cores on a single machine, it may take longer to
-  allocate your job. You may wish to consider using a mpi slots job to reserve
-  cores over multiple nodes.
+  allocate your job. You may wish to consider using an MPI slots job to
+  reserve cores over multiple nodes.
 
 __meta__:
   SLURM_TIME: &SLURM_TIME "^\
