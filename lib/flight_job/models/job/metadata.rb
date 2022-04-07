@@ -30,6 +30,11 @@ require_relative "validator"
 
 module FlightJob
   class Job < ApplicationModel
+    # Encapsulates a job's `metadata.yaml` file.
+    #
+    # * Loads and saves the file.
+    # * Validates against a schema.
+    # * Provides "atomic"(-ish) updates.
     class Metadata < Metadata::BaseMetadata
 
       RAW_SCHEMA = JSON.parse File.read(Flight.config.job_schema_path)

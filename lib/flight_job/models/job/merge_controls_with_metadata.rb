@@ -28,9 +28,9 @@
 module FlightJob
   class Job < ApplicationModel
     # Depending on how a job is submitted to the scheduler, some of the
-    # metadata may be in a controls_file instead of the metadata.  This class
-    # merges such controls_files to the metadata to provide a consistent
-    # access mechanism.
+    # metadata may be in a controls_file instead of the metadata.yaml file.
+    # This class merges such controls_files to the metadata providing a
+    # consistent access mechanism.
     class MergeControlsWithMetadata
       class << self
         def after_initialize(job)

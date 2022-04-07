@@ -27,6 +27,12 @@
 
 module FlightJob
   class Metadata
+    # Base class providing common functionality for encapsulating
+    # `metadata.yaml` files.
+    #
+    # * Loads and saves the file.
+    # * Provides mechanism to register expected attributes and to get a list
+    #   of expected attribute names.
     class BaseMetadata
       module AttributesConcern
         extend ActiveSupport::Concern

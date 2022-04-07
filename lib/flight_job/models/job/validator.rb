@@ -27,6 +27,12 @@
 
 module FlightJob
   class Job < ApplicationModel
+    # Validates a job's metadata against a json-schema.
+    #
+    # XXX Perhaps this has become so simple that it ought to be merged into
+    # Job::Metadata.
+    # XXX Or perhaps it ought to be making use of
+    # FlightJob::JsonSchemaValidator.
     class Validator < ActiveModel::Validator
       def validate(metadata)
         validate_schema(metadata)

@@ -27,6 +27,8 @@
 
 module FlightJob
   class Job < ApplicationModel
+    # Manages attempts to migrate a job's metadata.yaml to a new schema
+    # version.  The migration is performed by FlightJobMigration::Jobs.
     class MigrateMetadata
       def self.after_initialize(job)
         return unless job.persisted?
