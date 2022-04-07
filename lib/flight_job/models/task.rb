@@ -227,6 +227,10 @@ module FlightJob
       }
     end
 
+    def stderr_merged?
+      metadata['stdout_path'] == metadata['stderr_path']
+    end
+
     private
 
     # NOTE: Requires parity with job_dir

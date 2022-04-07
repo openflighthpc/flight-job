@@ -99,7 +99,7 @@ module FlightJob
       end
 
       def stderr_merged?
-        object.metadata.slice('stdout_path', 'stderr_path').values.uniq.length == 1
+        object.stderr_merged?
       end
     end
   end
