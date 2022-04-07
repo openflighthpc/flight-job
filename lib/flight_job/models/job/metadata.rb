@@ -25,12 +25,12 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require_relative "../metadata_base"
+require_relative "../metadata/base_metadata"
 require_relative "validator"
 
 module FlightJob
   class Job < ApplicationModel
-    class Metadata < MetadataBase
+    class Metadata < Metadata::BaseMetadata
 
       RAW_SCHEMA = JSON.parse File.read(Flight.config.job_schema_path)
       SCHEMA_VERSION = RAW_SCHEMA['oneOf'][0]["properties"]['version']['const']
