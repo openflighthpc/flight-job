@@ -85,6 +85,7 @@ RSpec.describe "FlightJob::Job::Metadata", type: :model do
       it "write the metadata to disk" do
         # Use FakeFS to avoid accumulating lots of extra test files.
         FakeFS.with do
+          FakeFS::FileSystem.clone(File.join(__FILE__, "../../../../config"))
           expect(metadata).not_to be_persisted
           expect(metadata.valid?(:load)).to be true
 
