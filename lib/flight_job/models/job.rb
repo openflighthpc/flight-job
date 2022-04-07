@@ -75,7 +75,8 @@ module FlightJob
     end
 
     def self.monitor_all
-      Dir.glob(new(id: '*').active_index_path).each do |path|
+      glob = File.join(Flight.config.jobs_dir, "*", "active.index")
+      Dir.glob(glob).each do |path|
         # Load the job
         id = File.basename(File.dirname(path))
         job = new(id: id)
@@ -124,11 +125,11 @@ module FlightJob
     end
 
     def persisted?
-      File.exists?(metadata_path)
+      File.exist?(metadata_path)
     end
 
     def metadata
-      @metadata ||= if File.exists?(metadata_path)
+      @metadata ||= if File.exist?(metadata_path)
         YAML.load(File.read(metadata_path))
       else
         # NOTE: This is almost always an error condition, however it is up
@@ -260,14 +261,14 @@ module FlightJob
 
     def stdout_readable?
       return false unless stdout_path
-      return false unless File.exists? stdout_path
+      return false unless File.exist? stdout_path
       File.stat(stdout_path).readable?
     end
 
     def stderr_readable?
       return false if stderr_merged?
       return false unless stderr_path
-      return false unless File.exists? stderr_path
+      return false unless File.exist? stderr_path
       File.stat(stderr_path).readable?
     end
 

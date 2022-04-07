@@ -36,7 +36,7 @@ require_relative 'flight_job/errors'
 module Flight
   class << self
     def config
-      return @config if @config
+      return @config if defined?(@config)
       @config = FlightJob::Configuration.build
       @config.tap do |c|
         logger.info("Flight.env set to #{env.inspect}")

@@ -39,7 +39,7 @@ module FlightJob
 
     # Returns the base name if it is available AND short enough
     def base_name
-      if File.exists? metadata_path(base)
+      if File.exist? metadata_path(base)
         Flight.logger.debug("The base name '#{base}' has already been taken")
         nil
       elsif base.length > FlightJob.config.max_id_length
@@ -101,7 +101,7 @@ module FlightJob
       Flight.logger.info "Falling back on random name generation"
       (1..FlightJob.config.max_ids).each do
         candidate = SecureRandom.urlsafe_base64(6)
-        return candidate unless File.exists? metadata_path(candidate)
+        return candidate unless File.exist? metadata_path(candidate)
       end
       raise InternalError, "Failed to generate a random name"
     end

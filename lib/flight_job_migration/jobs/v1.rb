@@ -74,7 +74,7 @@ module FlightJobMigration
 
       def migrate!
         Flight.logger.debug "Migrating job '#{id}'"
-        if File.exists? metadata_path
+        if File.exist? metadata_path
           validate_original
           populate_metadata_from_original
           case original['submit_status']
@@ -84,7 +84,7 @@ module FlightJobMigration
             metadata['job_type'] = 'FAILED_SUBMISSION'
             save_metadata
           end
-        elsif File.exists? initial_path
+        elsif File.exist? initial_path
           migrate_initializing
         else
           raise MigrationError, "File does not exist: #{metadata_path}"
@@ -192,7 +192,7 @@ module FlightJobMigration
       end
 
       def original
-        @original ||= if File.exists? metadata_path
+        @original ||= if File.exist? metadata_path
           YAML.load File.read(metadata_path)
         else
           {}
@@ -200,7 +200,7 @@ module FlightJobMigration
       end
 
       def initial
-        @initial ||= if File.exists? initial_path
+        @initial ||= if File.exist? initial_path
           YAML.load File.read(initial_path)
         else
           {}

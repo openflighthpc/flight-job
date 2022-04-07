@@ -58,7 +58,7 @@ module FlightJob
       def migrate_metadata(job)
         if @schema_errors.empty?
           FileUtils.rm_f job.failed_migration_path
-        elsif File.exists? job.failed_migration_path
+        elsif File.exist? job.failed_migration_path
           Flight.logger.warn "Skipping job '#{job.id}' migration as it previously failed!"
         else
           if FlightJobMigration::Jobs.migrate(job.job_dir)
