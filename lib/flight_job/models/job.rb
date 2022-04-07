@@ -51,7 +51,7 @@ module FlightJob
       Dir.glob(glob).map do |path|
         id = File.basename(File.dirname(path))
         job = new(id: id)
-        if job.valid?(:load)
+        if job.valid?
           job.tap(&:monitor)
         else
           Flight.logger.error("Failed to load missing/invalid job: #{id}")
@@ -69,7 +69,7 @@ module FlightJob
         job = new(id: id)
 
         # Ensure it is valid
-        unless job.valid?(:load)
+        unless job.valid?
           Flight.logger.error "Skipping monitor for invalid job: #{id}"
           Flight.logger.info(job.errors.full_messages.join("\n"))
           next
@@ -84,15 +84,8 @@ module FlightJob
     after_initialize MergeControlsWithMetadata, if: :persisted?
     after_initialize MigrateMetadata, if: :persisted?
 
-    validate on: :load do
-      unless metadata.valid?(:load)
-        messages = metadata.errors.map { |e| e.message }
-        errors.add(:metadata, messages.join("; "))
-      end
-    end
-
-    validate on: :save do
-      unless metadata.valid?(:save)
+    validate do
+      unless metadata.valid?
         messages = metadata.errors.map { |e| e.message }
         errors.add(:metadata, messages.join("; "))
       end

@@ -210,7 +210,7 @@ module FlightJob
 
     def job
       @job ||= Job.new(id: job_id).tap do |j|
-        unless j.valid?(:load)
+        unless j.valid?
           FlightJob.logger.error("Failed to load job: #{job_id}\n") do
             j.errors.full_messages
           end

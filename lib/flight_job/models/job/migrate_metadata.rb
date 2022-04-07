@@ -31,14 +31,14 @@ module FlightJob
       def self.after_initialize(job)
         return unless job.persisted?
 
-        if job.valid?(:load)
+        if job.valid?
           FileUtils.rm_f(job.failed_migration_path)
         elsif File.exist?(job.failed_migration_path)
           Flight.logger.info "Skipping job '#{job.id}' migration as it previously failed!"
         else
           if FlightJobMigration::Jobs.migrate(job.job_dir)
             job.metadata.reload
-            job.validate(:load)
+            job.validate
           else
             # Flag the failure
             FileUtils.touch(job.failed_migration_path)

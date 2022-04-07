@@ -8,37 +8,19 @@ RSpec.describe "FlightJob::Job", type: :model do
   subject(:job) { FlightJob::Job.new(id: job_id) }
 
   describe "validations" do
-    context "when job is valid when loaded" do
+    context "when job is valid" do
       let(:job_id) { "valid-job" }
 
-      before(:each) { subject.valid?(:load) }
+      before(:each) { subject.valid? }
 
       it { expect(subject.errors).to be_empty }
       it { is_expected.not_to have_error(:metadata, 'is invalid') }
     end
 
-    context "when job is valid when saved" do
-      let(:job_id) { "valid-job" }
-
-      before(:each) { subject.valid?(:save) }
-
-      it { expect(subject.errors).to be_empty }
-      it { is_expected.not_to have_error(:metadata, 'is invalid') }
-    end
-
-    context "when job is invalid when loaded" do
+    context "when job is invalid" do
       let(:job_id) { "invalid-job" }
 
-      before(:each) { subject.valid?(:load) }
-
-      it { expect(subject.errors).not_to be_empty }
-      it { is_expected.to have_error(:metadata, 'is invalid') }
-    end
-
-    context "when job is invalid when saved" do
-      let(:job_id) { "invalid-job" }
-
-      before(:each) { subject.valid?(:save) }
+      before(:each) { subject.valid? }
 
       it { expect(subject.errors).not_to be_empty }
       it { is_expected.to have_error(:metadata, 'is invalid') }
@@ -50,9 +32,6 @@ RSpec.describe "FlightJob::Job", type: :model do
   end
 
   describe "metadata" do
-    before(:each) do
-    end
-
     it "has the expected metadata path" do
       expect(job.metadata_path).to eq(metadata_path)
     end

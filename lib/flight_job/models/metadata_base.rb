@@ -79,6 +79,12 @@ module FlightJob
       new({}, path, parent)
     end
 
+    # Validates that the type of object loaded from the metadata file is of
+    # the correct type, i.e., a Hash.
+    validate on: :metadata_type do
+      errors.add(:metadata, 'is not a hash') unless @hash.is_a?(Hash)
+    end
+
     def [](attr)
       send(attr)
     end
@@ -92,7 +98,7 @@ module FlightJob
     end
 
     def save
-      if valid?(:save)
+      if valid?
         FileUtils.mkdir_p(File.dirname(@path))
         File.write(@path, YAML.dump(@hash))
       else

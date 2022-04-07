@@ -69,8 +69,7 @@ module FlightJob
 
       attribute :submission_answers, default: {}
 
-      validates_with Job::Validator, on: :load
-      validates_with Job::Validator, on: :save
+      validates_with Job::Validator
 
       def self.from_script(script, answers, job)
         initial_metadata = {
