@@ -1,3 +1,9 @@
+require 'simplecov'
+SimpleCov.start do
+  enable_coverage :branch
+  primary_coverage :branch
+end
+
 require "spec_helper"
 
 ENV['flight_ENVIRONMENT'] ||= "test"
