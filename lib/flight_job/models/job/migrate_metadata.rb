@@ -26,30 +26,25 @@
 #==============================================================================
 
 module FlightJob
-  module JobTransitions
-    FailedSubmitter = Struct.new(:job) do
-      def run
-        run!
-        return true
-      rescue
-        Flight.logger.error "Failed to transition job '#{job.id}'"
-        Flight.logger.warn $!
-        return false
-      end
+  class Job < ApplicationModel
+    # Manages attempts to migrate a job's metadata.yaml to a new schema
+    # version.  The migration is performed by FlightJobMigration::Jobs.
+    class MigrateMetadata
+      def self.after_initialize(job)
+        return unless job.persisted?
 
-      def run!
-        # Check if the maximum pending submission time has elapsed
-        start = DateTime.rfc3339(job.created_at).to_time.to_i
-        now = Time.now.to_i
-        if now - start > FlightJob.config.submission_period
-          FlightJob.logger.error <<~ERROR
-            The following job is being flagged as FAILED as it has not been submitted: #{job.id}
-          ERROR
-          job.metadata['job_type'] = "FAILED_SUBMISSION"
-          job.metadata['submit_status'] = 128
-          job.metadata['submit_stdout'] = ''
-          job.metadata['submit_stderr'] = 'Failed to run the submission command for an unknown reason'
-          job.metadata.save
+        if job.valid?
+          FileUtils.rm_f(job.failed_migration_path)
+        elsif File.exist?(job.failed_migration_path)
+          Flight.logger.info "Skipping job '#{job.id}' migration as it previously failed!"
+        else
+          if FlightJobMigration::Jobs.migrate(job.job_dir)
+            job.metadata.reload
+            job.validate
+          else
+            # Flag the failure
+            FileUtils.touch(job.failed_migration_path)
+          end
         end
       end
     end

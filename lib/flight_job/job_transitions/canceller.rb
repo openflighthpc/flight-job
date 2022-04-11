@@ -58,7 +58,7 @@ module FlightJob
           @job.monitor if status.success? || !@job.terminal?
           if status.success?
             @job.metadata['cancelling'] = true
-            @job.save_metadata
+            @job.metadata.save
           else
             raise CommandError, <<~ERROR.chomp
             Unexpectedly failed to cancel job '#{@job.id}'!

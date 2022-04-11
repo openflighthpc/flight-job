@@ -50,6 +50,7 @@ GEM
     ecma-re-validator (0.3.0)
       regexp_parser (~> 2.0)
     ed25519 (1.3.0)
+    fakefs (1.4.1)
     hana (1.3.7)
     highline (2.0.3)
     i18n (1.8.9)
@@ -142,6 +143,7 @@ DEPENDENCIES
   activemodel
   commander-openflighthpc (~> 2.1)
   dotenv
+  fakefs
   flight-subprocess!
   flight_configuration!
   json_schemer

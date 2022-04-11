@@ -246,7 +246,7 @@ module FlightJob
         unless File.exist?(job.metadata_path)
           raise MissingJobError, "Could not locate job: #{id}"
         end
-        unless job.valid?(:load)
+        unless job.valid?
           FlightJob.logger.error("Failed to load job: #{id}\n") do
             job.errors.full_messages
           end

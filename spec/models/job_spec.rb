@@ -11,9 +11,8 @@ RSpec.describe "FlightJob::Job", type: :model do
     context "when job is valid" do
       let(:job_id) { "valid-job" }
 
-      before(:each) { subject.valid?(:load) }
+      before(:each) { subject.valid? }
 
-      it { expect(subject.valid?(:load)).to be true }
       it { expect(subject.errors).to be_empty }
       it { is_expected.not_to have_error(:metadata, 'is invalid') }
     end
@@ -21,9 +20,8 @@ RSpec.describe "FlightJob::Job", type: :model do
     context "when job is invalid" do
       let(:job_id) { "invalid-job" }
 
-      before(:each) { subject.valid?(:load) }
+      before(:each) { subject.valid? }
 
-      it { expect(subject.valid?(:load)).to be false }
       it { expect(subject.errors).not_to be_empty }
       it { is_expected.to have_error(:metadata, 'is invalid') }
     end
@@ -34,9 +32,6 @@ RSpec.describe "FlightJob::Job", type: :model do
   end
 
   describe "metadata" do
-    before(:each) do
-    end
-
     it "has the expected metadata path" do
       expect(job.metadata_path).to eq(metadata_path)
     end

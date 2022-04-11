@@ -210,7 +210,7 @@ module FlightJob
 
     def job
       @job ||= Job.new(id: job_id).tap do |j|
-        unless j.valid?(:load)
+        unless j.valid?
           FlightJob.logger.error("Failed to load job: #{job_id}\n") do
             j.errors.full_messages
           end
@@ -225,6 +225,10 @@ module FlightJob
         data['actual_start_time'] = data.delete('start_time')
         data['actual_end_time'] = data.delete('end_time')
       }
+    end
+
+    def stderr_merged?
+      metadata['stdout_path'] == metadata['stderr_path']
     end
 
     private

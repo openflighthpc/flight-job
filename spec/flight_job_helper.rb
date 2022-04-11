@@ -5,6 +5,7 @@ SimpleCov.start do
 end
 
 require "spec_helper"
+require "fakefs/spec_helpers"
 
 ENV['flight_ENVIRONMENT'] ||= "test"
 require_relative "../lib/flight"
