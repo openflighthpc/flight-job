@@ -47,6 +47,7 @@ module FlightJob
       # NOTE: The verbose output is at the end to avoid the order changing
       register(section: :main, header: 'ID') { |s| s.id }
       register(section: :main, header: 'Name') { |s| s.name }
+      register(section: :main, header: 'Synopsis') { |s| s.synopsis }
       register(section: :main, header: 'Copyright') { |s| s.copyright } if verbose?
       register(section: :main, header: 'License') { |s| s.license } if verbose?
 

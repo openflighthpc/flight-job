@@ -100,7 +100,7 @@ module FlightJob
     end
 
     def exists?
-      File.exists? metadata_path
+      File.exist? metadata_path
     end
 
     def metadata_path
@@ -238,6 +238,10 @@ module FlightJob
        metadata['license']
     end
     
+    def synopsis
+       metadata['synopsis']
+    end
+
     def description
        metadata['description']
     end

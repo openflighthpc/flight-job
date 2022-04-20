@@ -10,14 +10,15 @@ synopsis: Submit a single job that has multiple processes that may span multiple
 description: |
   This allows you to specify the total number of cores required for a job whilst
   leaving it up to the scheduler to allocate them. This method is often used for
-  MPI jobs where you know the required number of processes in advance but do not
-  need exclusive access to the machine.
+  [MPI](https://en.wikipedia.org/wiki/Message_Passing_Interface) jobs where
+  you know the required number of processes in advance but do not need
+  exclusive access to the machine.
 
-  Your job will be allocated the requested number of cores across the allocated
-  nodes. The remaining unallocated cores maybe shared with other jobs. This method
-  should not be used for SMP (OpenMP) jobs. As this method allocates individual
-  cores, you may need to share the nodes' resources. You may prefer using a
-  multiple mpi node job to obtain exclusive access instead.
+  Your job will be allocated the requested number of cores across the
+  allocated nodes. The remaining unallocated cores maybe shared with other
+  jobs. This method should not be used for SMP (OpenMP) jobs. As this method
+  allocates individual cores, you may need to share the nodes' resources. You
+  may prefer using a multiple mpi node job to obtain exclusive access instead.
 
 __meta__:
   SLURM_TIME: &SLURM_TIME "^\

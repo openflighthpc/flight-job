@@ -109,7 +109,7 @@ module FlightJob
 
       def update_job(data)
         job.metadata["lazy"] = data["lazy"]
-        job.save_metadata
+        job.metadata.save
       end
 
       def build_tasks(data)

@@ -45,3 +45,12 @@ group :development do
   gem 'pry'
   gem 'pry-byebug'
 end
+
+group :test do
+  gem 'rspec'
+  gem 'fakefs'
+
+  # Used by CI platform
+  gem 'rspec_junit_formatter'
+  gem 'simplecov', require: false
+end

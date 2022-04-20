@@ -30,41 +30,28 @@ require 'securerandom'
 require 'json_schemer'
 require 'time'
 
-require_relative 'job/validator'
 require_relative 'job/adjust_active_index'
 require_relative 'job/merge_controls_with_metadata'
+require_relative 'job/metadata'
+require_relative 'job/migrate_metadata'
 
 module FlightJob
   class Job < ApplicationModel
-    RAW_SCHEMA = JSON.parse File.read(Flight.config.job_schema_path)
-    SCHEMA_VERSION = RAW_SCHEMA['oneOf'][0]["properties"]['version']['const']
-
     PENDING_STATES = ['PENDING']
     TERMINAL_STATES = ['FAILED', 'COMPLETED', 'CANCELLED', 'UNKNOWN']
     RUNNING_STATES = ['RUNNING', 'COMPLETING']
     NON_TERMINAL_STATES = [*PENDING_STATES, *RUNNING_STATES]
     STATES = [*NON_TERMINAL_STATES, *TERMINAL_STATES]
-
     STATES_LOOKUP = {}.merge(PENDING_STATES.map { |s| [s, :pending] }.to_h)
                       .merge(RUNNING_STATES.map { |s| [s, :running] }.to_h)
                       .merge(TERMINAL_STATES.map { |s| [s, :terminal] }.to_h)
-
-    # Break up the raw schema into its components
-    # This makes slightly nicer error reporting by removing the oneOf
-    SCHEMAS = {
-      common: JSONSchemer.schema(RAW_SCHEMA.dup.tap { |s| s.delete("oneOf") })
-    }
-    RAW_SCHEMA['oneOf'].each do |schema|
-      type = schema['properties']['job_type']['const']
-      SCHEMAS.merge!({ type => JSONSchemer.schema(schema) })
-    end
 
     def self.load_all
       glob = File.join(Flight.config.jobs_dir, "*", "metadata.yaml")
       Dir.glob(glob).map do |path|
         id = File.basename(File.dirname(path))
         job = new(id: id)
-        if job.valid?(:load)
+        if job.valid?
           job.tap(&:monitor)
         else
           Flight.logger.error("Failed to load missing/invalid job: #{id}")
@@ -75,13 +62,14 @@ module FlightJob
     end
 
     def self.monitor_all
-      Dir.glob(new(id: '*').active_index_path).each do |path|
+      glob = File.join(Flight.config.jobs_dir, "*", "active.index")
+      Dir.glob(glob).each do |path|
         # Load the job
         id = File.basename(File.dirname(path))
         job = new(id: id)
 
         # Ensure it is valid
-        unless job.valid?(:load)
+        unless job.valid?
           Flight.logger.error "Skipping monitor for invalid job: #{id}"
           Flight.logger.info(job.errors.full_messages.join("\n"))
           next
@@ -94,10 +82,17 @@ module FlightJob
 
     after_initialize AdjustActiveIndex, if: :persisted?
     after_initialize MergeControlsWithMetadata, if: :persisted?
+    after_initialize MigrateMetadata, if: :persisted?
 
-    validates_with Job::Validator, on: :load,
-      migrate_metadata: true
-    validates_with Job::Validator, on: :save_metadata
+    validate do
+      unless metadata.valid?
+        messages = metadata.errors.map { |e| e.message }
+        errors.add(:metadata, messages.join("; "))
+      end
+    end
+
+    delegate(*Metadata.attribute_names, to: :metadata)
+    delegate :persisted?, to: :metadata
 
     attr_writer :id
     def id
@@ -105,13 +100,9 @@ module FlightJob
       raise InternalError, "Job#id was called before being set"
     end
 
-    def script_id
-      metadata['script_id']
-    end
-
     def failed_migration_path
       @failed_migration_path ||= File.join(
-        job_dir, ".migration-failed.#{SCHEMA_VERSION}.0"
+        job_dir, ".migration-failed.#{Metadata::SCHEMA_VERSION}.0"
       )
     end
 
@@ -123,59 +114,28 @@ module FlightJob
       @active_index_path ||= File.join(job_dir, 'active.index')
     end
 
-    def persisted?
-      File.exists?(metadata_path)
-    end
-
     def metadata
-      @metadata ||= if File.exists?(metadata_path)
-        YAML.load(File.read(metadata_path))
+      @metadata ||= if File.exist?(metadata_path)
+        Metadata.load_from_path(metadata_path, self)
       else
         # NOTE: This is almost always an error condition, however it is up
         # to the validation to handle it. New jobs should use the submit
         # method
-        Flight.logger.warn("Setting metadata to empty hash; this probably isn't right")
-        {}
+        Flight.logger.warn("Setting metadata to empty hash for job #{id}; this probably isn't right")
+        Metadata.blank(metadata_path, self)
       end
     end
 
     def initialize_metadata(script, answers)
-      if @metadata
-        raise InternalError, <<~ERROR
-          Cannot initialize metadata for job '#{id.to_s}' as it has already been loaded
-        ERROR
+      if persisted?
+        raise InternalError, "Cannot initialize metadata for persisted job '#{id.to_s}'"
       else
-        @metadata = {
-          "created_at" => Time.now.rfc3339,
-          "job_type" => "SUBMITTING",
-          "script_id" => script.id,
-          "rendered_path" => File.join(job_dir, script.script_name),
-          "version" => SCHEMA_VERSION,
-          "submission_answers" => answers,
-        }
+        @metadata = Metadata.from_script(script, answers, self)
       end
-    end
-
-    def reload_metadata
-      @metadata = nil
-    end
-
-    # NOTE: This is a subset of the full metadata file which is stored in the active file
-    # It stores rudimentary information about the job if the metadata file is never saved
-    def active_metadata
-      metadata.is_a?(Hash) ? metadata.slice('version', 'created_at', 'script_id') : {}
     end
 
     def load_script
       Script.new(id: script_id)
-    end
-
-    def created_at
-      metadata['created_at']
-    end
-
-    def submission_answers
-      metadata['submission_answers'] || {}
     end
 
     # Return a job name that is independent from the scheduler.
@@ -194,7 +154,7 @@ module FlightJob
     end
 
     def results_dir
-      controls_file("results_dir").read || metadata['results_dir']
+      controls_file("results_dir").read || metadata.results_dir
     end
 
     # DEPRECATED: This method belongs on the decorator!
@@ -210,7 +170,7 @@ module FlightJob
       when 'FAILED_SUBMISSION'
         'FAILED'
       else
-        metadata['state'] || 'UNKNOWN'
+        metadata.state || 'UNKNOWN'
       end
     rescue
       # Various validations require the 'state', which depends on the
@@ -223,51 +183,39 @@ module FlightJob
     end
 
     def stdout_path
-      stdout_path!
-    rescue
-      Flight.logger.debug $!
-      nil
-    end
-
-    def stdout_path!
       case job_type
       when 'SINGLETON'
-        metadata['stdout_path']
+        metadata.stdout_path
       else
         raise InvalidOperation, failure_message("Could not get the standard output")
       end
-    end
-
-    def stderr_path
-      stderr_path!
     rescue
       Flight.logger.debug $!
       nil
     end
 
-    def stderr_path!
+    def stderr_path
       case job_type
       when 'SINGLETON'
-        metadata['stderr_path']
+        metadata.stderr_path
       else
         raise InvalidOperation, failure_message("Could not get the standard error")
       end
-    end
-
-    def scheduler_id
-      metadata['scheduler_id']
+    rescue
+      Flight.logger.debug $!
+      nil
     end
 
     def stdout_readable?
       return false unless stdout_path
-      return false unless File.exists? stdout_path
+      return false unless File.exist? stdout_path
       File.stat(stdout_path).readable?
     end
 
     def stderr_readable?
       return false if stderr_merged?
       return false unless stderr_path
-      return false unless File.exists? stderr_path
+      return false unless File.exist? stderr_path
       File.stat(stderr_path).readable?
     end
 
@@ -292,26 +240,28 @@ module FlightJob
     end
 
     def monitor
-      original_metadata = metadata.deep_dup
-      success = case job_type
-      when 'SUBMITTING'
-        JobTransitions::FailedSubmitter.new(self).run
-      when 'BOOTSTRAPPING'
-        JobTransitions::BootstrapMonitor.new(self).run
-      when 'SINGLETON'
-        JobTransitions::SingletonMonitor.new(self).run
-      when 'ARRAY'
-        JobTransitions::ArrayMonitor.new(self).run
-      when 'FAILED_SUBMISSION'
-        # There is nothing to do in this case.  Return true to avoid logging a
-        # confusing warning below.
-        true
+      metadata.with_save_point do
+        success =
+          case job_type
+          when 'SUBMITTING'
+            JobTransitions::FailedSubmitter.new(self).run
+          when 'BOOTSTRAPPING'
+            JobTransitions::BootstrapMonitor.new(self).run
+          when 'SINGLETON'
+            JobTransitions::SingletonMonitor.new(self).run
+          when 'ARRAY'
+            JobTransitions::ArrayMonitor.new(self).run
+          when 'FAILED_SUBMISSION'
+            # There is nothing to do in this case.  Return true to avoid logging a
+            # confusing warning below.
+            true
+          end
+        unless success
+          Flight.logger.warn "Resetting metadata for job '#{id}'"
+          metadata.restore_save_point
+        end
+        success
       end
-      unless success
-        Flight.logger.warn "Resetting metadata for job '#{id}'"
-        @metadata = original_metadata
-      end
-      success
     end
 
     def cancel
@@ -341,33 +291,15 @@ module FlightJob
       when 'FAILED_SUBMISSION'
         true
       when 'SINGLETON'
-        STATES_LOOKUP[metadata['state']] == :terminal
+        STATES_LOOKUP[metadata.state] == :terminal
       when 'ARRAY'
-        if metadata['lazy']
+        if lazy
           false
         else
           !Task.load_last_non_terminal(id)
         end
       else
         false
-      end
-    end
-
-    # NOTE: The job_type is used within the validation, thus the metadata
-    # may not be hash
-    def job_type
-      hash = metadata.is_a?(Hash) ? metadata : {}
-      hash['job_type']
-    end
-
-    def save_metadata
-      if valid?(:save_metadata)
-        FileUtils.mkdir_p File.dirname(metadata_path)
-        File.write metadata_path, YAML.dump(metadata)
-      else
-        Flight.logger.error("Failed to save job metadata: #{id}")
-        Flight.logger.info(errors.full_messages.join("\n"))
-        raise InternalError, "Unexpectedly failed to save job '#{id}' metadata"
       end
     end
 

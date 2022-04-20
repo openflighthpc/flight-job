@@ -92,7 +92,7 @@ module FlightJobMigration
       def pre_metadata
         return @pre_metadata if defined?(@pre_metadata)
         pm =
-          if File.exists?(metadata_path)
+          if File.exist?(metadata_path)
             YAML.load(File.read(metadata_path))
           else
             {}
@@ -113,7 +113,7 @@ module FlightJobMigration
       #
       # If any pre-existing keys are no longer required, they can be deleted.
       def new_metadata
-        @new_metadata ||= if File.exists?(metadata_path)
+        @new_metadata ||= if File.exist?(metadata_path)
           YAML.load(File.read(metadata_path))
         else
           {}

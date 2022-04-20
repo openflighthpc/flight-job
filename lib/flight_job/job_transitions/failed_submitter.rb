@@ -49,7 +49,7 @@ module FlightJob
           job.metadata['submit_status'] = 128
           job.metadata['submit_stdout'] = ''
           job.metadata['submit_stderr'] = 'Failed to run the submission command for an unknown reason'
-          job.save_metadata
+          job.metadata.save
         end
       end
     end

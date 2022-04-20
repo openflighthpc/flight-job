@@ -27,6 +27,13 @@
 
 module FlightJob
   class Job < ApplicationModel
+    # Manages a job's active index file.
+    #
+    # This file is a performance optimisation to allow for quickly determining
+    # which jobs have not yet reached a terminal state.
+    #
+    # XXX The active index file may also be updated when a job is saved.
+    # Managing that should also become the responsibility of this class.
     class AdjustActiveIndex
       def self.after_initialize(job)
         return unless job.persisted?
