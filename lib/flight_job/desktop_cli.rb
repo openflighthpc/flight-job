@@ -83,6 +83,7 @@ module FlightJob
         'USER' => username,
         'LOGNAME' => username,
       }.merge(env)
+      @cmd = cmd + ["--name", @env['FLIGHT_JOB_ID']]
     end
 
     def run_local(&block)
