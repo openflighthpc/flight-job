@@ -212,6 +212,7 @@ session_start() {
             start \
             --script ${SESSION_SCRIPT} \
             --no-override-env \
+            --name ${FLIGHT_JOB_ID} \
             | tee >( grep '^Identity' | cut -f2 | register_control "flight_desktop_id" )
     )
 

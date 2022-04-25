@@ -39,6 +39,7 @@ module FlightJob
           "--no-override-env",
           "--script", script,
           "--kill-on-script-exit",
+          "--name", env['FLIGHT_JOB_ID']
         ]
         cmd = new(*flight_desktop, *args, env: env)
         if remote_host = select_remote_host(cmd.username)
