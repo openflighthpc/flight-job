@@ -208,8 +208,7 @@ session_start() {
     echo "Starting session..."
     (
         set -o pipefail
-        # ${flight_ROOT:-/opt/flight}/bin/flight desktop \
-        /code/flight-desktop/bin/desktop \
+        ${flight_ROOT:-/opt/flight}/bin/flight desktop \
             start \
             --script ${SESSION_SCRIPT} \
             --no-override-env \
@@ -224,8 +223,7 @@ session_start() {
 session_is_active() {
     local state
     state=$(
-        # ${flight_ROOT:-/opt/flight}/bin/flight desktop \
-        /code/flight-desktop/bin/desktop \
+        ${flight_ROOT:-/opt/flight}/bin/flight desktop \
             show "${SESSION_ID}" 2>/dev/null \
             | grep '^State' \
             | cut -d $'\t' -f 2
