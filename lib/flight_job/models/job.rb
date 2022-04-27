@@ -117,10 +117,6 @@ module FlightJob
       @metadata_path ||= File.join(job_dir, 'metadata.yaml')
     end
 
-    def active_index_path
-      @active_index_path ||= File.join(job_dir, 'active.index')
-    end
-
     def metadata
       @metadata ||= if File.exist?(metadata_path)
         Metadata.load_from_path(metadata_path, self)

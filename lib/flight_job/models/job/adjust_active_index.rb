@@ -34,26 +34,29 @@ module FlightJob
     #
     # XXX The active index file may also be updated when a job is saved.
     # Managing that should also become the responsibility of this class.
-    class AdjustActiveIndex
+    class AdjustActiveIndex < Job
       def self.after_initialize(job)
         return unless job.persisted?
-        edit_active_index(job)
+        job.edit_active_index
       end
 
       def self.after_save(job)
-        edit_active_index(job)
+        job.edit_active_index
       end
+    end
 
-      def self.edit_active_index(job)
-        if job.terminal?
-          Flight.logger.debug("Removing active index file for terminal job #{job.id}")
-          FileUtils.rm_f job.active_index_path
-        else
-          Flight.logger.debug("Touching active index file for non-terminal job #{job.id}")
-          FileUtils.touch job.active_index_path
-        end
+    def edit_active_index
+      if terminal?
+        Flight.logger.debug("Removing active index file for terminal job #{id}")
+        FileUtils.rm_f active_index_path
+      else
+        Flight.logger.debug("Touching active index file for non-terminal job #{id}")
+        FileUtils.touch active_index_path
       end
+    end
 
+    def active_index_path
+      @active_index_path ||= File.join(job_dir, 'active.index')
     end
   end
 end
