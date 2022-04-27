@@ -74,8 +74,8 @@ module FlightJob
             update_tasks(data)
             update_job(data)
 
-            # Remove the indexing file in terminal state
-            FileUtils.rm_f job.active_index_path if job.terminal?
+            # Update the indexing file so it's removed in terminal state
+            job.save
           else
             raise_command_error
           end
