@@ -26,12 +26,14 @@ register_control() {
   local value
   name="$1"
   if [[ -p /dev/stdin ]]; then
-      value="$( cat - )"
+      value="$( cat )"
   else
       value="$2"
   fi
   if [ -d "${CONTROLS_DIR}" ]; then
-    if [ -n ${value} ]; then
+    if [ -z "${value}" ]; then
+        :
+    else
         echo "${value}" > "${CONTROLS_DIR}/${name}"
     fi
   else
