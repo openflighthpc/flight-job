@@ -37,6 +37,14 @@ module FlightJob
     class AdjustActiveIndex
       def self.after_initialize(job)
         return unless job.persisted?
+        edit_active_index(job)
+      end
+
+      def self.after_save(job)
+        edit_active_index(job)
+      end
+
+      def self.edit_active_index(job)
         if job.terminal?
           Flight.logger.debug("Removing active index file for terminal job #{job.id}")
           FileUtils.rm_f job.active_index_path
@@ -45,6 +53,7 @@ module FlightJob
           FileUtils.touch job.active_index_path
         end
       end
+
     end
   end
 end

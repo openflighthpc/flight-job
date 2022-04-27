@@ -33,7 +33,7 @@ module FlightJob
     include ActiveModel::Serializers::JSON
     extend ActiveModel::Callbacks
 
-    define_model_callbacks :initialize, only: :after
+    define_model_callbacks :initialize, :save, only: :after
 
     def initialize(**attributes)
       run_callbacks :initialize do

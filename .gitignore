@@ -10,3 +10,4 @@ tags
 /coverage/
 /spec/fixtures/jobs/*/.migration-failed*
 /spec/fixtures/jobs/*/active.index
+*.idea*
