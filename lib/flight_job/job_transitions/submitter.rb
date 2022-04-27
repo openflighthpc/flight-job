@@ -72,8 +72,7 @@ module FlightJob
         script = job.load_script
 
         # Write the initial metadata
-        job.metadata.save
-        FileUtils.touch job.active_index_path
+        job.save
 
         # Duplicate the script into the job's directory
         FileUtils.cp script.script_path, job.metadata["rendered_path"]
@@ -95,8 +94,7 @@ module FlightJob
 
           unless status.success?
             job.metadata['job_type'] = 'FAILED_SUBMISSION'
-            job.metadata.save
-            FileUtils.rm_f job.active_index_path
+            job.save
             return
           end
 
@@ -104,7 +102,7 @@ module FlightJob
 
           job.metadata["job_type"] = "BOOTSTRAPPING"
           job.metadata['scheduler_id'] = data['id']
-          job.metadata.save
+          job.save
 
           BootstrapMonitor.new(job).run
         end
