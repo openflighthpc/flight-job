@@ -22,6 +22,7 @@
 # saved outside of RESULTS_DIR, 'flight-job' will be unable to help you access
 # your results.
 RESULTS_DIR="$(pwd)/${FLIGHT_JOB_NAME}-outputs/${FLIGHT_JOB_ID}"
+echo $RESULTS_DIR
 register_control "results_dir" "${RESULTS_DIR}"
 mkdir -p "$RESULTS_DIR"
 echo "Your results will be stored in: $RESULTS_DIR"
@@ -29,6 +30,7 @@ SESSION_OUTPUT="${RESULTS_DIR}/session.output"
 
 create_session_script <<SESSION
 #!/bin/bash
+cd $(pwd)
 
 #===============================
 #  Activate Flight Environment
@@ -50,7 +52,7 @@ source "${flight_ROOT:-/opt/flight}"/etc/setup.sh >> "${SESSION_OUTPUT}" 2>&1
 #-------------------------------
 # Customize this section to suit your needs.
 
-echo "Executing job commands, current working directory is $(pwd)" >> "${SESSION_OUTPUT}" 2>&1
+echo "Executing job commands, current working directory is \$(pwd)" >> "${SESSION_OUTPUT}" 2>&1
 
 # REPLACE THE FOLLOWING WITH YOUR APPLICATION COMMANDS
 
