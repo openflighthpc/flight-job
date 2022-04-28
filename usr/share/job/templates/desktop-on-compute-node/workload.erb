@@ -22,7 +22,6 @@
 # saved outside of RESULTS_DIR, 'flight-job' will be unable to help you access
 # your results.
 RESULTS_DIR="$(pwd)/${FLIGHT_JOB_NAME}-outputs/${FLIGHT_JOB_ID}"
-echo $RESULTS_DIR
 register_control "results_dir" "${RESULTS_DIR}"
 mkdir -p "$RESULTS_DIR"
 echo "Your results will be stored in: $RESULTS_DIR"
