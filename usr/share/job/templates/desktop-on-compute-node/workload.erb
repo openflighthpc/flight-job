@@ -29,6 +29,7 @@ SESSION_OUTPUT="${RESULTS_DIR}/session.output"
 
 create_session_script <<SESSION
 #!/bin/bash
+cd $(pwd)
 
 #===============================
 #  Activate Flight Environment
@@ -50,7 +51,7 @@ source "${flight_ROOT:-/opt/flight}"/etc/setup.sh >> "${SESSION_OUTPUT}" 2>&1
 #-------------------------------
 # Customize this section to suit your needs.
 
-echo "Executing job commands, current working directory is $(pwd)" >> "${SESSION_OUTPUT}" 2>&1
+echo "Executing job commands, current working directory is \$(pwd)" >> "${SESSION_OUTPUT}" 2>&1
 
 # REPLACE THE FOLLOWING WITH YOUR APPLICATION COMMANDS
 
