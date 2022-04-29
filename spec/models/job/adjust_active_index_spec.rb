@@ -9,9 +9,7 @@ RSpec.describe FlightJob::Job::AdjustActiveIndex do
     let(:active_index_path) { File.join(job_dir, "active.index") }
     it "creates active index file" do
       FakeFS do
-        FakeFS::FileSystem.clone(File.join(__FILE__, "../../../../config"))
-        FakeFS::FileSystem.clone(job_dir)
-        
+        clone_job_directory(job_dir)
         expect(File).not_to exist(active_index_path)
         FlightJob::Job.new(id: job_id)
         expect(File).to exist(active_index_path)
@@ -25,9 +23,7 @@ RSpec.describe FlightJob::Job::AdjustActiveIndex do
     let(:active_index_path) { File.join(job_dir, "active.index") }
     it "removes active.index file" do
       FakeFS do
-        FakeFS::FileSystem.clone(File.join(__FILE__, "../../../../config"))
-        FakeFS::FileSystem.clone(job_dir)
-
+        clone_job_directory(job_dir)
         expect(File).to exist(active_index_path)
         FlightJob::Job.new(id: job_id)
         expect(File).not_to exist(active_index_path)
@@ -41,9 +37,7 @@ RSpec.describe FlightJob::Job::AdjustActiveIndex do
     let(:active_index_path) { File.join(job_dir, "active.index") }
     it "removes active.index file" do
       FakeFS do
-        FakeFS::FileSystem.clone(File.join(__FILE__, "../../../../config"))
-        FakeFS::FileSystem.clone(job_dir)
-
+        clone_job_directory(job_dir)
         job = FlightJob::Job.new(id: job_id)
         expect(File).to exist(active_index_path)
         job.metadata.state = "CANCELLED"
@@ -51,5 +45,10 @@ RSpec.describe FlightJob::Job::AdjustActiveIndex do
         expect(File).not_to exist(active_index_path)
       end
     end
+  end
+
+  def clone_job_directory(job_dir)
+    FakeFS::FileSystem.clone(File.join(__FILE__, "../../../../config"))
+    FakeFS::FileSystem.clone(job_dir)
   end
 end
