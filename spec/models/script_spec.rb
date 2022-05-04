@@ -19,7 +19,17 @@ RSpec.describe "FlightJob::Script", type: :model do
     it "writes the metadata" do
       FakeFS do
         FakeFS::FileSystem.clone(File.join(__FILE__, "../../../config"))
-        FakeFS::FileSystem.clone(script_dir)
+
+        # We don't need to clone script_dir in this case.  `FakeFS do ... end`
+        # creates a fake and blank file system.  We only need to clone
+        # directories / files if we want to populate the blank fake filesystem
+        # with what's on disk.  (The files on disk won't be modified).
+        # FakeFS::FileSystem.clone(script_dir)
+
+        # We need to clone these two paths as the template and adapter are
+        # used when rendering the job script.
+        FakeFS::FileSystem.clone(config.templates_dir)
+        FakeFS::FileSystem.clone(config.adapter_script_path)
 
         expect(File).not_to exist(metadata_path)
         opts = ( script_id ? { id: script_id } : {} )
