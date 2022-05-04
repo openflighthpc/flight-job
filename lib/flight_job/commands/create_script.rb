@@ -126,6 +126,7 @@ module FlightJob
           **opts
         )
         script.tags = template.tags
+        puts script.inspect
         script.render_and_save
         script
       end
