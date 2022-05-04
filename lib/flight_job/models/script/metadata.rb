@@ -24,7 +24,7 @@
 # For more information on Flight Job, please visit:
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
-
+require_relative "../metadata/base_metadata"
 #require_relative "validator"
 
 module FlightJob
@@ -34,7 +34,7 @@ module FlightJob
     # * Loads and saves the file.
     # * Validates against a schema.
     # * Provides "atomic"(-ish) updates.
-    class ScriptMetadata < Metadata::BaseMetadata
+    class Metadata < Metadata::BaseMetadata
 
       def self.from_template(script)
         initial_metadata = {
@@ -43,7 +43,6 @@ module FlightJob
         path = File.join(script.metadata_path, "metadata.yaml")
         new(initial_metadata, path, script)
       end
-
 
     end
   end
