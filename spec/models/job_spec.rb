@@ -13,6 +13,7 @@ RSpec.describe "FlightJob::Job", type: :model do
 
       before(:each) { subject.valid? }
 
+      puts config.jobs_dir
       it { expect(subject.errors).to be_empty }
       it { is_expected.not_to have_error(:metadata, 'is invalid') }
     end

@@ -32,6 +32,7 @@ require_relative 'script/metadata'
 
 module FlightJob
   class Script < ApplicationModel
+
     SCHEMA = JSONSchemer.schema({
       "$comment" => "strip-schema",
       "type" => "object",
@@ -266,7 +267,6 @@ module FlightJob
 
     def renderer
       return @renderer if @renderer
-
       # Ensure the script is in a valid state
       unless valid?(:render)
         FlightJob.logger.error("The script is invalid:\n") do
@@ -274,7 +274,6 @@ module FlightJob
         end
         raise InternalError, 'Unexpectedly failed to render the script!'
       end
-
       @renderer ||= FlightJob::Renderers::ScriptRenderer.new(
         template: load_template, answers: answers
       )
@@ -309,7 +308,7 @@ module FlightJob
         { 'version' => 0, 'created_at' => DateTime.now.rfc3339 }
       end.tap do |hash|
         if hash.is_a? Hash
-          if @provisional_metadata
+          if defined?(@provisional_metadata)
             hash.merge!(@provisional_metadata)
             @provisional_metadata = nil
           end
