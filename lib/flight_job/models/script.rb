@@ -28,6 +28,7 @@
 require 'json'
 require 'securerandom'
 require 'json_schemer'
+require_relative 'script/metadata'
 
 module FlightJob
   class Script < ApplicationModel
