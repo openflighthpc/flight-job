@@ -26,12 +26,14 @@ register_control() {
   local value
   name="$1"
   if [[ -p /dev/stdin ]]; then
-      value="$( cat - )"
+      value="$( cat )"
   else
       value="$2"
   fi
   if [ -d "${CONTROLS_DIR}" ]; then
-    if [ -n ${value} ]; then
+    if [ -z "${value}" ]; then
+        :
+    else
         echo "${value}" > "${CONTROLS_DIR}/${name}"
     fi
   else
@@ -140,10 +142,11 @@ request_allocation() {
         echo "srun ${srun_args[@]}" | tee_session_output
         srun "${srun_args[@]}" 2> >( tee >( register_scheduler_id ) | tee_session_output )
         submit_status=$?
-        if [[ $submit_status -ne 0 ]] ; then
-            # More Flight Job bookkeeping.  As the job wasn't successfully
-            # submitted, Flight Job cannot query the scheduler to discover its
-            # status.  We set its status here.
+        if [ ! -f "${CONTROLS_DIR}/scheduler_id" ] ; then
+            # The scheduler_id hasn't been recorded.  We assume that the
+            # job wasn't submitted to the scheduler successfully.  In
+            # which case Flight Job cannot query the scheduler to discover
+            # its status.  We set its status here.
             register_control "submit_status" ${submit_status}
             register_control "job_type" "FAILED_SUBMISSION"
             register_control "submit_stderr" "srun failed to submit job"

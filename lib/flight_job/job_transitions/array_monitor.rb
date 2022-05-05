@@ -73,9 +73,6 @@ module FlightJob
             validate_response(data)
             update_tasks(data)
             update_job(data)
-
-            # Remove the indexing file in terminal state
-            FileUtils.rm_f job.active_index_path if job.terminal?
           else
             raise_command_error
           end
@@ -109,7 +106,7 @@ module FlightJob
 
       def update_job(data)
         job.metadata["lazy"] = data["lazy"]
-        job.metadata.save
+        job.save
       end
 
       def build_tasks(data)

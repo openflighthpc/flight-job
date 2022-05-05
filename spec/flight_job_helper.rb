@@ -4,6 +4,7 @@ SimpleCov.start do
   primary_coverage :branch
 end
 
+require "pp"
 require "spec_helper"
 require "fakefs/spec_helpers"
 

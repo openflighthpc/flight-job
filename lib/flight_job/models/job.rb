@@ -80,6 +80,7 @@ module FlightJob
       end
     end
 
+    after_save AdjustActiveIndex
     after_initialize AdjustActiveIndex, if: :persisted?
     after_initialize MergeControlsWithMetadata, if: :persisted?
     after_initialize MigrateMetadata, if: :persisted?
@@ -93,6 +94,12 @@ module FlightJob
 
     delegate(*Metadata.attribute_names, to: :metadata)
     delegate :persisted?, to: :metadata
+
+    def save
+      run_callbacks :save do
+        metadata.save
+      end
+    end
 
     attr_writer :id
     def id
@@ -108,10 +115,6 @@ module FlightJob
 
     def metadata_path
       @metadata_path ||= File.join(job_dir, 'metadata.yaml')
-    end
-
-    def active_index_path
-      @active_index_path ||= File.join(job_dir, 'active.index')
     end
 
     def metadata
