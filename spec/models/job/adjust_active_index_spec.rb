@@ -1,12 +1,12 @@
 require 'flight_job_helper'
 
 RSpec.describe FlightJob::Job::AdjustActiveIndex do
+  let(:active_index_path) { File.join(job_dir, "active.index") }
   let(:config) { FlightJob.config }
+  let(:job_dir) { File.join(config.jobs_dir, job_id) }
 
   context "non-terminal job is initialized" do
     let(:job_id) { "non-terminal-no-active-index" }
-    let(:job_dir) { File.join(config.jobs_dir, job_id) }
-    let(:active_index_path) { File.join(job_dir, "active.index") }
     it "creates active index file" do
       FakeFS do
         clone_job_directory(job_dir)
@@ -19,8 +19,6 @@ RSpec.describe FlightJob::Job::AdjustActiveIndex do
 
   context "terminal job is initialized" do
     let(:job_id) { "terminal-with-active-index" }
-    let(:job_dir) { File.join(config.jobs_dir, job_id) }
-    let(:active_index_path) { File.join(job_dir, "active.index") }
     it "removes active.index file" do
       FakeFS do
         clone_job_directory(job_dir)
@@ -33,8 +31,6 @@ RSpec.describe FlightJob::Job::AdjustActiveIndex do
 
   context "job reaches terminal state and is saved" do
     let(:job_id) { "non-terminal-with-active-index" }
-    let(:job_dir) { File.join(config.jobs_dir, job_id) }
-    let(:active_index_path) { File.join(job_dir, "active.index") }
     it "removes active.index file" do
       FakeFS do
         clone_job_directory(job_dir)
