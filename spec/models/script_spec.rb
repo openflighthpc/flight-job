@@ -2,15 +2,15 @@ require 'flight_job_helper'
 
 RSpec.describe "FlightJob::Script", type: :model do
   let(:config) { FlightJob.config }
+  let(:metadata_path) { File.join(script_dir,"metadata.yaml") }
+  let(:script_dir) { File.join(config.scripts_dir, script_id) }
 
   describe "script creation" do
     let(:script_id) { "new-script" }
     let(:template_id) { "desktop-on-login-node" }
     let(:script_name) { "interactive-desktop.sh" }
-    let(:script_dir) { File.join(config.scripts_dir, script_id) }
-    let(:metadata_path) { File.join(script_dir,"metadata.yaml") }
-    let(:answers) { {"working_dir"=>"~", "stdout_file"=>"job-%j.output", "merge_stderr_with_stdout"=>"yes", "notification_wanted"=>"no"} }
-    let(:tags) { ["script:type=interactive", "session:type=desktop", "session:order=desktop:alloc"] }
+    let(:notes_path) { File.join(script_dir,"notes.md") }
+    let(:job_script_path) { File.join(script_dir,"script.sh") }
 
     it "writes the notes"
 
@@ -18,33 +18,23 @@ RSpec.describe "FlightJob::Script", type: :model do
 
     it "writes the metadata" do
       FakeFS do
-        FakeFS::FileSystem.clone(File.join(__FILE__, "../../../config"))
-
-        # We don't need to clone script_dir in this case.  `FakeFS do ... end`
-        # creates a fake and blank file system.  We only need to clone
-        # directories / files if we want to populate the blank fake filesystem
-        # with what's on disk.  (The files on disk won't be modified).
-        # FakeFS::FileSystem.clone(script_dir)
-
-        # We need to clone these two paths as the template and adapter are
-        # used when rendering the job script.
-        FakeFS::FileSystem.clone(config.templates_dir)
-        FakeFS::FileSystem.clone(config.adapter_script_path)
-
-        expect(File).not_to exist(metadata_path)
-        opts = ( script_id ? { id: script_id } : {} )
-        script = FlightJob::Script.new(
-          id: script_id,
-          template_id: template_id,
-          script_name: script_name,
-          answers: answers,
-          notes: "",
-          tags: tags,
-          **opts
-        )
-        script.render_and_save
-        expect(File).to exist(metadata_path)
+        check_for_file_creation(metadata_path)
       end
+    end
+
+    def check_for_file_creation(file_path)
+      #FakeFS::FileSystem.clone(File.join(__FILE__, "../../../config"))
+      FakeFS::FileSystem.clone(config.templates_dir)
+      FakeFS::FileSystem.clone(config.adapter_script_path)
+
+      expect(File).not_to exist(file_path)
+      script = FlightJob::Script.new(
+        id: script_id,
+        template_id: template_id,
+        script_name: script_name,
+        )
+      script.render_and_save
+      expect(File).to exist(file_path)
     end
   end
 
