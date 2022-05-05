@@ -44,19 +44,17 @@ module FlightJob
 
       attribute :answers, default: {}
 
-      def self.from_template(script)
+      def self.from_template(template, answers, notes, script)
         initial_metadata = {
           "created_at" => Time.now.rfc3339,
-          "tags" => "X",
-          "template_id" => "X",
-          "script_name" => script.script_name
+          "tags" => template.tags,
+          "template_id" => template.id,
+          "script_name" => template.script_template_name,
+          "answers" => answers,
+          "notes" => notes
         }
-        path = File.join(script.metadata_path, "metadata.yaml")
-        new(initial_metadata, path, script)
-      end
-
-      def created_at
-        metadata["created_at"]
+        # new(initial_metadata, script.metadata_path, script)
+        initial_metadata
       end
 
     end

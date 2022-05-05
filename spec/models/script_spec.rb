@@ -8,24 +8,31 @@ RSpec.describe "FlightJob::Script", type: :model do
   describe "script creation" do
     let(:script_id) { "new-script" }
     let(:template_id) { "desktop-on-login-node" }
+    let(:template) { {id: template_id, tags: %w(a b c), script_name: "interactive-desktop.sh" } }
     let(:script_name) { "interactive-desktop.sh" }
     let(:notes_path) { File.join(script_dir,"notes.md") }
     let(:job_script_path) { File.join(script_dir,"script.sh") }
 
-    it "writes the notes"
-
-    it "writes the job script file"
-
-    it "writes the metadata" do
-      FakeFS do
-        check_for_file_creation(metadata_path)
-      end
+    it "writes the notes" do
+      #check_for_file_creation(notes_path)
     end
 
-    def check_for_file_creation(file_path)
-      #FakeFS::FileSystem.clone(File.join(__FILE__, "../../../config"))
+    it "writes the job script file" do
+      #check_for_file_creation(job_script_path)
+    end
+
+    it "writes the metadata" do
+      check_for_file_creation(metadata_path)
+    end
+  end
+
+  def check_for_file_creation(file_path)
+    FakeFS do
       FakeFS::FileSystem.clone(config.templates_dir)
+      $stderr.puts config.templates_dir
       FakeFS::FileSystem.clone(config.adapter_script_path)
+      FakeFS::FileSystem.clone("/tmp/bundle/ruby/2.7.0/gems/activesupport-6.1.3")
+      FakeFS::FileSystem.clone("/tmp/bundle/ruby/2.7.0/gems/activemodel-6.1.3")
 
       expect(File).not_to exist(file_path)
       script = FlightJob::Script.new(
@@ -33,10 +40,15 @@ RSpec.describe "FlightJob::Script", type: :model do
         template_id: template_id,
         script_name: script_name,
         )
+      # script.render_and_save
+      # script = FlightJob::Script.new(id: script_id, template_id: template_id)
+      #script.initialize_metadata(template,{ },"")
       script.render_and_save
       expect(File).to exist(file_path)
+      puts File.read(file_path)
     end
   end
+
 
   describe "metadata" do
     let(:script_id) { "valid-script" }
@@ -56,8 +68,21 @@ RSpec.describe "FlightJob::Script", type: :model do
       end
     end
 
-    it "reads submission_answers from the metadata defaulting to {}" do
+    it "reads generation_answers from the metadata defaulting to {}" do
       expect(script.answers).to eq(metadata["answers"] || {})
     end
+
+    {
+      template_id: 'foo',
+      script_name: 'bar',
+      tags: %w[a b c],
+    }.each do |attr, value|
+      it "writes #{attr} to the metadata" do
+        expect(script.send(attr)).not_to eq(value)
+        script.send("#{attr}=", value)
+        expect(script.send(attr)).to eq(value)
+      end
+    end
+
   end
 end
