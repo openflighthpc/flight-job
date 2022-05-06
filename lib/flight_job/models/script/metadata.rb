@@ -24,8 +24,9 @@
 # For more information on Flight Job, please visit:
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
+require 'json'
+require 'json_schemer'
 require_relative "../metadata/base_metadata"
-#require_relative "validator"
 
 module FlightJob
   class Script < ApplicationModel
@@ -33,8 +34,42 @@ module FlightJob
     #
     # * Loads and saves the file.
     # * Validates against a schema.
-    # * Provides "atomic"(-ish) updates.
     class Metadata < Metadata::BaseMetadata
+
+      SCHEMA = JSONSchemer.schema({
+        "$comment" => "strip-schema",
+        "type" => "object",
+        "additionalProperties" => false,
+        "required" => ['created_at', 'script_name'],
+        "properties" => {
+          # ----------------------------------------------------------------------------
+          # Required
+          # ----------------------------------------------------------------------------
+          'created_at' => { 'type' => 'string', 'format' => 'date-time' },
+          'script_name' => { 'type' => 'string' },
+          # ----------------------------------------------------------------------------
+          # Psuedo - Required
+          #
+          # These should *probably* become required on the next major release of the metadata
+          # ----------------------------------------------------------------------------
+          'answers' => { 'type' => 'object' },
+          'tags' => { 'type' => 'array', 'items' => { 'type' => 'string' }},
+          'template_id' => { 'type' => 'string' },
+          'version' => { 'const' => 0 },
+        }
+      })
+
+      validate do
+        # Skip this validation on :id_check
+        next if validation_context == :id_check
+        schema_errors = SCHEMA.validate(self.to_hash).to_a
+        unless schema_errors.empty?
+          path_tag = File.exist?(@path) ? @path : @parent.id
+          FlightJob.logger.info("Invalid metadata: #{path_tag}\n")
+          JSONSchemaErrorLogger.new(schema_errors, :info).log
+          errors.add(:metadata, 'is not valid')
+        end
+      end
 
       attributes \
         :created_at,
@@ -44,17 +79,34 @@ module FlightJob
 
       attribute :answers, default: {}
 
-      def self.from_template(template, answers, notes, script)
+      def self.from_template(template, answers, script)
         initial_metadata = {
+          "version" => 0,
           "created_at" => Time.now.rfc3339,
-          "tags" => template.tags,
           "template_id" => template.id,
           "script_name" => template.script_template_name,
           "answers" => answers,
-          "notes" => notes
+          "tags" => template.tags,
         }
-        # new(initial_metadata, script.metadata_path, script)
-        initial_metadata
+        new(initial_metadata, script.metadata_path, script)
+      end
+
+      def tags=(tags)
+        @hash["tags"] = tags
+      end
+
+      def template_id=(id)
+        @hash['template_id'] = id
+      end
+
+      def script_name=(name)
+        @hash['script_name'] = name
+      end
+
+      # # NOTE: For backwards compatibility, the 'answers' are not strictly required
+      # # This may change in a few release
+      def answers=(object)
+        @answers['answers'] = object
       end
 
     end

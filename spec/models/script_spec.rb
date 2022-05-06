@@ -29,7 +29,6 @@ RSpec.describe "FlightJob::Script", type: :model do
   def check_for_file_creation(file_path)
     FakeFS do
       FakeFS::FileSystem.clone(config.templates_dir)
-      $stderr.puts config.templates_dir
       FakeFS::FileSystem.clone(config.adapter_script_path)
       FakeFS::FileSystem.clone("/tmp/bundle/ruby/2.7.0/gems/activesupport-6.1.3")
       FakeFS::FileSystem.clone("/tmp/bundle/ruby/2.7.0/gems/activemodel-6.1.3")
@@ -40,12 +39,8 @@ RSpec.describe "FlightJob::Script", type: :model do
         template_id: template_id,
         script_name: script_name,
         )
-      # script.render_and_save
-      # script = FlightJob::Script.new(id: script_id, template_id: template_id)
-      #script.initialize_metadata(template,{ },"")
       script.render_and_save
       expect(File).to exist(file_path)
-      puts File.read(file_path)
     end
   end
 
@@ -79,7 +74,7 @@ RSpec.describe "FlightJob::Script", type: :model do
     }.each do |attr, value|
       it "writes #{attr} to the metadata" do
         expect(script.send(attr)).not_to eq(value)
-        script.send("#{attr}=", value)
+        script.metadata.send("#{attr}=", value)
         expect(script.send(attr)).to eq(value)
       end
     end
