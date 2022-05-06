@@ -44,7 +44,6 @@ RSpec.describe "FlightJob::Script", type: :model do
     end
   end
 
-
   describe "metadata" do
     let(:script_id) { "valid-script" }
     let(:script_dir) { File.join(config.scripts_dir, script_id) }
@@ -55,6 +54,10 @@ RSpec.describe "FlightJob::Script", type: :model do
 
     it "has the expected metadata path" do
       expect(script.metadata_path).to eq(metadata_path)
+    end
+
+    it "has file contents in the expected format" do
+      expect(metadata).to be_kind_of(Hash)
     end
 
     %w(created_at script_name tags template_id).each do |attr|
@@ -78,6 +81,5 @@ RSpec.describe "FlightJob::Script", type: :model do
         expect(script.send(attr)).to eq(value)
       end
     end
-
   end
 end
