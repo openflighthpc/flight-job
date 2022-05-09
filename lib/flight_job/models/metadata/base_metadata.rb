@@ -48,13 +48,15 @@ module FlightJob
           end
 
           def attribute(attr, default: nil)
-            define_method(attr) do
-              if @hash.is_a?(Hash)
-                @hash.fetch(attr.to_s, default)
-              else
-                msg = "Attempting to read metadata attribute #{attr} but @hash is a #{@hash.class.name}"
-                Flight.logger.debug(msg)
-                nil
+            unless attr == :job_type
+              define_method(attr) do
+                if @hash.is_a?(Hash)
+                  @hash.fetch(attr.to_s, default)
+                else
+                  msg = "Attempting to read metadata attribute #{attr} but @hash is a #{@hash.class.name}"
+                  Flight.logger.debug(msg)
+                  nil
+                end
               end
             end
             define_method(:"#{attr}=") do |val|
