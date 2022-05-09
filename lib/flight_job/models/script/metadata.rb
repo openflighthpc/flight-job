@@ -60,8 +60,6 @@ module FlightJob
       })
 
       validate do
-        # Skip this validation on :id_check
-        next if validation_context == :id_check
         schema_errors = SCHEMA.validate(self.to_hash).to_a
         unless schema_errors.empty?
           path_tag = File.exist?(@path) ? @path : @parent.id
@@ -89,6 +87,11 @@ module FlightJob
           "tags" => template.tags,
         }
         new(initial_metadata, script.metadata_path, script)
+      end
+
+      def self.create_blank(path,parent)
+        initial_metadata = { "created_at" => Time.now.rfc3339 }
+        new(initial_metadata, path, parent)
       end
 
       def tags=(tags)

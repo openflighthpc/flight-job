@@ -24,7 +24,6 @@
 # For more information on Flight Job, please visit:
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
-
 require 'securerandom'
 require_relative 'script/metadata'
 
@@ -216,7 +215,7 @@ module FlightJob
                       Metadata.load_from_path(metadata_path, self)
                     else
                       Flight.logger.warn("Setting metadata to empty hash for script #{id}; this probably isn't right")
-                      Metadata.blank(metadata_path, self)
+                      Metadata.create_blank(metadata_path, self)
                     end
     end
 

@@ -14,11 +14,11 @@ RSpec.describe "FlightJob::Script", type: :model do
     let(:job_script_path) { File.join(script_dir,"script.sh") }
 
     it "writes the notes" do
-      #check_for_file_creation(notes_path)
+      check_for_file_creation(notes_path)
     end
 
     it "writes the job script file" do
-      #check_for_file_creation(job_script_path)
+      check_for_file_creation(job_script_path)
     end
 
     it "writes the metadata" do
@@ -57,6 +57,10 @@ RSpec.describe "FlightJob::Script", type: :model do
       expect(script.metadata_path).to eq(metadata_path)
     end
 
+    it "has file contents in the expected format" do
+      expect(YAML.load_file(script.metadata_path)).to be_kind_of(Hash)
+    end
+    
     %w(created_at script_name tags template_id).each do |attr|
       it "reads #{attr} from the metadata" do
         expect(script.send(attr)).to eq(metadata[attr])
