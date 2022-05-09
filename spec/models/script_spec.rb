@@ -27,7 +27,7 @@ RSpec.describe "FlightJob::Script", type: :model do
   end
 
   def check_for_file_creation(file_path)
-    FakeFS do
+    FakeFS.with_fresh do
       FakeFS::FileSystem.clone(config.templates_dir)
       FakeFS::FileSystem.clone(config.adapter_script_path)
       FakeFS::FileSystem.clone("/tmp/bundle/ruby/2.7.0/gems/activesupport-6.1.3")
