@@ -13,15 +13,15 @@ RSpec.describe "FlightJob::Script", type: :model do
     let(:notes_path) { File.join(script_dir,"notes.md") }
     let(:job_script_path) { File.join(script_dir,"script.sh") }
 
-    it "writes the notes" do
+    fit "writes the notes" do
       check_for_file_creation(notes_path)
     end
 
-    it "writes the job script file" do
+    fit "writes the job script file" do
       check_for_file_creation(job_script_path)
     end
 
-    it "writes the metadata" do
+    fit "writes the metadata" do
       check_for_file_creation(metadata_path)
     end
   end
