@@ -55,7 +55,6 @@ module FlightJob
         :end_time,
         :estimated_end_time,
         :estimated_start_time,
-        :job_type,
         :lazy,
         :reason,
         :rendered_path,
@@ -73,6 +72,7 @@ module FlightJob
         :version
 
       attribute :submission_answers, default: {}
+      attribute :job_type, reader: false
 
       validates_with Job::Validator
 
@@ -114,14 +114,6 @@ module FlightJob
 
       def job
         @parent
-      end
-
-      def self.attributes_to_delegate
-        attributes = attribute_names
-        %w(results_dir state stdout_path stderr_path).each do |attr|
-          attributes.delete(attr.to_sym)
-        end
-        attributes
       end
     end
   end

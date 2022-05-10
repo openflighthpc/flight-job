@@ -93,7 +93,7 @@ module FlightJob
       end
     end
 
-    delegate(*Metadata.attributes_to_delegate, to: :metadata)
+    delegate(*Metadata.attribute_names - %i[results_dir state stdout_path stderr_path], to: :metadata)
     delegate :persisted?, to: :metadata
 
     def save

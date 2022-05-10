@@ -103,7 +103,7 @@ RSpec.describe "FlightJob::Job::Metadata", type: :model do
         expect(metadata).not_to be_persisted
         expect(metadata.valid?(:load)).to be false
 
-        expect { metadata.save }.to raise_error
+        expect { metadata.save }.to raise_error(FlightJob::InternalError)
 
         expect(metadata).not_to be_persisted
       end
