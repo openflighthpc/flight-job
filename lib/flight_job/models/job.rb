@@ -276,7 +276,7 @@ module FlightJob
     end
 
     # Jobs need to be serialized via the decorator
-    def serializable_hash
+    def serializable_hash(opts = nil)
       raise InternalError, "Unexpectedly tried to serializer a job resource"
     end
 
