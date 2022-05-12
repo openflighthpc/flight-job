@@ -73,5 +73,4 @@ RSpec.describe "FlightJob::Job::BrokenMetadata", type: :model do
       expect(job.decorate.state).to eq("BROKEN")
     end
   end
-
 end

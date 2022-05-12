@@ -34,7 +34,7 @@ module FlightJob
 
       attributes \
         :cancelling,
-        # :created_at,
+        :created_at,
         :end_time,
         :estimated_end_time,
         :estimated_start_time,
@@ -57,26 +57,18 @@ module FlightJob
 
       attribute :submission_answers, default: {}
 
-      def self.new_broken_metadata(metadata, job)
-        initial_metadata = {
-          # # scheduler_id: scheduler_id(metadata),
-          # scheduler_id: job.scheduler_id || nil,
-          # state: broken_state
-        }
-        path = File.join(job.job_dir, "xmetadata.yaml")
-        new(initial_metadata, path, job)
-      end
-
       def state
         "BROKEN"
       end
 
       %w(script_id scheduler_id).each do |att|
             define_method(att) do
-              @parent.send(att).is_a?(String) ? @parent.send(att) : nil
+              value = @parent.send(att)
+              if value.is_a?(Integer) || value.is_a?(String)
+                return value
+              end
             end
-        end
-
+      end
     end
   end
 end

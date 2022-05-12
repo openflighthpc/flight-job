@@ -32,11 +32,6 @@ module FlightJob
         if jobs.empty? && !opts.json
           $stderr.puts 'Nothing To Display'
         else
-          # jobs.select {|j| j.valid? == false }
-          #     .map do |j|
-          #   j.overwrite_broken_job_attributes
-          # end
-
           puts render_output(Outputs::ListJobs, jobs.map(&:decorate))
         end
       end

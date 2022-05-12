@@ -98,11 +98,7 @@ module FlightJob
 
     def save
       run_callbacks :save do
-        if valid?
-          metadata.save
-        else
-          broken_metadata.save
-        end
+        metadata.save
       end
     end
 
@@ -142,28 +138,9 @@ module FlightJob
       end
     end
 
-    def broken_metadata_path
-      @broken_metadata_path ||= File.join(job_dir, 'xmetadata.yaml')
-    end
-
     def broken_metadata
-      @broken_metadata ||= if File.exist?(broken_metadata_path)
-        BrokenMetadata.load_from_path(broken_metadata_path, self)
-                           else
-                             BrokenMetadata.new_broken_metadata(metadata,self)
-        # Flight.logger.warn("Setting broken metadata to empty hash for job #{id}")
-        # BrokenMetadata.blank(broken_metadata_path, self)
-      end
+      @broken_metadata ||= BrokenMetadata.new({ }, metadata_path, self)
     end
-
-    def initialize_broken_metadata
-      @broken_metadata ||= BrokenMetadata.new_broken_metadata(metadata,self)
-    end
-
-    # def overwrite_broken_job_attributes
-    #   BrokenMetadata.overwrite(self)
-    #   save
-    # end
 
     def load_script
       Script.new(id: script_id)
