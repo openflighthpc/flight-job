@@ -33,6 +33,7 @@ require 'time'
 require_relative 'job/adjust_active_index'
 require_relative 'job/merge_controls_with_metadata'
 require_relative 'job/metadata'
+require_relative 'job/broken_metadata'
 require_relative 'job/migrate_metadata'
 
 module FlightJob
@@ -54,11 +55,11 @@ module FlightJob
         if job.valid?
           job.tap(&:monitor)
         else
-          Flight.logger.error("Failed to load missing/invalid job: #{id}")
+          Flight.logger.error("Invalid job: #{id}")
           Flight.logger.info(job.errors.full_messages.join("\n"))
-          nil
+          job
         end
-      end.reject(&:nil?).sort
+      end
     end
 
     def self.monitor_all
@@ -97,7 +98,11 @@ module FlightJob
 
     def save
       run_callbacks :save do
-        metadata.save
+        if valid?
+          metadata.save
+        else
+          broken_metadata.save
+        end
       end
     end
 
@@ -137,6 +142,29 @@ module FlightJob
       end
     end
 
+    def broken_metadata_path
+      @broken_metadata_path ||= File.join(job_dir, 'xmetadata.yaml')
+    end
+
+    def broken_metadata
+      @broken_metadata ||= if File.exist?(broken_metadata_path)
+        BrokenMetadata.load_from_path(broken_metadata_path, self)
+                           else
+                             BrokenMetadata.new_broken_metadata(metadata,self)
+        # Flight.logger.warn("Setting broken metadata to empty hash for job #{id}")
+        # BrokenMetadata.blank(broken_metadata_path, self)
+      end
+    end
+
+    def initialize_broken_metadata
+      @broken_metadata ||= BrokenMetadata.new_broken_metadata(metadata,self)
+    end
+
+    # def overwrite_broken_job_attributes
+    #   BrokenMetadata.overwrite(self)
+    #   save
+    # end
+
     def load_script
       Script.new(id: script_id)
     end
@@ -165,6 +193,7 @@ module FlightJob
     # Unfortunately it is extensively used to control the life-cycle of a Job.
     # This makes fully removing it, tricky. Instead, calls to this method will be progressively
     # removed.
+
     def state
       Flight.logger.warn "DEPRECATED: Job#state does not function correctly for array tasks"
       case job_type
@@ -173,7 +202,7 @@ module FlightJob
       when 'FAILED_SUBMISSION'
         'FAILED'
       else
-        metadata.state || 'UNKNOWN'
+        valid? ? metadata.state || 'UNKNOWN' : broken_metadata.state
       end
     rescue
       # Various validations require the 'state', which depends on the
@@ -182,7 +211,7 @@ module FlightJob
       # This error can be ignored, as the metadata is validated independently
       Flight.logger.error "Failed to resolve the state for job '#{id}'"
       Flight.logger.debug $!
-      return 'UNKNOWN'
+      valid? ? metadata.state || 'UNKNOWN' : broken_metadata.state
     end
 
     def stdout_path

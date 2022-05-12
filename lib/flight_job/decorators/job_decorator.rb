@@ -70,7 +70,13 @@ module FlightJob
 
       def self.delegate_metadata(*keys)
         keys.each do |key|
-          define_method(key) { object.metadata[key.to_s] }
+            define_method(key) do
+              if object.valid?
+                object.metadata[key.to_s]
+              else
+                object.broken_metadata[key.to_s]
+              end
+            end
         end
       end
 
@@ -91,6 +97,7 @@ module FlightJob
       end
 
       def state
+        return 'BROKEN' unless object.valid?
         case job_type
         when 'SUBMITTING'
           'SUBMITTING'

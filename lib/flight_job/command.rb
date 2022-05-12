@@ -244,18 +244,16 @@ module FlightJob
     def load_job(id)
       Job.new(id: id).tap do |job|
         unless File.exist?(job.metadata_path)
-          puts "MMMMMMMMMMMMMMM"
           raise MissingJobError, "Could not locate job: #{id}"
         end
-        unless job.valid?
-          puts "IIIIIIIIIII"
-          FlightJob.logger.error("Failed to load job: #{id}\n") do
+        if job.valid?
+          job.monitor
+        else
+          FlightJob.logger.error("Invalid job: #{id}\n") do
             job.errors.full_messages
           end
-          raise InternalError, "Unexpectedly failed to load job: #{id}"
+          # raise InternalError, "Unexpectedly failed to load job: #{id}"
         end
-        puts "EEEEEEEEEEEEE"
-        job.monitor
       end
     end
 
