@@ -47,7 +47,7 @@ RSpec.describe "FlightJob::Job::BrokenMetadata", type: :model do
   end
 
   context "invalid job with metadata containing only scheduler ID" do
-    let(:job_id) { "invalid-job-state-bootstrapping" }
+    let(:job_id) { "invalid-job-only-scheduler-id" }
     subject(:job) {FlightJob::Job.new(id: job_id)}
 
     it "displays job_ID and scheduler_ID" do

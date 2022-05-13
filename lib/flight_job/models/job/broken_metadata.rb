@@ -64,9 +64,7 @@ module FlightJob
       %w(script_id scheduler_id).each do |att|
             define_method(att) do
               value = @parent.send(att)
-              if value.is_a?(Integer) || value.is_a?(String)
-                return value
-              end
+              return value if value.is_a?(Integer) || value.is_a?(String)
             end
       end
     end
