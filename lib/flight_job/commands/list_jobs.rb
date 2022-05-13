@@ -39,7 +39,6 @@ module FlightJob
       def jobs
         @jobs ||= Job.load_all
       end
-
     end
   end
 end

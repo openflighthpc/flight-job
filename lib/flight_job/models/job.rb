@@ -170,7 +170,6 @@ module FlightJob
     # Unfortunately it is extensively used to control the life-cycle of a Job.
     # This makes fully removing it, tricky. Instead, calls to this method will be progressively
     # removed.
-
     def state
       Flight.logger.warn "DEPRECATED: Job#state does not function correctly for array tasks"
       case job_type

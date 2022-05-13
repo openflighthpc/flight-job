@@ -252,7 +252,6 @@ module FlightJob
           FlightJob.logger.error("Invalid job: #{id}\n") do
             job.errors.full_messages
           end
-          # raise InternalError, "Unexpectedly failed to load job: #{id}"
         end
       end
     end

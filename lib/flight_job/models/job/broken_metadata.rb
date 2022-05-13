@@ -28,34 +28,12 @@ require_relative "../metadata/base_metadata"
 
 module FlightJob
   class Job < ApplicationModel
-    # For producing a metadata file for invalid jobs
-    # Broken metadata contains the information available about the invalid job
+    # Broken metadata objects are created when loading invalid jobs. Checks the
+    # information available about the jobs is in a suitable format for display.
+    # This is currently limited to checking the script_id and scheduler_id.
     class BrokenMetadata < FlightJob::Metadata::BaseMetadata
 
-      attributes \
-        :cancelling,
-        :created_at,
-        :end_time,
-        :estimated_end_time,
-        :estimated_start_time,
-        :job_type,
-        :lazy,
-        :reason,
-        :rendered_path,
-        :results_dir,
-        :scheduler_id,
-        :scheduler_state,
-        :script_id,
-        :start_time,
-        :state,
-        :stderr_path,
-        :stdout_path,
-        :submit_status,
-        :submit_stderr,
-        :submit_stdout,
-        :version
-
-      attribute :submission_answers, default: {}
+      attributes(*Metadata.attribute_names)
 
       def state
         "BROKEN"
