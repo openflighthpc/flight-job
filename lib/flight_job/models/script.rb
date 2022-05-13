@@ -204,7 +204,7 @@ module FlightJob
 
     def initialize_metadata(template, answers)
       @metadata ||= if metadata_path && File.exist?(metadata_path)
-                      YAML.load File.read(metadata_path)
+                      Metadata.load_from_path(metadata_path, self)
                     else
                       Metadata.from_template(template, answers, self) # self = script
                     end
@@ -215,7 +215,7 @@ module FlightJob
                       Metadata.load_from_path(metadata_path, self)
                     else
                       Flight.logger.warn("Setting metadata to empty hash for script #{id}; this probably isn't right")
-                      Metadata.create_blank(metadata_path, self)
+                      Metadata.blank(metadata_path, self)
                     end
     end
 

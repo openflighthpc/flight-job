@@ -89,8 +89,11 @@ module FlightJob
         new(initial_metadata, script.metadata_path, script)
       end
 
-      def self.create_blank(path,parent)
-        initial_metadata = { "created_at" => Time.now.rfc3339 }
+      def self.blank(path, parent)
+        initial_metadata = {
+          "version" => 0,
+          "created_at" => Time.now.rfc3339
+        }
         new(initial_metadata, path, parent)
       end
 
@@ -106,8 +109,6 @@ module FlightJob
         @hash['script_name'] = name
       end
 
-      # # NOTE: For backwards compatibility, the 'answers' are not strictly required
-      # # This may change in a few release
       def answers=(object)
         @answers['answers'] = object
       end
