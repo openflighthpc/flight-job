@@ -12,8 +12,6 @@ RSpec.describe "FlightJob::Job::BrokenMetadata", type: :model do
       FakeFS do
         FakeFS::FileSystem.clone(File.join(__FILE__, "../../../../config"))
         FakeFS::FileSystem.clone(job_dir)
-        FakeFS::FileSystem.clone("/tmp/bundle/ruby/2.7.0/gems/activesupport-6.1.3")
-        FakeFS::FileSystem.clone("/tmp/bundle/ruby/2.7.0/gems/activemodel-6.1.3")
 
         x = FlightJob::Command.new(nil,nil)
         expect { x.load_job(job_id) }.not_to raise_error
@@ -25,8 +23,6 @@ RSpec.describe "FlightJob::Job::BrokenMetadata", type: :model do
       FakeFS do
         FakeFS::FileSystem.clone(File.join(__FILE__, "../../../../config"))
         FakeFS::FileSystem.clone(job_dir)
-        FakeFS::FileSystem.clone("/tmp/bundle/ruby/2.7.0/gems/activesupport-6.1.3")
-        FakeFS::FileSystem.clone("/tmp/bundle/ruby/2.7.0/gems/activemodel-6.1.3")
 
         expect { FlightJob::Job.load_all }.not_to raise_error
       end
