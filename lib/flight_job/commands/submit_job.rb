@@ -148,6 +148,9 @@ module FlightJob
           job.desktop_id = result.desktop_id
         else
           job.metadata['job_type'] = 'FAILED_SUBMISSION'
+          job.metadata['submit_status'] = result.exitstatus
+          job.metadata['submit_stdout'] = result.stdout
+          job.metadata['submit_stderr'] = result.stderr
           job.save
         end
       end
