@@ -86,7 +86,7 @@ module FlightJob
     end
 
     def default
-      @default ||= nil
+      @default = nil unless defined?(@default)
       return @default unless defined?(@dynamic_default)
 
       generate(**@dynamic_default) || @default
