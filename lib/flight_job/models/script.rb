@@ -24,35 +24,11 @@
 # For more information on Flight Job, please visit:
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
-
-require 'json'
 require 'securerandom'
-require 'json_schemer'
+require_relative 'script/metadata'
 
 module FlightJob
   class Script < ApplicationModel
-    SCHEMA = JSONSchemer.schema({
-      "$comment" => "strip-schema",
-      "type" => "object",
-      "additionalProperties" => false,
-      "required" => ['created_at', 'script_name'],
-      "properties" => {
-        # ----------------------------------------------------------------------------
-        # Required
-        # ----------------------------------------------------------------------------
-        'created_at' => { 'type' => 'string', 'format' => 'date-time' },
-        'script_name' => { 'type' => 'string' },
-        # ----------------------------------------------------------------------------
-        # Psuedo - Required
-        #
-        # These should *probably* become required on the next major release of the metadata
-        # ----------------------------------------------------------------------------
-        'answers' => { 'type' => 'object' },
-        'tags' => { 'type' => 'array', 'items' => { 'type' => 'string' }},
-        'template_id' => { 'type' => 'string' },
-        'version' => { 'const' => 0 },
-      }
-    })
 
     def self.load_all
       Dir.glob(new(id: '*').metadata_path).map do |path|
@@ -69,6 +45,8 @@ module FlightJob
     end
 
     delegate :generate_submit_args, to: :load_template
+    delegate(*Metadata.attribute_names, to: :metadata)
+    delegate :tags=, :template_id=, :script_name=, :answers=, to: :metadata
 
     attr_accessor :id
     attr_writer :notes
@@ -79,18 +57,6 @@ module FlightJob
               unless: -> { validation_context == :render }
     validates :id, format: { with: /\A[[:alnum:]].*\Z/, message: 'must start with a letter or a number' },
               unless: -> { validation_context == :render }
-
-    validate do
-      # Skip this validation on :id_check
-      next if validation_context == :id_check
-
-      unless (schema_errors = SCHEMA.validate(metadata).to_a).empty?
-        path_tag = File.exist?(metadata_path) ? metadata_path : id
-        FlightJob.logger.info("Invalid metadata: #{path_tag}\n")
-        JSONSchemaErrorLogger.new(schema_errors, :info).log
-        errors.add(:metadata, 'is not valid')
-      end
-    end
 
     validate on: :load do
       # Ensures the metadata file exists
@@ -147,57 +113,12 @@ module FlightJob
                  end
     end
 
-    def metadata_path
-      # Sometimes we render a script that has no ID; in this case, it doesn't
-      # exist outside of the execution scope, and will not have a path.
-      return nil if id.nil?
-      @metadata_path ||= File.join(FlightJob.config.scripts_dir, id, 'metadata.yaml')
-    end
-
     def script_path
       @script_path ||= File.join(FlightJob.config.scripts_dir, id, 'script.sh')
     end
 
     def notes_path
       @notes_path ||= File.join(FlightJob.config.scripts_dir, id, 'notes.md')
-    end
-
-    def created_at
-      metadata['created_at']
-    end
-
-    def tags
-      metadata['tags'] || []
-    end
-
-    def tags=(tags)
-      metadata_setter('tags', tags)
-    end
-
-    def template_id
-      metadata['template_id']
-    end
-
-    def template_id=(id)
-      metadata_setter('template_id', id)
-    end
-
-    def script_name
-      metadata['script_name']
-    end
-
-    def script_name=(name)
-      metadata_setter('script_name', name)
-    end
-
-    # NOTE: For backwards compatibility, the 'answers' are not strictly required
-    # This may change in a few release
-    def answers
-      metadata['answers']
-    end
-
-    def answers=(object)
-      metadata_setter('answers', object)
     end
 
     def load_template
@@ -221,17 +142,12 @@ module FlightJob
       end
 
       # Writes the data to disk
-      save_metadata
+      metadata.save
       save_notes
       File.write(script_path, renderer.render)
 
       # Makes the script executable and metadata read/write
       FileUtils.chmod(0700, script_path)
-      FileUtils.chmod(0600, metadata_path)
-    end
-
-    def save_metadata
-      File.write metadata_path, YAML.dump(metadata)
       FileUtils.chmod(0600, metadata_path)
     end
 
@@ -265,7 +181,7 @@ module FlightJob
     end
 
     def renderer
-      return @renderer if @renderer
+      return @renderer if defined?(@renderer) && @renderer
 
       # Ensure the script is in a valid state
       unless valid?(:render)
@@ -280,42 +196,36 @@ module FlightJob
       )
     end
 
+    def initialize_metadata(template, answers)
+      @metadata ||= if metadata_path && File.exist?(metadata_path)
+                      Metadata.load_from_path(metadata_path, self)
+                    else
+                      Metadata.from_template(template, answers, self) # self = script
+                    end
+    end
+
+    def metadata
+      @metadata ||= if File.exist?(metadata_path)
+                      Metadata.load_from_path(metadata_path, self)
+                    else
+                      Flight.logger.warn("Setting metadata to empty hash for script #{id}; this probably isn't right")
+                      Metadata.blank(metadata_path, self)
+                    end
+    end
+
+    def metadata_path
+      # Sometimes we render a script that has no ID; in this case, it doesn't
+      # exist outside of the execution scope, and will not have a path.
+      return nil if id.nil?
+      @metadata_path ||= File.join(FlightJob.config.scripts_dir, id, 'metadata.yaml')
+    end
+
+
     protected
 
     def <=>(other)
       FancyIdOrdering.call(self.id, other.id)
     end
 
-    private
-
-    # Allows keys to be set within the metadata without loading the file
-    # This allows the 'id' to remain unset during the 'initialize' method
-    def metadata_setter(key, value)
-      if @metadata
-        @metadata[key] = value
-      else
-        @provisional_metadata ||= {}
-        @provisional_metadata[key] = value
-      end
-    end
-
-    # NOTE: The raw metadata is exposed through the CLI with the --json flag.
-    # This allows it to be directly passed to the API layer.
-    # Consider refactoring when introducing a non-backwards compatible change
-    def metadata
-      @metadata ||= if metadata_path && File.exist?(metadata_path)
-        YAML.load File.read(metadata_path)
-      else
-        { 'version' => 0, 'created_at' => DateTime.now.rfc3339 }
-      end.tap do |hash|
-        if hash.is_a? Hash
-          if @provisional_metadata
-            hash.merge!(@provisional_metadata)
-            @provisional_metadata = nil
-          end
-          hash['answers'] ||= {}
-        end
-      end
-    end
   end
 end
