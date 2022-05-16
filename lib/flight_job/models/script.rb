@@ -113,13 +113,6 @@ module FlightJob
                  end
     end
 
-    def metadata_path
-      # Sometimes we render a script that has no ID; in this case, it doesn't
-      # exist outside of the execution scope, and will not have a path.
-      return nil if id.nil?
-      @metadata_path ||= File.join(FlightJob.config.scripts_dir, id, 'metadata.yaml')
-    end
-
     def script_path
       @script_path ||= File.join(FlightJob.config.scripts_dir, id, 'script.sh')
     end
@@ -187,7 +180,7 @@ module FlightJob
     end
 
     def renderer
-      return @renderer if @renderer
+      return @renderer if defined?(@renderer) && @renderer
 
       # Ensure the script is in a valid state
       unless valid?(:render)

@@ -44,7 +44,7 @@ module FlightJob
 
       def render
         template = File.read(@template_path)
-        ERB.new(template, nil, '-').result(generate_binding)
+        ERB.new(template, trim_mode: '-').result(generate_binding)
       end
 
       private

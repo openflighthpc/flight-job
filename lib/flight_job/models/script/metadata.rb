@@ -96,23 +96,6 @@ module FlightJob
         }
         new(initial_metadata, path, parent)
       end
-
-      def tags=(tags)
-        @hash["tags"] = tags
-      end
-
-      def template_id=(id)
-        @hash['template_id'] = id
-      end
-
-      def script_name=(name)
-        @hash['script_name'] = name
-      end
-
-      def answers=(object)
-        @answers['answers'] = object
-      end
-
     end
   end
 end
