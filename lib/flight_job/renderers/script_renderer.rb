@@ -65,19 +65,19 @@ module FlightJob
       private
 
       def render_workload
-        ERB.new(File.read(@template.workload_path), nil, '-').result(generate_binding)
+        ERB.new(File.read(@template.workload_path), trim_mode: '-').result(generate_binding)
       end
 
       def render_adapter
         # NOTE: The adapter is designed to augment the directives. Monolithic
         # 'script templates' (sans 'directives template') cannot benefit from the adapter
         return nil unless File.exist? @template.directives_path
-        ERB.new(File.read(Flight.config.adapter_script_path), nil, '-').result(generate_binding)
+        ERB.new(File.read(Flight.config.adapter_script_path), trim_mode: '-').result(generate_binding)
       end
 
       def render_directives
         return nil unless File.exist? @template.directives_path
-        ERB.new(File.read(@template.directives_path), nil, '-').result(generate_binding)
+        ERB.new(File.read(@template.directives_path), trim_mode: '-').result(generate_binding)
       end
 
       def generate_binding

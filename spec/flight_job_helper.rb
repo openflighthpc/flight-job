@@ -18,4 +18,11 @@ require_relative 'matchers/model'
 
 RSpec.configure do |config|
   config.include FlightJob::Matchers::Model, type: :model
+
+  config.before(:suite) do
+    # Our use of FakeFS can cause problems when translations and localizations
+    # are lazily loaded.  We ensure that all needed localizations are loaded
+    # prior to the suite running.
+    I18n.localize(Time.now)
+  end
 end
