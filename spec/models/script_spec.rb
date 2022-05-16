@@ -38,14 +38,15 @@ RSpec.describe "FlightJob::Script", type: :model do
       it "creates the metadata file" do
         check_for_file_creation(metadata_path)
       end
+
       it "saves the metadata correctly" do
         fresh_fakefs do
           create_and_save_script
           new_script = FlightJob::Script.new(id: script_id)
 
-          %w(created_at script_name tags template_id).each do |attr|
-            expect(new_script.send(attr)).to eq(metadata[attr])
-          end
+          expect(new_script.script_name).to eq script_name
+          expect(new_script.template_id).to eq template_id
+          expect(new_script.tags).to eq template.tags
         end
       end
     end
