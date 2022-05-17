@@ -59,7 +59,7 @@ module FlightJob
           Flight.logger.info(job.errors.full_messages.join("\n"))
           job
         end
-      end
+      end.sort
     end
 
     def self.monitor_all
@@ -178,7 +178,7 @@ module FlightJob
       when 'FAILED_SUBMISSION'
         'FAILED'
       else
-        valid? ? metadata.state || 'UNKNOWN' : broken_metadata.state
+        metadata.state || 'BROKEN'
       end
     rescue
       # Various validations require the 'state', which depends on the
@@ -187,7 +187,7 @@ module FlightJob
       # This error can be ignored, as the metadata is validated independently
       Flight.logger.error "Failed to resolve the state for job '#{id}'"
       Flight.logger.debug $!
-      valid? ? metadata.state || 'UNKNOWN' : broken_metadata.state
+      metadata.state || 'BROKEN'
     end
 
     def stdout_path

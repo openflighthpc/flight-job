@@ -7,24 +7,24 @@ RSpec.describe "FlightJob::Job::BrokenMetadata", type: :model do
   let(:job_id) { "invalid-job-state-bootstrapping" }
 
   context "invalid job is loaded" do
-    it "doesn't raise errors when loading a single job" do
+    it "loads when loading a single job" do
       # this means that the invalid job would appear when running info-job
-      FakeFS do
+      FakeFS.with_fresh do
         FakeFS::FileSystem.clone(File.join(__FILE__, "../../../../config"))
         FakeFS::FileSystem.clone(job_dir)
 
         x = FlightJob::Command.new(nil,nil)
-        expect { x.load_job(job_id) }.not_to raise_error
+        expect(x.load_job(job_id)).to be_truthy
       end
     end
 
-    it "doesn't raise errors when loading all jobs" do
+    it "loads when loading all jobs" do
       # this means that the invalid job would appear when running list-jobs
-      FakeFS do
+      FakeFS.with_fresh do
         FakeFS::FileSystem.clone(File.join(__FILE__, "../../../../config"))
         FakeFS::FileSystem.clone(job_dir)
 
-        expect { FlightJob::Job.load_all }.not_to raise_error
+        expect(FlightJob::Job.load_all.length).to eq(1)
       end
     end
   end

@@ -71,7 +71,7 @@ module FlightJob
       def self.delegate_metadata(*keys)
         keys.each do |key|
             define_method(key) do
-              if object.valid?
+              if valid?
                 object.metadata[key.to_s]
               else
                 object.broken_metadata[key.to_s]
@@ -96,8 +96,13 @@ module FlightJob
         time && !stringify ? Time.parse(time) : time
       end
 
+      def valid?
+        @valid = object.valid? unless defined?(@valid)
+        @valid
+      end
+
       def state
-        return 'BROKEN' unless object.valid?
+        return 'BROKEN' unless valid?
         case job_type
         when 'SUBMITTING'
           'SUBMITTING'
