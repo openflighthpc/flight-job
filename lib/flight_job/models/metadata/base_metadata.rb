@@ -37,33 +37,37 @@ module FlightJob
       module AttributesConcern
         extend ActiveSupport::Concern
 
-        included do
-          class_attribute :attribute_names, instance_accessor: false
-          self.attribute_names = []
-        end
-
         module ClassMethods
-          def attributes(*attrs, default: nil)
-            attrs.each { |attr| attribute(attr, default: default) }
+          def attribute_names
+            @attribute_names = [] unless defined?(@attribute_names)
+            @attribute_names
           end
 
-          def attribute(attr, default: nil)
-            define_method(attr) do
-              if @hash.is_a?(Hash)
-                @hash.fetch(attr.to_s, default)
-              else
-                msg = "Attempting to read metadata attribute #{attr} but @hash is a #{@hash.class.name}"
-                Flight.logger.debug(msg)
-                nil
+          def attributes(*attrs, default: nil, reader: true, writer: true)
+            attrs.each { |attr| attribute(attr, default: default, reader: reader, writer: writer) }
+          end
+
+          def attribute(attr, default: nil, reader: true, writer: true)
+            if reader
+              define_method(attr) do
+                if @hash.is_a?(Hash)
+                  @hash.fetch(attr.to_s, default)
+                else
+                  msg = "Attempting to read metadata attribute #{attr} but @hash is a #{@hash.class.name}"
+                  Flight.logger.debug(msg)
+                  nil
+                end
               end
             end
-            define_method(:"#{attr}=") do |val|
-              if @hash.is_a?(Hash)
-                @hash[attr.to_s] = val
-              else
-                msg = "Attempting to set metadata attribute #{attr} but @hash is a #{@hash.class.name}"
-                Flight.logger.debug(msg)
-                nil
+            if writer
+              define_method(:"#{attr}=") do |val|
+                if @hash.is_a?(Hash)
+                  @hash[attr.to_s] = val
+                else
+                  msg = "Attempting to set metadata attribute #{attr} but @hash is a #{@hash.class.name}"
+                  Flight.logger.debug(msg)
+                  nil
+                end
               end
             end
             self.attribute_names << attr

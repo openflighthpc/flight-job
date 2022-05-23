@@ -55,7 +55,6 @@ module FlightJob
         :end_time,
         :estimated_end_time,
         :estimated_start_time,
-        :job_type,
         :lazy,
         :reason,
         :rendered_path,
@@ -73,6 +72,7 @@ module FlightJob
         :version
 
       attribute :submission_answers, default: {}
+      attribute :job_type, reader: false
 
       validates_with Job::Validator
 
@@ -90,7 +90,7 @@ module FlightJob
       end
 
       def with_save_point(&block)
-        raise "Nested calls to with_save_point unsupported" unless @save_point.nil?
+        raise "Nested calls to with_save_point unsupported" if defined?(@save_point)
         @save_point = @hash.deep_dup
         yield
       ensure
