@@ -10,11 +10,10 @@ GIT
 
 GIT
   remote: https://github.com/openflighthpc/flight_configuration.git
-  revision: 070b00f82f70f2a3c677371763e4dadbd8a56d2b
-  branch: fix/remove_warnings
-  tag: 0.6.0
+  revision: 25c809a2db7080226962fb18ef0fb2dcf5ea7932
+  tag: 0.6.3
   specs:
-    flight_configuration (0.6.1)
+    flight_configuration (0.6.3)
 
 GIT
   remote: https://github.com/openflighthpc/tty-table.git
