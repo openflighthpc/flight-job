@@ -10,7 +10,7 @@ GIT
 
 GIT
   remote: https://github.com/openflighthpc/flight_configuration.git
-  revision: 113ef4558feae2107813ae5cd7947cf3b8fb7c00
+  revision: 070b00f82f70f2a3c677371763e4dadbd8a56d2b
   branch: fix/remove_warnings
   tag: 0.6.0
   specs:
