@@ -169,8 +169,9 @@ module FlightJob
           hash['template'] = load_template
         end
         if Flight.config.includes.include? 'jobs'
-          # NOTE: Consider using a file registry instead
-          hash['jobs'] = Job.load_all.select { |s| s.script_id == id }
+          hash['jobs'] = Job.load_all
+                            .select { |j| j.script_id == id && j.valid? }
+                            .map { |j| j.decorate }
         end
       end
     end

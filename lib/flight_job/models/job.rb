@@ -33,6 +33,7 @@ require 'time'
 require_relative 'job/adjust_active_index'
 require_relative 'job/merge_controls_with_metadata'
 require_relative 'job/metadata'
+require_relative 'job/broken_metadata'
 require_relative 'job/migrate_metadata'
 
 module FlightJob
@@ -54,11 +55,11 @@ module FlightJob
         if job.valid?
           job.tap(&:monitor)
         else
-          Flight.logger.error("Failed to load missing/invalid job: #{id}")
+          Flight.logger.error("Invalid job: #{id}")
           Flight.logger.info(job.errors.full_messages.join("\n"))
-          nil
+          job
         end
-      end.reject(&:nil?).sort
+      end.sort
     end
 
     def self.monitor_all
@@ -137,6 +138,10 @@ module FlightJob
       end
     end
 
+    def broken_metadata
+      @broken_metadata ||= BrokenMetadata.new({ }, metadata_path, self)
+    end
+
     def load_script
       Script.new(id: script_id)
     end
@@ -173,7 +178,7 @@ module FlightJob
       when 'FAILED_SUBMISSION'
         'FAILED'
       else
-        metadata.state || 'UNKNOWN'
+        metadata.state || 'BROKEN'
       end
     rescue
       # Various validations require the 'state', which depends on the
@@ -182,7 +187,7 @@ module FlightJob
       # This error can be ignored, as the metadata is validated independently
       Flight.logger.error "Failed to resolve the state for job '#{id}'"
       Flight.logger.debug $!
-      return 'UNKNOWN'
+      metadata.state || 'BROKEN'
     end
 
     def stdout_path
@@ -276,7 +281,7 @@ module FlightJob
     end
 
     # Jobs need to be serialized via the decorator
-    def serializable_hash
+    def serializable_hash(opts = nil)
       raise InternalError, "Unexpectedly tried to serializer a job resource"
     end
 
