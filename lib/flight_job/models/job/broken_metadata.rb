@@ -33,7 +33,7 @@ module FlightJob
     # This is currently limited to checking the script_id and scheduler_id.
     class BrokenMetadata < FlightJob::Metadata::BaseMetadata
 
-      attributes(*Metadata.attribute_names)
+      attributes(*Metadata.attribute_names - %i[state script_id scheduler_id])
 
       def state
         "BROKEN"

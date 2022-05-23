@@ -37,12 +37,12 @@ module FlightJob
       module AttributesConcern
         extend ActiveSupport::Concern
 
-        included do
-          class_attribute :attribute_names, instance_accessor: false
-          self.attribute_names = []
-        end
-
         module ClassMethods
+          def attribute_names
+            @attribute_names = [] unless defined?(@attribute_names)
+            @attribute_names
+          end
+
           def attributes(*attrs, default: nil, reader: true, writer: true)
             attrs.each { |attr| attribute(attr, default: default, reader: reader, writer: writer) }
           end
