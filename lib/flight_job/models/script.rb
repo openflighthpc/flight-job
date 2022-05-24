@@ -170,8 +170,8 @@ module FlightJob
         end
         if Flight.config.includes.include? 'jobs'
           hash['jobs'] = Job.load_all
-            .select { |j| j.script_id == id }
-            .map { |j| j.decorate }
+                            .select { |j| j.script_id == id && j.valid? }
+                            .map { |j| j.decorate }
         end
       end
     end

@@ -1,5 +1,5 @@
 #==============================================================================
-# Copyright (C) 2020-present Alces Flight Ltd.
+# Copyright (C) 2022-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -24,6 +24,27 @@
 # For more information on Flight Job, please visit:
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
+require_relative "../metadata/base_metadata"
+
 module FlightJob
-  VERSION = '2.9.0'
+  class Job < ApplicationModel
+    # Broken metadata objects are created when loading invalid jobs. Checks the
+    # information available about the jobs is in a suitable format for display.
+    # This is currently limited to checking the script_id and scheduler_id.
+    class BrokenMetadata < FlightJob::Metadata::BaseMetadata
+
+      attributes(*Metadata.attribute_names - %i[state script_id scheduler_id])
+
+      def state
+        "BROKEN"
+      end
+
+      %w(script_id scheduler_id).each do |att|
+        define_method(att) do
+          value = @parent.send(att)
+          return value if value.is_a?(Integer) || value.is_a?(String)
+        end
+      end
+    end
+  end
 end

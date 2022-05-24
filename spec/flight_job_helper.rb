@@ -26,3 +26,4 @@ RSpec.configure do |config|
     I18n.localize(Time.now)
   end
 end
+

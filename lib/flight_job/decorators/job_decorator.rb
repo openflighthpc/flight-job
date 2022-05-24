@@ -70,7 +70,13 @@ module FlightJob
 
       def self.delegate_metadata(*keys)
         keys.each do |key|
-          define_method(key) { object.metadata[key.to_s] }
+            define_method(key) do
+              if valid?
+                object.metadata[key.to_s]
+              else
+                object.broken_metadata[key.to_s]
+              end
+            end
         end
       end
 
@@ -82,15 +88,21 @@ module FlightJob
 
       delegate :desktop_id, :id, :results_dir, :job_type, to: :object
       delegate_metadata :script_id, :scheduler_id, :scheduler_state,
-        :stdout_path, :stderr_path, :reason, :created_at,
-        :submit_status, :submit_stdout, :submit_stderr, :estimated_start_time, :estimated_end_time
+        :stdout_path, :stderr_path, :reason, :submit_status, :submit_stdout,
+        :submit_stderr
 
       def created_at(stringify: false)
         time = object.metadata['created_at']
         time && !stringify ? Time.parse(time) : time
       end
 
+      def valid?
+        @valid = object.valid? unless defined?(@valid)
+        @valid
+      end
+
       def state
+        return 'BROKEN' unless valid?
         case job_type
         when 'SUBMITTING'
           'SUBMITTING'
