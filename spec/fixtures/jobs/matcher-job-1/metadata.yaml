@@ -1,0 +1,24 @@
+---
+created_at: '2022-03-10T14:55:43+00:00'
+job_type: SINGLETON
+script_id: first-script
+rendered_path: "/code/flight-job/spec/fixtures/jobs/valid-job/simple.sh"
+version: 2
+submit_status: 0
+submit_stdout: '{  "version": 1,  "id": "1003"}'
+submit_stderr: |2
+
+  sbatch wrapper output:
+  Submitted batch job 1003
+scheduler_id: '1003'
+results_dir: "/home/vagrant/simple.sh-outputs/1003"
+cancelling: false
+state: RUNNING
+reason: 
+scheduler_state: COMPLETED
+start_time: '2022-03-10T14:55:43+00:00'
+end_time: '2022-03-10T14:55:44+00:00'
+estimated_start_time: 
+estimated_end_time: 
+stdout_path: "/home/vagrant/job-1003.output"
+stderr_path: "/home/vagrant/job-1003.output"

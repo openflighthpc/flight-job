@@ -1,5 +1,5 @@
 #==============================================================================
-# Copyright (C) 2021-present Alces Flight Ltd.
+# Copyright (C) 2022-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -9,7 +9,7 @@
 # terms made available by Alces Flight Ltd - please direct inquiries
 # about licensing to licensing@alces-flight.com.
 #
-# Flight Job is distributed in the hope that it will be useful, but
+# FlightHowto is distributed in the hope that it will be useful, but
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR
 # IMPLIED INCLUDING, WITHOUT LIMITATION, ANY WARRANTIES OR CONDITIONS
 # OF TITLE, NON-INFRINGEMENT, MERCHANTABILITY OR FITNESS FOR A
@@ -17,29 +17,31 @@
 # details.
 #
 # You should have received a copy of the Eclipse Public License 2.0
-# along with Flight Job. If not, see:
+# along with FlightHowto. If not, see:
 #
 #  https://opensource.org/licenses/EPL-2.0
 #
-# For more information on Flight Job, please visit:
-# https://github.com/openflighthpc/flight-job
+# For more information on FlightHowto, please visit:
+# https://github.com/openflighthpc/flight-howto
 #==============================================================================
 
 module FlightJob
-  module Commands
-    class ListJobs < Command
-      def run
-        if jobs.empty? && !opts.json
-          $stderr.puts 'Nothing To Display'
-        else
-          puts render_output(Outputs::ListJobs, jobs.map(&:decorate))
-        end
+  class Matcher
+
+    def initialize; end
+
+    def self.pass_filter?(filter, param)
+      param ||= ""
+
+      filter.split(',').each do |f|
+        match = File.fnmatch(f, param)
+        return true if match
       end
 
-      def jobs
-        @jobs ||= Job.load_all(opts)
-      end
+      false
     end
+
+    # method for splitting and standardising filter strings, downcase, check if nil
+
   end
 end
-

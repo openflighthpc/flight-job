@@ -35,6 +35,7 @@ require_relative 'job/merge_controls_with_metadata'
 require_relative 'job/metadata'
 require_relative 'job/broken_metadata'
 require_relative 'job/migrate_metadata'
+require_relative '../matcher'
 
 module FlightJob
   class Job < ApplicationModel
@@ -47,19 +48,21 @@ module FlightJob
                       .merge(RUNNING_STATES.map { |s| [s, :running] }.to_h)
                       .merge(TERMINAL_STATES.map { |s| [s, :terminal] }.to_h)
 
-    def self.load_all
+    def self.load_all(opts)
       glob = File.join(Flight.config.jobs_dir, "*", "metadata.yaml")
       Dir.glob(glob).map do |path|
         id = File.basename(File.dirname(path))
         job = new(id: id)
-        if job.valid?
-          job.tap(&:monitor)
-        else
-          Flight.logger.error("Invalid job: #{id}")
-          Flight.logger.info(job.errors.full_messages.join("\n"))
-          job
+        if job.pass_filter?(opts)
+          if job.valid?
+            job.tap(&:monitor)
+          else
+            Flight.logger.error("Invalid job: #{id}")
+            Flight.logger.info(job.errors.full_messages.join("\n"))
+            job
+          end
         end
-      end.sort
+      end.reject(&:nil?).sort
     end
 
     def self.monitor_all
@@ -100,6 +103,17 @@ module FlightJob
       run_callbacks :save do
         metadata.save
       end
+    end
+
+    def pass_filter?(opts)
+      return true unless opts.id || opts.script || opts.state
+      params = OpenStruct.new(id: id, script: script_id, state: state)
+      params.each_pair do |key, _|
+        if opts[key]
+          return false unless FlightJob::Matcher.pass_filter?(opts[key],params[key])
+        end
+      end
+      true
     end
 
     attr_writer :id

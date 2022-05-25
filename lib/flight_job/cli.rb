@@ -158,6 +158,9 @@ module FlightJob
 
     create_command 'list-jobs' do |c|
       c.summary = 'List your previously submitted jobs'
+      c.slop.string '--id', 'Filter by job ID'
+      c.slop.string '--script', 'Filter by script ID'
+      c.slop.string '--state', 'Filter by job state'
     end
 
     # NOTE: Ideally the method signature would be: JOB_ID [-- LS_OPTIONS...]

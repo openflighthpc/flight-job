@@ -9,4 +9,5 @@ tags
 /spec/examples.txt
 /coverage/
 /spec/fixtures/jobs/*/.migration-failed*
+/spec/fixtures/jobs/matcher*/active.index
 *.idea*
