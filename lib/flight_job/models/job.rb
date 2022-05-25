@@ -39,6 +39,8 @@ require_relative '../matcher'
 
 module FlightJob
   class Job < ApplicationModel
+    include Matcher
+
     PENDING_STATES = ['PENDING']
     TERMINAL_STATES = ['FAILED', 'COMPLETED', 'CANCELLED', 'UNKNOWN']
     RUNNING_STATES = ['RUNNING', 'COMPLETING']
@@ -110,7 +112,7 @@ module FlightJob
       params = OpenStruct.new(id: id, script: script_id, state: state)
       params.each_pair do |key, _|
         if opts[key]
-          return false unless FlightJob::Matcher.pass_filter?(opts[key],params[key])
+          return false unless super(opts[key],params[key])
         end
       end
       true

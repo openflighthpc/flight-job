@@ -24,24 +24,24 @@
 # For more information on FlightHowto, please visit:
 # https://github.com/openflighthpc/flight-howto
 #==============================================================================
-
 module FlightJob
-  class Matcher
-
-    def initialize; end
-
-    def self.pass_filter?(filter, param)
-      param ||= ""
-
-      filter.split(',').each do |f|
-        match = File.fnmatch(f, param)
+  module Matcher
+    def pass_filter?(filter, att)
+      filter.split(',')
+            .uniq
+            .each do |f|
+        match = File.fnmatch(standardize_string(f), standardize_string(att))
         return true if match
       end
-
       false
     end
 
-    # method for splitting and standardising filter strings, downcase, check if nil
+    private
 
+    def standardize_string(str)
+      str ||= ""             # Replace nil values with empty string
+      str.downcase           # Case insensitive matching
+         .gsub(/[\s_]/, '-') # Treat underscores as hyphens
+    end
   end
 end

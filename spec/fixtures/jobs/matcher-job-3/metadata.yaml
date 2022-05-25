@@ -13,7 +13,7 @@ submit_stderr: |2
 scheduler_id: '1003'
 results_dir: "/home/vagrant/simple.sh-outputs/1003"
 cancelling: false
-state: COMPLETED
+state: CANCELLED
 reason: 
 scheduler_state: COMPLETED
 start_time: '2022-03-10T14:55:43+00:00'
