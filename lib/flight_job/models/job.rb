@@ -50,7 +50,7 @@ module FlightJob
                       .merge(RUNNING_STATES.map { |s| [s, :running] }.to_h)
                       .merge(TERMINAL_STATES.map { |s| [s, :terminal] }.to_h)
 
-    def self.load_all(opts)
+    def self.load_all(opts = nil)
       glob = File.join(Flight.config.jobs_dir, "*", "metadata.yaml")
       Dir.glob(glob).map do |path|
         id = File.basename(File.dirname(path))
@@ -108,9 +108,8 @@ module FlightJob
     end
 
     def pass_filter?(opts)
-      return true unless opts.id || opts.script || opts.state
-      params = OpenStruct.new(id: id, script: script_id, state: state)
-      params.each_pair do |key, _|
+      return true unless opts && (opts.id || opts.script || opts.state)
+      job_attributes.each_pair do |key, _|
         if opts[key]
           return false unless super(opts[key],params[key])
         end
