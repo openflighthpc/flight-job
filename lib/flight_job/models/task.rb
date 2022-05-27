@@ -175,6 +175,8 @@ module FlightJob
       end.sort
     end
 
+    private_class_method :task_indices
+
     def tag
       "#{job_id}.#{index}"
     end
