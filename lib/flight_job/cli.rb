@@ -158,9 +158,20 @@ module FlightJob
 
     create_command 'list-jobs' do |c|
       c.summary = 'List your previously submitted jobs'
-      c.slop.string '--id', 'Filter by job ID'
-      c.slop.string '--script', 'Filter by script ID'
-      c.slop.string '--state', 'Filter by job state'
+      c.description = <<~DESC.chomp
+      List your previously submitted jobs.
+      
+      Filter the displayed jobs using the optional flags. Filters may be input as 
+      glob expressions; filters with wildcards should be enclosed in quotes.
+
+      Multiple comma-separated filter expressions may be passed to each flag. A job 
+      is considered to have passed the filter for a given flag if its attributes 
+      match at least one of these expressions.
+      DESC
+      c.slop.string '--id', 'Filter by job ID', meta: 'ID[,ID...]'
+      c.slop.string '--script', 'Filter by script ID', meta: 'SCRIPT[,SCRIPT...]'
+      c.slop.string '--state', "Filter by job state. Valid states include: \n" \
+      'PENDING, RUNNING, COMPLETING, COMPLETED, CANCELLED, FAILED, BROKEN, UNKNOWN', meta: 'STATE[,STATE...]'
     end
 
     # NOTE: Ideally the method signature would be: JOB_ID [-- LS_OPTIONS...]

@@ -1,0 +1,23 @@
+---
+created_at: '2022-05-27T08:59:13+00:00'
+job_type: ARRAY
+script_id: simple-array
+rendered_path: "/home/vagrant/.local/share/flight/job/jobs/simple-array-1/simple-array.sh"
+version: 2
+submission_answers:
+  max_runtime: 3-0
+  memory_limit: 1
+  job_name: simple-array.sh
+  array_configuration: 1-10%4
+  workload: World
+submit_status: 0
+submit_stdout: '{  "version": 1,  "id": "13"}'
+submit_stderr: |2
+
+  sbatch wrapper output:
+  Submitted batch job 13
+  declare -A JOB='([scheduler_id]="13" )'
+scheduler_id: '13'
+results_dir: "/home/vagrant/simple-array.sh-outputs/13"
+cancelling: false
+lazy: false

@@ -117,6 +117,10 @@ module FlightJob
       true
     end
 
+    def job_attributes
+      @job_attributes ||= OpenStruct.new(id: id, script: script_id, state: self.decorate.state)
+    end
+
     attr_writer :id
     def id
       return @id if @id

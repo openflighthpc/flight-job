@@ -41,6 +41,7 @@ module FlightJob
     def standardize_string(str)
       str ||= ""             # Replace nil values with empty string
       str.downcase           # Case insensitive matching
+         .strip              # Trims white space
          .gsub(/[\s_]/, '-') # Treat underscores as hyphens
     end
   end
