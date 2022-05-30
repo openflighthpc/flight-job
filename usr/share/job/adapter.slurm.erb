@@ -25,10 +25,12 @@ register_control() {
   local name
   local value
   name="$1"
-  if [[ -p /dev/stdin ]]; then
+  if [[ $# -gt 1 ]] ; then
+      value="$2"
+  elif [[ -p /dev/stdin ]]; then
       value="$( cat )"
   else
-      value="$2"
+      value=""
   fi
   if [ -d "${CONTROLS_DIR}" ]; then
     if [ -z "${value}" ]; then
@@ -57,10 +59,26 @@ tee_session_output() {
     tee -a "${SESSION_OUTPUT}"
 }
 
-register_scheduler_id() {
+# Wait for `srun` to print a line matching "job <ID> queued", then write out
+# some Flight Job bookkeeping.
+bookkeeping_for_pending_job() {
     stdbuf -oL sed -n 's/.*job \([0-9]*\) queued.*/\1/p' \
         | head -n 1 \
-        | register_control "scheduler_id" 
+        | register_bookkeeping
+    }
+
+# Some Flight Job bookkeeping to allow the job to be monitored / controlled.
+register_bookkeeping() {
+    local scheduler_id
+    if [[ -p /dev/stdin ]]; then
+        scheduler_id="$( cat )"
+    else
+        scheduler_id="$1"
+    fi
+
+    register_control "scheduler_id" "${scheduler_id}"
+    register_control "submit_status" "0"
+    register_control "job_type" "BOOTSTRAPPING"
 }
 
 # This function is ran twice.
@@ -119,11 +137,6 @@ request_allocation() {
             export DISPLAYNAME=$DISPLAY
         fi
 
-        # Some Flight Job bookkeeping to allow the job to be monitored /
-        # controlled.
-        register_control "job_type" "BOOTSTRAPPING"
-        register_control "submit_status" "0"
-
         # Long-winded construction of `srun` arguments to ensure that we don't
         # lose any quoting along the way.
         declare -a srun_args
@@ -140,7 +153,7 @@ request_allocation() {
         # Request an allocation from the scheduler.  The allocation will run
         # this script again on the allocated node.
         echo "srun ${srun_args[@]}" | tee_session_output
-        srun "${srun_args[@]}" 2> >( tee >( register_scheduler_id ) | tee_session_output )
+        srun "${srun_args[@]}" 2> >( tee >( bookkeeping_for_pending_job ) | tee_session_output )
         submit_status=$?
         if [ ! -f "${CONTROLS_DIR}/scheduler_id" ] ; then
             # The scheduler_id hasn't been recorded.  We assume that the
@@ -163,11 +176,7 @@ request_allocation() {
         # The scheduler has allocated resources and the script is running for
         # a second time on one of the allocated nodes.
 
-        # Some Flight Job bookkeeping to allow the job to be monitored /
-        # controlled.
-        register_control "scheduler_id" "$SLURM_JOB_ID"
-        register_control "job_type" "BOOTSTRAPPING"
-
+        register_bookkeeping "$SLURM_JOB_ID"
         # Setup the originator to expect our X connection.
         DISPLAYNAME=$1
         DISPLAYHOST=`echo $DISPLAYNAME | cut -d: -f1`
