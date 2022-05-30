@@ -171,7 +171,7 @@ module FlightJob
       c.slop.string '--id', 'Filter by job ID', meta: 'ID[,ID...]'
       c.slop.string '--script', 'Filter by script ID', meta: 'SCRIPT[,SCRIPT...]'
       c.slop.string '--state', "Filter by job state. Valid states include: \n" \
-      'PENDING, RUNNING, COMPLETING, COMPLETED, CANCELLED, FAILED, BROKEN, UNKNOWN', meta: 'STATE[,STATE...]'
+      'PENDING, RUNNING, COMPLETED, CANCELLED, FAILED, BROKEN, UNKNOWN', meta: 'STATE[,STATE...]'
     end
 
     # NOTE: Ideally the method signature would be: JOB_ID [-- LS_OPTIONS...]
