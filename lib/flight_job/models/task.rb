@@ -164,8 +164,6 @@ module FlightJob
       File.join(FlightJob.config.jobs_dir, job_id, 'terminated', "#{epoch_time}.#{index}")
     end
 
-    private_class_method
-
     def self.task_indices(job_id)
       Dir.glob(new(job_id: job_id, index: '*').metadata_path).map do |path|
         name = File.basename(path)

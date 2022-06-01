@@ -39,8 +39,6 @@ require_relative '../matcher'
 
 module FlightJob
   class Job < ApplicationModel
-    include Matcher
-
     PENDING_STATES = ['PENDING']
     TERMINAL_STATES = ['FAILED', 'COMPLETED', 'CANCELLED', 'UNKNOWN']
     RUNNING_STATES = ['RUNNING', 'COMPLETING']
@@ -64,7 +62,7 @@ module FlightJob
             job
           end
         end
-      end.reject(&:nil?).sort
+      end.compact.sort
     end
 
     def self.monitor_all
@@ -107,18 +105,9 @@ module FlightJob
       end
     end
 
-    def pass_filter?(opts)
-      return true unless opts && (opts.id || opts.script || opts.state)
-      job_attributes.each_pair do |key, _|
-        if opts[key]
-          return false unless super(opts[key],params[key])
-        end
-      end
-      true
-    end
-
-    def job_attributes
-      @job_attributes ||= OpenStruct.new(id: id, script: script_id, state: self.decorate.state)
+    def pass_filter?(filters)
+      @_matcher ||= Matcher.new(filters, {id: id, script: script_id, state: decorate.state})
+      @_matcher.matches?
     end
 
     attr_writer :id

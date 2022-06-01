@@ -2,8 +2,6 @@ require 'flight_job_helper'
 require_relative '../../../lib/flight_job/matcher'
 
 RSpec.describe FlightJob::Matcher do
-  let(:config) { FlightJob.config }
-  let(:jobs_dir) { config.jobs_dir }
   let(:job_id_1) { "matcher-job-1" }
   let(:job_id_2) { "matcher-job-2" }
   let(:job_id_3) { "matcher-job-3" }

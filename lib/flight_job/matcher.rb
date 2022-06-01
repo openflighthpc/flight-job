@@ -25,24 +25,41 @@
 # https://github.com/openflighthpc/flight-howto
 #==============================================================================
 module FlightJob
-  module Matcher
-    def pass_filter?(filter, att)
+  class Matcher
+    attr_reader :filters, :attrs
+
+    def initialize(filters, attrs)
+      @filters = filters
+      @attrs = attrs
+    end
+
+    def matches?
+      return true unless filters
+      attrs.each_pair do |key, attr|
+        if filters[key]
+          return false unless pass_filter?(filters[key], attr)
+        end
+      end
+      true
+    end
+
+    private
+
+    def pass_filter?(filter, attr)
       filter.split(',')
             .uniq
             .each do |f|
-        match = File.fnmatch(standardize_string(f), standardize_string(att))
+        match = File.fnmatch(standardize_string(f), standardize_string(attr))
         return true if match
       end
       false
     end
 
-    private
-
     def standardize_string(str)
-      str ||= ""             # Replace nil values with empty string
-      str.downcase           # Case insensitive matching
-         .strip              # Trims white space
-         .gsub(/[\s_]/, '-') # Treat underscores as hyphens
+      str ||= ""
+      str.downcase
+         .strip
+         .gsub(/[\s_]/, '-')
     end
   end
 end
