@@ -29,6 +29,7 @@ require "json_schemer"
 
 require_relative "template/schema_defs"
 require_relative "template/validator"
+require_relative '../matcher'
 
 module FlightJob
   class Template < ApplicationModel
@@ -67,25 +68,22 @@ module FlightJob
       "$defs" => {}.merge!(SchemaDefs::VALIDATOR_DEF).merge!(SchemaDefs::QUESTION_DEF)
     })
 
-    def self.load_all
-      templates = Dir.glob(new(id: '*').metadata_path).map do |path|
+    def self.load_all(opts = nil)
+      Dir.glob(new(id: '*').metadata_path).map do |path|
         id = File.basename(File.dirname(path))
-        new(id: id)
-      end
-
-      templates.each do |template|
-        next if template.valid?
-        FlightJob.logger.warn("Invalid template detected upon load: #{template.id}")
-        FlightJob.logger.warn(template.errors.full_messages.join("\n"))
-      end
-
-      templates.sort!
-
-      templates.each_with_index do |t, idx|
-        t.index = idx + 1
-      end
-
-      templates
+        template = new(id: id)
+        if template.pass_filter?(opts)
+          if template.valid?
+            template
+          else
+            FlightJob.logger.warn("Invalid template detected upon load: #{template.id}")
+            FlightJob.logger.warn(template.errors.full_messages.join("\n"))
+            nil
+          end
+        end
+      end.compact
+         .sort
+         .each_with_index { |t, idx| t.index = idx + 1 }
     end
 
     attr_accessor :id, :index
@@ -97,6 +95,11 @@ module FlightJob
         messages = submit_args.errors.map { |e| e.message }
         errors.add(:rendred_submit_yaml_erb, messages.join("; "))
       end
+    end
+
+    def pass_filter?(filters)
+      @_matcher ||= Matcher.new(filters, {id: id, name: name})
+      @_matcher.matches?
     end
 
     def exists?

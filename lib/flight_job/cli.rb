@@ -85,7 +85,8 @@ module FlightJob
       List available templates.
       
       Filter the displayed templates using the optional flags. Filters may be input as 
-      glob expressions; filters with wildcards should be enclosed in quotes.
+      glob expressions. Filters that include wildcards or spaces should be enclosed in 
+      quotes.
 
       Multiple comma-separated filter expressions may be passed to each flag. A template 
       is considered to have passed the filter for a given flag if its attributes 
