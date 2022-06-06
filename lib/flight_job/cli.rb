@@ -293,7 +293,7 @@ module FlightJob
       least one of these expressions.
       DESC
       c.slop.string '--state', "Filter by task state. Valid states include: \n" \
-      'PENDING, RUNNING, COMPLETED, CANCELLED, FAILED, BROKEN, UNKNOWN', meta: 'STATE[,STATE...]'
+      'PENDING, RUNNING, COMPLETING, COMPLETED, FAILED, CANCELLED, UNKNOWN', meta: 'STATE[,STATE...]'
     end
 
     create_command 'info-array-task', 'JOB_ID INDEX' do |c|
