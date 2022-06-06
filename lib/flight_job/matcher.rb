@@ -26,7 +26,6 @@
 #==============================================================================
 module FlightJob
   class Matcher
-    attr_reader :filters, :attrs
 
     def initialize(filters, attrs)
       @filters = filters
@@ -44,6 +43,8 @@ module FlightJob
     end
 
     private
+
+    attr_reader :filters, :attrs
 
     def pass_filter?(filter, attr)
       filter.split(',')
