@@ -1,5 +1,5 @@
 #==============================================================================
-# Copyright (C) 2021-present Alces Flight Ltd.
+# Copyright (C) 2022-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -9,7 +9,7 @@
 # terms made available by Alces Flight Ltd - please direct inquiries
 # about licensing to licensing@alces-flight.com.
 #
-# Flight Job is distributed in the hope that it will be useful, but
+# FlightHowto is distributed in the hope that it will be useful, but
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR
 # IMPLIED INCLUDING, WITHOUT LIMITATION, ANY WARRANTIES OR CONDITIONS
 # OF TITLE, NON-INFRINGEMENT, MERCHANTABILITY OR FITNESS FOR A
@@ -17,29 +17,50 @@
 # details.
 #
 # You should have received a copy of the Eclipse Public License 2.0
-# along with Flight Job. If not, see:
+# along with FlightHowto. If not, see:
 #
 #  https://opensource.org/licenses/EPL-2.0
 #
-# For more information on Flight Job, please visit:
-# https://github.com/openflighthpc/flight-job
+# For more information on FlightHowto, please visit:
+# https://github.com/openflighthpc/flight-howto
 #==============================================================================
-
 module FlightJob
-  module Commands
-    class ListJobs < Command
-      def run
-        if jobs.empty? && !opts.json
-          $stderr.puts 'Nothing To Display'
-        else
-          puts render_output(Outputs::ListJobs, jobs.map(&:decorate))
+  class Matcher
+
+    def initialize(filters, attrs)
+      @filters = filters
+      @attrs = attrs
+    end
+
+    def matches?
+      return true unless filters
+      attrs.each_pair do |key, attr|
+        if filters[key]
+          return false unless pass_filter?(filters[key], attr)
         end
       end
+      true
+    end
 
-      def jobs
-        @jobs ||= Job.load_all(opts)
+    private
+
+    attr_reader :filters, :attrs
+
+    def pass_filter?(filter, attr)
+      filter.split(',')
+            .uniq
+            .each do |f|
+        match = File.fnmatch(standardize_string(f), standardize_string(attr))
+        return true if match
       end
+      false
+    end
+
+    def standardize_string(str)
+      str ||= ""
+      str.downcase
+         .strip
+         .gsub(/[\s_]/, '-')
     end
   end
 end
-

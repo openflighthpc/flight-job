@@ -164,8 +164,6 @@ module FlightJob
       File.join(FlightJob.config.jobs_dir, job_id, 'terminated', "#{epoch_time}.#{index}")
     end
 
-    private_class_method
-
     def self.task_indices(job_id)
       Dir.glob(new(job_id: job_id, index: '*').metadata_path).map do |path|
         name = File.basename(path)
@@ -174,6 +172,8 @@ module FlightJob
         md.nil? ? nil : md.named_captures['index'].to_i
       end.sort
     end
+
+    private_class_method :task_indices
 
     def tag
       "#{job_id}.#{index}"

@@ -35,6 +35,7 @@ require_relative 'job/merge_controls_with_metadata'
 require_relative 'job/metadata'
 require_relative 'job/broken_metadata'
 require_relative 'job/migrate_metadata'
+require_relative '../matcher'
 
 module FlightJob
   class Job < ApplicationModel
@@ -47,19 +48,21 @@ module FlightJob
                       .merge(RUNNING_STATES.map { |s| [s, :running] }.to_h)
                       .merge(TERMINAL_STATES.map { |s| [s, :terminal] }.to_h)
 
-    def self.load_all
+    def self.load_all(opts = nil)
       glob = File.join(Flight.config.jobs_dir, "*", "metadata.yaml")
       Dir.glob(glob).map do |path|
         id = File.basename(File.dirname(path))
         job = new(id: id)
-        if job.valid?
-          job.tap(&:monitor)
-        else
-          Flight.logger.error("Invalid job: #{id}")
-          Flight.logger.info(job.errors.full_messages.join("\n"))
-          job
+        if job.pass_filter?(opts)
+          if job.valid?
+            job.tap(&:monitor)
+          else
+            Flight.logger.error("Invalid job: #{id}")
+            Flight.logger.info(job.errors.full_messages.join("\n"))
+            job
+          end
         end
-      end.sort
+      end.compact.sort
     end
 
     def self.monitor_all
@@ -100,6 +103,11 @@ module FlightJob
       run_callbacks :save do
         metadata.save
       end
+    end
+
+    def pass_filter?(filters)
+      @_matcher ||= Matcher.new(filters, {id: id, script: script_id, state: decorate.state})
+      @_matcher.matches?
     end
 
     attr_writer :id
