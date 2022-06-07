@@ -27,6 +27,7 @@
 require 'json'
 require 'json_schemer'
 require_relative "../metadata/base_metadata"
+require_relative "../../validators/json_schema_validator"
 
 module FlightJob
   class Script < ApplicationModel
@@ -59,15 +60,10 @@ module FlightJob
         }
       })
 
-      validate do
-        schema_errors = SCHEMA.validate(self.to_hash).to_a
-        unless schema_errors.empty?
-          path_tag = File.exist?(@path) ? @path : @parent.id
-          FlightJob.logger.info("Invalid metadata: #{path_tag}\n")
-          JSONSchemaErrorLogger.new(schema_errors, :info).log
-          errors.add(:metadata, 'is not valid')
-        end
-      end
+      validates_with JsonSchemaValidator,
+                     schema: SCHEMA,
+                     json_method: :to_hash,
+                     error_key: :metadata
 
       attributes \
         :created_at,
