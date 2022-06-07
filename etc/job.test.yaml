@@ -1,3 +1,2 @@
 jobs_dir: spec/fixtures/jobs
 scripts_dir: spec/fixtures/scripts
-templates_dir: spec/fixtures/templates

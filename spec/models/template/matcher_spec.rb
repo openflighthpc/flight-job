@@ -8,6 +8,10 @@ RSpec.describe FlightJob::Matcher do
   let(:template_name_1) { "Template name 1" }
   let(:template_name_2) { "Template name 2" }
 
+  before(:all) do
+    Flight.config.templates_dir = File.join(Flight.root, 'spec/fixtures/templates')
+  end
+
   context "templates are loaded and filtered" do
     it "by only template ID" do
       opts = OpenStruct.new(id: "*-1")
