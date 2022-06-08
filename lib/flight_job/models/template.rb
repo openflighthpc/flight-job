@@ -72,18 +72,14 @@ module FlightJob
       Dir.glob(new(id: '*').metadata_path).map do |path|
         id = File.basename(File.dirname(path))
         template = new(id: id)
-        if template.pass_filter?(opts)
-          if template.valid?
-            template
-          else
-            FlightJob.logger.warn("Invalid template detected upon load: #{template.id}")
-            FlightJob.logger.warn(template.errors.full_messages.join("\n"))
-            nil
-          end
+        unless template.valid?
+          FlightJob.logger.warn("Invalid template detected upon load: #{template.id}")
+          FlightJob.logger.warn(template.errors.full_messages.join("\n"))
         end
-      end.compact
-         .sort
+        template
+      end.sort
          .each_with_index { |t, idx| t.index = idx + 1 }
+         .select { |t| t.pass_filter?(opts) }
     end
 
     attr_accessor :id, :index
