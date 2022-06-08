@@ -26,6 +26,7 @@
 #==============================================================================
 require 'securerandom'
 require_relative 'script/metadata'
+require_relative 'script/migrate_script'
 
 module FlightJob
   class Script < ApplicationModel
@@ -41,12 +42,15 @@ module FlightJob
           FlightJob.logger.info(script.errors.full_messages.join("\n"))
           nil
         end
-      end.reject(&:nil?).sort
+      end.compact.sort
     end
+
+    after_initialize MigrateScript, if: :persisted?
 
     delegate :generate_submit_args, to: :load_template
     delegate(*Metadata.attribute_names, to: :metadata)
     delegate :tags=, :template_id=, :script_name=, :answers=, to: :metadata
+    delegate :persisted?, to: :metadata
 
     attr_accessor :id
     attr_writer :notes
@@ -59,22 +63,13 @@ module FlightJob
               unless: -> { validation_context == :render }
 
     validate on: :load do
-      # Ensures the metadata file exists
       unless File.exist? metadata_path
         errors.add(:metadata_path, 'does not exist')
         next
       end
-
-      # Ensures the script file exists
       unless File.exist? script_path
-        legacy_path = File.join(Flight.config.scripts_dir, id, script_name)
-        if File.exist?(legacy_path)
-          # Migrate legacy scripts to the script_path
-          FileUtils.ln_s script_name, script_path
-        else
-          # Error as it is missing
-          @errors.add(:script_path, 'does not exist')
-        end
+        errors.add(:script_path, 'does not exist')
+        next
       end
     end
 
@@ -197,11 +192,11 @@ module FlightJob
     end
 
     def initialize_metadata(template, answers)
-      @metadata ||= if metadata_path && File.exist?(metadata_path)
-                      Metadata.load_from_path(metadata_path, self)
-                    else
-                      Metadata.from_template(template, answers, self) # self = script
-                    end
+      if persisted?
+        Metadata.load_from_path(metadata_path, self)
+      else
+        @metadata = Metadata.from_template(template, answers, self)
+      end
     end
 
     def metadata

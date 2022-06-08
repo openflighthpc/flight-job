@@ -92,6 +92,10 @@ module FlightJob
         }
         new(initial_metadata, path, parent)
       end
+
+      def persisted?
+        File.exist?(@path)
+      end
     end
   end
 end

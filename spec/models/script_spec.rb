@@ -52,6 +52,38 @@ RSpec.describe "FlightJob::Script", type: :model do
     end
   end
 
+  describe "validations" do
+    subject(:script) { FlightJob::Script.new(id: script_id) }
+    before(:each) { subject.valid?(:load) }
+
+    context "when script is valid" do
+      let(:script_id) { "valid-script" }
+
+      it "doesn't raise an error" do
+        expect(subject.errors).to be_empty
+        is_expected.not_to have_error(:script_path, 'does not exist')
+      end
+    end
+
+    context "when script file is missing" do
+      let(:script_id) { "invalid-no-script" }
+
+      it "raises an error" do
+        expect(subject.errors).not_to be_empty
+        is_expected.to have_error(:script_path, 'does not exist')
+      end
+    end
+
+    context "when metadata file is missing" do
+      let(:script_id) { "invalid-no-metadata" }
+
+      it "raises an error" do
+        expect(subject.errors).not_to be_empty
+        is_expected.to have_error(:metadata_path, 'does not exist')
+      end
+    end
+  end
+
   describe "metadata" do
     let(:script_id) { "valid-script" }
     subject(:script) { FlightJob::Script.new(id: script_id) }
