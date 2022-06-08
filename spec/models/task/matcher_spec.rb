@@ -1,7 +1,7 @@
 require 'flight_job_helper'
 require_relative '../../../lib/flight_job/matcher'
 
-RSpec.describe FlightJob::Matcher do
+RSpec.describe 'Task filtering' do
   let(:job_id) { "matcher-job-array" }
 
   context "tasks are loaded and filtered" do

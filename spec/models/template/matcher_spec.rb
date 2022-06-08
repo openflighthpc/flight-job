@@ -1,7 +1,7 @@
 require 'flight_job_helper'
 require_relative '../../../lib/flight_job/matcher'
 
-RSpec.describe FlightJob::Matcher do
+RSpec.describe 'Template filtering' do
   let(:config) { FlightJob.config }
   let(:template_id_1) { "template-1" }
   let(:template_id_2) { "template-2" }
