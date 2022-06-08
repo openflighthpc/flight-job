@@ -9,7 +9,11 @@ RSpec.describe FlightJob::Matcher do
   let(:template_name_2) { "Template name 2" }
 
   before(:all) do
+    @templates_dir = Flight.config.templates_dir
     Flight.config.templates_dir = File.join(Flight.root, 'spec/fixtures/templates')
+  end
+  after(:all) do
+    Flight.config.templates_dir = @templates_dir
   end
 
   context "templates are loaded and filtered" do
