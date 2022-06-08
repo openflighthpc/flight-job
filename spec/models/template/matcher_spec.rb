@@ -20,9 +20,13 @@ RSpec.describe FlightJob::Matcher do
     end
     it "by only template name" do
       opts = OpenStruct.new(name: "* name 2")
-      puts config.templates_dir
       expect(FlightJob::Template.new(id: template_id_1).pass_filter?(opts)).to be false
       expect(FlightJob::Template.new(id: template_id_2).pass_filter?(opts)).to be true
+    end
+    it "keeps the template indices consistent" do
+      opts = OpenStruct.new(name: "* name 2")
+      templates = FlightJob::Template.load_all(opts)
+      expect(templates[0].index).to eq(2)
     end
   end
 
