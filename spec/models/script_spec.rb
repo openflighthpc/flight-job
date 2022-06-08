@@ -61,6 +61,7 @@ RSpec.describe "FlightJob::Script", type: :model do
 
       it "doesn't raise an error" do
         expect(subject.errors).to be_empty
+        expect(subject.metadata.valid?).to be true
         is_expected.not_to have_error(:script_path, 'does not exist')
       end
     end
@@ -80,6 +81,13 @@ RSpec.describe "FlightJob::Script", type: :model do
       it "raises an error" do
         expect(subject.errors).not_to be_empty
         is_expected.to have_error(:metadata_path, 'does not exist')
+      end
+    end
+
+    context "when metadata is invalid" do
+      let(:script_id) { "invalid-metadata" }
+      it "raises an error" do
+        expect(subject.metadata.valid?).to be false
       end
     end
   end
