@@ -37,7 +37,7 @@ module FlightJob
       end
 
       def scripts
-        @scripts ||= Script.load_all
+        @scripts ||= Script.load_all(opts)
       end
     end
   end

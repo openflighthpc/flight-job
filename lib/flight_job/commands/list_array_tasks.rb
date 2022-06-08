@@ -42,7 +42,7 @@ module FlightJob
             # Load the job so as to cause it to be monitored and the list of tasks
             # updated as a side-effect.
             load_job(args.first)
-            Task.load_job_tasks(args.first)
+            Task.load_job_tasks(args.first, opts)
           end
       end
     end

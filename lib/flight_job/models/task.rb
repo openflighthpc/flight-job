@@ -97,11 +97,12 @@ module FlightJob
       reform_state_index_file
     end
 
-    def self.load_job_tasks(job_id)
+    def self.load_job_tasks(job_id, opts = nil)
       Dir.glob(new(job_id: job_id, index: '*').metadata_path).map do |path|
         index = File.basename(path).split('.')[1]
         self.load(job_id, index)
-      end.sort_by { |t| t.index.to_i }
+      end.select  { |t| t.pass_filter?(opts) }
+         .sort_by { |t| t.index.to_i }
     end
 
     def self.load(job_id, index)
@@ -174,6 +175,11 @@ module FlightJob
     end
 
     private_class_method :task_indices
+
+    def pass_filter?(filters)
+      @_matcher ||= Matcher.new(filters, {state: metadata['state']})
+      @_matcher.matches?
+    end
 
     def tag
       "#{job_id}.#{index}"

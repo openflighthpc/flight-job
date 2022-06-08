@@ -37,7 +37,7 @@ module FlightJob
       end
 
       def templates
-        @templates ||= Template.load_all
+        @templates ||= Template.load_all(opts)
       end
     end
   end
