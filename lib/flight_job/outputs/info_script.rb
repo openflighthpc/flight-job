@@ -54,9 +54,9 @@ module FlightJob
       end
 
       if humanize?
-        notes = MarkdownRenderer.new(object.notes).wrap_markdown
+        notes = MarkdownRenderer.new(object.notes.read).wrap_markdown
       else
-        notes = object.notes
+        notes = object.notes.read
       end
       register(section: :notes, header: 'Notes') { notes }
     end

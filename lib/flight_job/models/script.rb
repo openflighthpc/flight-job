@@ -53,7 +53,6 @@ module FlightJob
     delegate :persisted?, to: :metadata
 
     attr_accessor :id
-    attr_writer :notes
 
     validates :id, presence: true, length: { maximum: FlightJob.config.max_id_length },
               format: { with: /\A[a-zA-Z0-9_-]+\Z/,
@@ -101,19 +100,15 @@ module FlightJob
     end
 
     def notes
-      @notes ||= if File.exist? notes_path
-                   File.read notes_path
-                 else
-                   ''
-                 end
+      @notes ||= Notes.new(id).tap { |n| n.read }
+    end
+
+    def initialize_notes(notes = "")
+      @notes ||= Notes.new(id).tap { |n| n.write(notes) }
     end
 
     def script_path
       @script_path ||= File.join(FlightJob.config.scripts_dir, id, 'script.sh')
-    end
-
-    def notes_path
-      @notes_path ||= File.join(FlightJob.config.scripts_dir, id, 'notes.md')
     end
 
     def load_template
@@ -138,7 +133,7 @@ module FlightJob
 
       # Writes the data to disk
       metadata.save
-      save_notes
+      notes.save
       File.write(script_path, renderer.render)
 
       # Makes the script executable and metadata read/write
@@ -146,17 +141,12 @@ module FlightJob
       FileUtils.chmod(0600, metadata_path)
     end
 
-    def save_notes
-      File.write notes_path, notes
-      FileUtils.chmod(0600, notes_path)
-    end
-
     def serializable_hash(opts = nil)
       opts ||= {}
       answers # Ensure the answers have been set
       {
         "id" => id,
-        "notes" => notes,
+        "notes" => notes.read,
         "path" => script_path,
         "tags" => tags,
       }.merge(metadata).tap do |hash|

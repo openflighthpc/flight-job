@@ -11,22 +11,7 @@ RSpec.describe "FlightJob::Script", type: :model do
 
   describe "script creation" do
     let(:script_id) { "new-script" }
-    let(:test_notes) { "test notes" }
-    let(:notes_path) { File.join(script_dir,"notes.md") }
     let(:job_script_path) { File.join(script_dir,"script.sh") }
-
-    context "writes the notes" do
-      it "creates the notes file" do
-        check_for_file_creation(notes_path)
-      end
-      it "saves the notes correctly" do
-        fresh_fakefs do
-          create_and_save_script(notes: test_notes)
-          new_script = FlightJob::Script.new(id: script_id)
-          expect(new_script.notes).to eq(test_notes)
-        end
-      end
-    end
 
     context "creates the job script" do
       it "writes the job script file" do
@@ -131,8 +116,8 @@ RSpec.describe "FlightJob::Script", type: :model do
     end
   end
 
-  def create_and_save_script(id: script_id, notes: nil)
-    FlightJob::Script.new( id: id, notes: notes ).tap do |s|
+  def create_and_save_script(id: script_id)
+    FlightJob::Script.new( id: id ).tap do |s|
       s.initialize_metadata(template, {})
       s.render_and_save
     end
