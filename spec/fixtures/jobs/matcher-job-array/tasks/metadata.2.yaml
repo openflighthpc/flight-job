@@ -1,0 +1,12 @@
+---
+version: 1
+scheduler_id: '5'
+state: FAILED
+reason: 
+scheduler_state: COMPLETED
+start_time: '2022-05-26T15:46:26+00:00'
+end_time: '2022-05-26T15:46:27+00:00'
+estimated_start_time: 
+estimated_end_time: 
+stdout_path: "/home/vagrant/job-3.2.output"
+stderr_path: "/home/vagrant/job-3.2.output"

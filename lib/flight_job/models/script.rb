@@ -27,20 +27,23 @@
 require 'securerandom'
 require_relative 'script/metadata'
 require_relative 'script/migrate_script'
+require_relative '../matcher'
 
 module FlightJob
   class Script < ApplicationModel
 
-    def self.load_all
+    def self.load_all(opts = nil)
       Dir.glob(new(id: '*').metadata_path).map do |path|
         id = File.basename(File.dirname(path))
         script = new(id: id)
-        if script.valid?(:load)
-          script
-        else
-          FlightJob.logger.error("Failed to load missing/invalid script: #{id}")
-          FlightJob.logger.info(script.errors.full_messages.join("\n"))
-          nil
+        if script.pass_filter?(opts)
+          if script.valid?(:load)
+            script
+          else
+            FlightJob.logger.error("Failed to load missing/invalid script: #{id}")
+            FlightJob.logger.info(script.errors.full_messages.join("\n"))
+            nil
+          end
         end
       end.compact.sort
     end
@@ -91,6 +94,11 @@ module FlightJob
           template.errors.full_messages.join("\n")
         end
       end
+    end
+
+    def pass_filter?(filters)
+      @_matcher ||= Matcher.new(filters, {id: id, template: template_id})
+      @_matcher.matches?
     end
 
     # NOTE: Only used for a shorthand existence check, full validation is required in

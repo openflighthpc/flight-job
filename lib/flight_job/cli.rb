@@ -81,6 +81,19 @@ module FlightJob
 
     create_command 'list-templates' do |c|
       c.summary = 'List available templates'
+      c.description = <<~DESC.chomp
+      List available templates.
+      
+      Filter the displayed templates using the optional flags. Filters may be input as 
+      glob expressions. Filters that include wildcards or spaces should be enclosed in 
+      quotes.
+
+      Multiple comma-separated filter expressions may be passed to each flag. A template 
+      is considered to have passed the filter for a given flag if its attributes 
+      match at least one of these expressions.
+      DESC
+      c.slop.string '--id', 'Filter by template ID', meta: 'ID[,ID...]'
+      c.slop.string '--name', 'Filter by template name', meta: 'NAME[,NAME...]'
     end
 
     create_command 'copy-template', 'NAME [DEST]' do |c|
@@ -93,6 +106,18 @@ module FlightJob
 
     create_command 'list-scripts' do |c|
       c.summary = 'List your rendered scripts'
+      c.description = <<~DESC.chomp
+      List your rendered scripts.
+      
+      Filter the displayed scripts using the optional flags. Filters may be input as 
+      glob expressions; filters with wildcards should be enclosed in quotes.
+
+      Multiple comma-separated filter expressions may be passed to each flag. A script 
+      is considered to have passed the filter for a given flag if its attributes 
+      match at least one of these expressions.
+      DESC
+      c.slop.string '--id', 'Filter by script ID', meta: 'ID[,ID...]'
+      c.slop.string '--template', 'Filter by template ID', meta: 'TEMPLATE[,TEMPLATE...]'
     end
 
     create_command 'view-script', 'SCRIPT_ID' do |c|
@@ -257,6 +282,19 @@ module FlightJob
 
     create_command 'list-array-tasks', 'JOB_ID' do |c|
       c.summary = 'List all the tasks for an array job'
+      c.description = <<~DESC.chomp
+      List all the tasks for a previously submitted array job.
+      
+      Filter the displayed tasks by their current state using the optional 
+      `--state` flag. Filters may be input as glob expressions; filters with 
+      wildcards should be enclosed in quotes.
+
+      Multiple comma-separated filter expressions may be passed to the `--state` 
+      flag. A task is considered to have passed the filter if its state matches at
+      least one of these expressions.
+      DESC
+      c.slop.string '--state', "Filter by task state. Valid states include: \n" \
+      'PENDING, RUNNING, COMPLETING, COMPLETED, FAILED, CANCELLED, UNKNOWN', meta: 'STATE[,STATE...]'
     end
 
     create_command 'info-array-task', 'JOB_ID INDEX' do |c|
