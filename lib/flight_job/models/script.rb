@@ -33,7 +33,8 @@ module FlightJob
   class Script < ApplicationModel
 
     def self.load_all(opts = nil)
-      Dir.glob(new(id: '*').metadata_path).map do |path|
+      glob = File.join(Flight.config.scripts_dir, "*", "metadata.yaml")
+      Dir.glob(glob).map do |path|
         id = File.basename(File.dirname(path))
         script = new(id: id)
         if script.pass_filter?(opts)
