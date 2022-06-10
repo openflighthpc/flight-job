@@ -65,14 +65,19 @@ module FlightJob
     validates :id, format: { with: /\A[[:alnum:]].*\Z/, message: 'must start with a letter or a number' },
               unless: -> { validation_context == :render }
 
+    validate do
+      unless metadata.valid?
+        messages = metadata.errors.map { |e| e.message }
+        errors.add(:metadata, messages.join("; "))
+      end
+    end
+
     validate on: :load do
       unless File.exist? metadata_path
         errors.add(:metadata_path, 'does not exist')
-        next
       end
       unless File.exist? script_path
         errors.add(:script_path, 'does not exist')
-        next
       end
     end
 
@@ -106,14 +111,6 @@ module FlightJob
     # before it can be used
     def exists?
       File.exist? metadata_path
-    end
-
-    def notes
-      @notes ||= Notes.new(id).tap { |n| n.read }
-    end
-
-    def initialize_notes(notes = "")
-      @notes ||= Notes.new(id).tap { |n| n.write(notes) }
     end
 
     def script_path
@@ -192,7 +189,7 @@ module FlightJob
 
     def initialize_metadata(template, answers)
       if persisted?
-        Metadata.load_from_path(metadata_path, self)
+        raise InternalError, "Cannot initialize metadata for persisted script '#{id.to_s}'"
       else
         @metadata = Metadata.from_template(template, answers, self)
       end
@@ -212,6 +209,23 @@ module FlightJob
       # exist outside of the execution scope, and will not have a path.
       return nil if id.nil?
       @metadata_path ||= File.join(FlightJob.config.scripts_dir, id, 'metadata.yaml')
+    end
+
+    def initialize_notes(notes)
+      @notes = Notes.new(id, notes)
+    end
+
+    def notes
+      @notes ||= if File.exist?(notes_path)
+                   Notes.new(id, Notes.load_from_path(notes_path))
+                 else
+                   Notes.new(id)
+                 end
+    end
+
+    def notes_path
+      return nil if id.nil?
+      @notes_path ||= File.join(FlightJob.config.scripts_dir, id, 'notes.md')
     end
 
 

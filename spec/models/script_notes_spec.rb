@@ -16,6 +16,7 @@ RSpec.describe "FlightJob::Notes", type: :model do
         expect(File).to exist(notes_path)
       end
     end
+
     it "saves the notes correctly" do
       fresh_fakefs do
         create_and_save_script(notes: test_notes)
@@ -25,14 +26,13 @@ RSpec.describe "FlightJob::Notes", type: :model do
     end
   end
 
-  context "edits the notes for an existing script" do
+  context "edits notes for an existing script" do
     let(:new_notes) { "New test notes" }
 
-    it "saves the notes correctly" do
+    it "new notes are saved correctly" do
       fresh_fakefs do
         create_and_save_script(notes: test_notes).tap do |script|
-          script.notes.write(new_notes)
-          script.notes.save
+          script.notes.save(new_notes)
         end
         new_script = FlightJob::Script.new(id: script_id)
         expect(new_script.notes.read).to eq(new_notes)

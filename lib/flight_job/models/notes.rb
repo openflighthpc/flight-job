@@ -25,26 +25,29 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 module FlightJob
-  class Notes
-    def initialize(script_id)
-      @script_id = script_id
-    end
+  class Script < ApplicationModel
+    class Notes
+      def self.load_from_path(path)
+        File.exist?(path) ? File.read(path) : ''
+      end
 
-    def read
-      @notes ||= File.exist?(path) ? File.read(path) : ''
-    end
+      def initialize(script_id, notes = '')
+        @script_id = script_id
+        @notes = notes
+      end
 
-    def write(notes)
-      @notes = notes
-    end
+      def read
+        @notes || ''
+      end
 
-    def save
-      File.write path, @notes
-      FileUtils.chmod(0600, path)
-    end
+      def save(notes = nil)
+        File.write path, notes || @notes || ''
+        FileUtils.chmod(0600, path)
+      end
 
-    def path
-      @path ||= File.join(FlightJob.config.scripts_dir, @script_id, 'notes.md')
+      def path
+        @path ||= File.join(FlightJob.config.scripts_dir, @script_id, 'notes.md')
+      end
     end
   end
 end
