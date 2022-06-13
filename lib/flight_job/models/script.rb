@@ -216,15 +216,13 @@ module FlightJob
     end
 
     def notes
-      @notes ||= Notes.new(id).load
+      @notes ||= Notes.new(id)
     end
-
 
     protected
 
     def <=>(other)
       FancyIdOrdering.call(self.id, other.id)
     end
-
   end
 end

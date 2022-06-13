@@ -27,22 +27,18 @@
 module FlightJob
   class Script < ApplicationModel
     class Notes
-      def initialize(script_id, notes = '')
+      def initialize(script_id, notes=nil)
         @script_id = script_id
         @notes = notes
       end
 
-      def load
-        Notes.new(@script_id, File.exist?(path) ? File.read(path) : '')
-      end
-
       def read
-        @notes || ''
+        @notes ||= File.exist?(path) ? File.read(path) : ''
       end
 
       def save(notes = nil)
         @notes = notes if notes
-        File.write path, notes || @notes || ''
+        File.write(path, @notes || '')
         FileUtils.chmod(0600, path)
       end
 
