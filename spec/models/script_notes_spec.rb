@@ -33,6 +33,7 @@ RSpec.describe "FlightJob::Notes", type: :model do
       fresh_fakefs do
         create_and_save_script(notes: test_notes).tap do |script|
           script.notes.save(new_notes)
+          expect(script.notes.read).to eq(new_notes)
         end
         new_script = FlightJob::Script.new(id: script_id)
         expect(new_script.notes.read).to eq(new_notes)

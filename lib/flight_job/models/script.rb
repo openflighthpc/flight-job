@@ -216,16 +216,7 @@ module FlightJob
     end
 
     def notes
-      @notes ||= if File.exist?(notes_path)
-                   Notes.new(id, Notes.load_from_path(notes_path))
-                 else
-                   Notes.new(id)
-                 end
-    end
-
-    def notes_path
-      return nil if id.nil?
-      @notes_path ||= File.join(FlightJob.config.scripts_dir, id, 'notes.md')
+      @notes ||= Notes.new(id).load
     end
 
 
