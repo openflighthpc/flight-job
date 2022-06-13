@@ -29,18 +29,42 @@ require 'output_mode'
 
 module FlightJob
   class Outputs::ListScripts < OutputMode::Formatters::Index
+    def render(*a, **o)
+      super.tap do |txt|
+        next unless humanize?
+        next unless @invalid_script
+        txt << "\n"
+        txt << pastel.red(" * Invalid script")
+      end
+    end
+
     def register_all
-      register(header: 'ID', row_color: :yellow) { |s| s.id }
+      register_id
       register(header: 'Template ID') { |s| s.template_id }
       register(header: 'File Name') { |s| s.script_name }
 
       register(header: 'Created at') do |script|
-        Time.parse script.created_at
+        Time.parse script.created_at if script.created_at
       end
 
       if verbose?
         register(header: 'Path') { |s| s.script_path }
       end
+    end
+
+    def register_id
+      register(header: 'ID', row_color: :yellow) do |script|
+        if script.valid?
+          script.id
+        else
+          @invalid_script = true
+          pastel.red "#{script.id}*"
+        end
+      end
+    end
+
+    def pastel
+      @pastel ||= Pastel.new(enabled: color?)
     end
   end
 end

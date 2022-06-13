@@ -28,6 +28,7 @@ require 'securerandom'
 require_relative 'script/metadata'
 require_relative 'script/migrate_script'
 require_relative '../matcher'
+require_relative 'script/migrate_script'
 
 module FlightJob
   class Script < ApplicationModel
@@ -38,13 +39,11 @@ module FlightJob
         id = File.basename(File.dirname(path))
         script = new(id: id)
         if script.pass_filter?(opts)
-          if script.valid?(:load)
-            script
-          else
-            FlightJob.logger.error("Failed to load missing/invalid script: #{id}")
+          unless script.valid?(:load)
+            FlightJob.logger.error("Invalid script: #{id}")
             FlightJob.logger.info(script.errors.full_messages.join("\n"))
-            nil
           end
+          script
         end
       end.compact.sort
     end

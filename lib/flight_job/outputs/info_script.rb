@@ -50,7 +50,7 @@ module FlightJob
       register(section: :main, header: 'Path') { |s| s.script_path }
 
       register(section: :main, header: 'Created at') do |script|
-        Time.parse script.created_at
+        Time.parse script.created_at if script.created_at
       end
 
       if humanize?
