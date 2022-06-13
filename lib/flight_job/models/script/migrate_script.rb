@@ -31,6 +31,7 @@ module FlightJob
     class MigrateScript
       def self.after_initialize(script)
         return if File.exist? script.script_path
+        return unless script.script_name
 
         legacy_path = File.join(Flight.config.scripts_dir, script.id, script.script_name)
         if File.exist?(legacy_path)
