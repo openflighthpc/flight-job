@@ -29,6 +29,7 @@ require_relative 'script/metadata'
 require_relative 'script/migrate_script'
 require_relative '../matcher'
 require_relative 'script/migrate_script'
+require_relative '../matcher'
 
 module FlightJob
   class Script < ApplicationModel

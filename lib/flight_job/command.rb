@@ -233,8 +233,10 @@ module FlightJob
           raise MissingScriptError, "Could not locate script: #{id}"
         end
         unless script.valid?(:load)
-          FlightJob.logger.error("Invalid script: #{id}")
-          FlightJob.logger.info(script.errors.full_messages.join("\n"))
+          FlightJob.logger.error("Failed to load script: #{id}\n") do
+            script.errors.full_messages
+          end
+          raise InternalError, "Failed to load invalid script: #{id}"
         end
       end
     end
