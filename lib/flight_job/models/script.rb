@@ -66,7 +66,7 @@ module FlightJob
               unless: -> { validation_context == :render }
 
     validate do
-      unless metadata.valid?
+      if persisted? && !metadata.valid?
         messages = metadata.errors.map { |e| e.message }
         errors.add(:metadata, messages.join("; "))
       end
