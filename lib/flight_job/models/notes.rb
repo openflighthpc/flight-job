@@ -1,5 +1,5 @@
 #==============================================================================
-# Copyright (C) 2021-present Alces Flight Ltd.
+# Copyright (C) 2022-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -24,32 +24,26 @@
 # For more information on Flight Job, please visit:
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
-
-require 'tty-editor'
-
 module FlightJob
-  module Commands
-    class EditScriptNotes < Command
-      def run
-        # Ensure the script exists up front
-        script = load_script(args.first)
+  class Script < ApplicationModel
+    class Notes
+      def initialize(script_id, notes = nil)
+        @script_id = script_id
+        @notes = notes
+      end
 
-        if stdin_flag?(opts.notes)
-          # Update the notes from stdin
-          script.notes.save(cached_stdin)
+      def read
+        @notes ||= File.exist?(path) ? File.read(path) : ''
+      end
 
-        elsif opts.notes && opts.notes[0] == '@'
-          # Update the notes from a file
-          script.notes.save(read_file(opts.notes[1..]))
+      def save(notes = nil)
+        @notes = notes if notes
+        File.write(path, @notes || '')
+        FileUtils.chmod(0600, path)
+      end
 
-        elsif opts.notes
-          # Update the notes from the CLI
-          script.notes.save(opts.notes)
-
-        else
-          # Open the notes in the editor
-          new_editor.open(script.notes.path)
-        end
+      def path
+        @path ||= File.join(FlightJob.config.scripts_dir, @script_id, 'notes.md')
       end
     end
   end

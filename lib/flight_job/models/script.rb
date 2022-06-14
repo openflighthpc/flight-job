@@ -26,13 +26,15 @@
 #==============================================================================
 require 'securerandom'
 require_relative 'script/metadata'
+require_relative 'script/migrate_script'
 require_relative '../matcher'
 
 module FlightJob
   class Script < ApplicationModel
 
     def self.load_all(opts = nil)
-      Dir.glob(new(id: '*').metadata_path).map do |path|
+      glob = File.join(Flight.config.scripts_dir, "*", "metadata.yaml")
+      Dir.glob(glob).map do |path|
         id = File.basename(File.dirname(path))
         script = new(id: id)
         if script.pass_filter?(opts)
@@ -47,12 +49,14 @@ module FlightJob
       end.compact.sort
     end
 
+    after_initialize MigrateScript, if: :persisted?
+
     delegate :generate_submit_args, to: :load_template
     delegate(*Metadata.attribute_names, to: :metadata)
     delegate :tags=, :template_id=, :script_name=, :answers=, to: :metadata
+    delegate :persisted?, to: :metadata
 
     attr_accessor :id
-    attr_writer :notes
 
     validates :id, presence: true, length: { maximum: FlightJob.config.max_id_length },
               format: { with: /\A[a-zA-Z0-9_-]+\Z/,
@@ -61,23 +65,19 @@ module FlightJob
     validates :id, format: { with: /\A[[:alnum:]].*\Z/, message: 'must start with a letter or a number' },
               unless: -> { validation_context == :render }
 
+    validate do
+      if persisted? && !metadata.valid?
+        messages = metadata.errors.map { |e| e.message }
+        errors.add(:metadata, messages.join("; "))
+      end
+    end
+
     validate on: :load do
-      # Ensures the metadata file exists
       unless File.exist? metadata_path
         errors.add(:metadata_path, 'does not exist')
-        next
       end
-
-      # Ensures the script file exists
       unless File.exist? script_path
-        legacy_path = File.join(Flight.config.scripts_dir, id, script_name)
-        if File.exist?(legacy_path)
-          # Migrate legacy scripts to the script_path
-          FileUtils.ln_s script_name, script_path
-        else
-          # Error as it is missing
-          @errors.add(:script_path, 'does not exist')
-        end
+        errors.add(:script_path, 'does not exist')
       end
     end
 
@@ -113,20 +113,8 @@ module FlightJob
       File.exist? metadata_path
     end
 
-    def notes
-      @notes ||= if File.exist? notes_path
-                   File.read notes_path
-                 else
-                   ''
-                 end
-    end
-
     def script_path
       @script_path ||= File.join(FlightJob.config.scripts_dir, id, 'script.sh')
-    end
-
-    def notes_path
-      @notes_path ||= File.join(FlightJob.config.scripts_dir, id, 'notes.md')
     end
 
     def load_template
@@ -151,7 +139,7 @@ module FlightJob
 
       # Writes the data to disk
       metadata.save
-      save_notes
+      notes.save
       File.write(script_path, renderer.render)
 
       # Makes the script executable and metadata read/write
@@ -159,17 +147,12 @@ module FlightJob
       FileUtils.chmod(0600, metadata_path)
     end
 
-    def save_notes
-      File.write notes_path, notes
-      FileUtils.chmod(0600, notes_path)
-    end
-
     def serializable_hash(opts = nil)
       opts ||= {}
       answers # Ensure the answers have been set
       {
         "id" => id,
-        "notes" => notes,
+        "notes" => notes.read,
         "path" => script_path,
         "tags" => tags,
       }.merge(metadata).tap do |hash|
@@ -205,11 +188,11 @@ module FlightJob
     end
 
     def initialize_metadata(template, answers)
-      @metadata ||= if metadata_path && File.exist?(metadata_path)
-                      Metadata.load_from_path(metadata_path, self)
-                    else
-                      Metadata.from_template(template, answers, self) # self = script
-                    end
+      if persisted?
+        raise InternalError, "Cannot initialize metadata for persisted script '#{id.to_s}'"
+      else
+        @metadata = Metadata.from_template(template, answers, self)
+      end
     end
 
     def metadata
@@ -228,12 +211,18 @@ module FlightJob
       @metadata_path ||= File.join(FlightJob.config.scripts_dir, id, 'metadata.yaml')
     end
 
+    def initialize_notes(notes)
+      @notes = Notes.new(id, notes)
+    end
+
+    def notes
+      @notes ||= Notes.new(id)
+    end
 
     protected
 
     def <=>(other)
       FancyIdOrdering.call(self.id, other.id)
     end
-
   end
 end

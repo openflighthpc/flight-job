@@ -11,22 +11,7 @@ RSpec.describe "FlightJob::Script", type: :model do
 
   describe "script creation" do
     let(:script_id) { "new-script" }
-    let(:test_notes) { "test notes" }
-    let(:notes_path) { File.join(script_dir,"notes.md") }
     let(:job_script_path) { File.join(script_dir,"script.sh") }
-
-    context "writes the notes" do
-      it "creates the notes file" do
-        check_for_file_creation(notes_path)
-      end
-      it "saves the notes correctly" do
-        fresh_fakefs do
-          create_and_save_script(notes: test_notes)
-          new_script = FlightJob::Script.new(id: script_id)
-          expect(new_script.notes).to eq(test_notes)
-        end
-      end
-    end
 
     context "creates the job script" do
       it "writes the job script file" do
@@ -48,6 +33,47 @@ RSpec.describe "FlightJob::Script", type: :model do
           expect(new_script.template_id).to eq template_id
           expect(new_script.tags).to eq template.tags
         end
+      end
+    end
+  end
+
+  describe "validations" do
+    subject(:script) { FlightJob::Script.new(id: script_id) }
+    before(:each) { subject.valid?(:load) }
+
+    context "when script is valid" do
+      let(:script_id) { "valid-script" }
+
+      it "doesn't raise an error" do
+        expect(subject.errors).to be_empty
+        is_expected.not_to have_error(:script_path, 'does not exist')
+      end
+    end
+
+    context "when script file is missing" do
+      let(:script_id) { "invalid-no-script" }
+
+      it "raises an error" do
+        expect(subject.errors).not_to be_empty
+        is_expected.to have_error(:script_path, 'does not exist')
+      end
+    end
+
+    context "when metadata file is missing" do
+      let(:script_id) { "invalid-no-metadata" }
+
+      it "raises an error" do
+        expect(subject.errors).not_to be_empty
+        is_expected.to have_error(:metadata_path, 'does not exist')
+      end
+    end
+
+    context "when metadata is invalid" do
+      let(:script_id) { "invalid-metadata" }
+
+      it "raises an error" do
+        expect(subject.errors).not_to be_empty
+        is_expected.to have_error(:metadata, 'is not valid')
       end
     end
   end
@@ -91,8 +117,8 @@ RSpec.describe "FlightJob::Script", type: :model do
     end
   end
 
-  def create_and_save_script(id: script_id, notes: nil)
-    FlightJob::Script.new( id: id, notes: notes ).tap do |s|
+  def create_and_save_script(id: script_id)
+    FlightJob::Script.new( id: id ).tap do |s|
       s.initialize_metadata(template, {})
       s.render_and_save
     end

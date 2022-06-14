@@ -1,5 +1,5 @@
 #==============================================================================
-# Copyright (C) 2021-present Alces Flight Ltd.
+# Copyright (C) 2022-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -25,30 +25,18 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 
-require 'tty-editor'
-
 module FlightJob
-  module Commands
-    class EditScriptNotes < Command
-      def run
-        # Ensure the script exists up front
-        script = load_script(args.first)
+  class Script < ApplicationModel
+    # Manages attempts to migrate legacy scripts to the script_path
+    class MigrateScript
+      def self.after_initialize(script)
+        return if File.exist? script.script_path
 
-        if stdin_flag?(opts.notes)
-          # Update the notes from stdin
-          script.notes.save(cached_stdin)
-
-        elsif opts.notes && opts.notes[0] == '@'
-          # Update the notes from a file
-          script.notes.save(read_file(opts.notes[1..]))
-
-        elsif opts.notes
-          # Update the notes from the CLI
-          script.notes.save(opts.notes)
-
+        legacy_path = File.join(Flight.config.scripts_dir, script.id, script.script_name)
+        if File.exist?(legacy_path)
+          FileUtils.ln_s script.script_name, script.script_path
         else
-          # Open the notes in the editor
-          new_editor.open(script.notes.path)
+          script.errors.add(script.script_path, 'does not exist')
         end
       end
     end
