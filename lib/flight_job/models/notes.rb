@@ -27,7 +27,7 @@
 module FlightJob
   class Script < ApplicationModel
     class Notes
-      def initialize(script_id, notes=nil)
+      def initialize(script_id, notes = nil)
         @script_id = script_id
         @notes = notes
       end
