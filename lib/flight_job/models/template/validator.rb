@@ -41,7 +41,7 @@ module FlightJob
 
       def validate_schema(template)
         return unless template.metadata.present?
-        schema_errors = SCHEMA.validate(template.metadata).to_a
+        schema_errors = Metadata::SCHEMA.validate(template.metadata.to_hash).to_a
         return if schema_errors.empty?
 
         template.errors.add(:metadata, 'is not valid')
