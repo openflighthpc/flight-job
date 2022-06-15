@@ -28,8 +28,6 @@ require 'securerandom'
 require_relative 'script/metadata'
 require_relative 'script/migrate_script'
 require_relative '../matcher'
-require_relative 'script/migrate_script'
-require_relative '../matcher'
 
 module FlightJob
   class Script < ApplicationModel
@@ -41,7 +39,7 @@ module FlightJob
         script = new(id: id)
         if script.pass_filter?(opts)
           unless script.valid?(:load)
-            FlightJob.logger.error("Invalid script: #{id}")
+            FlightJob.logger.warn("Invalid script: #{id}")
             FlightJob.logger.info(script.errors.full_messages.join("\n"))
           end
           script
