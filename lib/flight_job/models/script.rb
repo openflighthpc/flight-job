@@ -194,7 +194,7 @@ module FlightJob
     end
 
     def metadata
-      @metadata ||= if File.exist?(metadata_path)
+      @metadata ||= if !metadata_path.nil? && File.exist?(metadata_path)
                       Metadata.load_from_path(metadata_path, self)
                     else
                       Flight.logger.warn("Setting metadata to empty hash for script #{id}; this probably isn't right")

@@ -94,6 +94,9 @@ module FlightJob
       end
 
       def persisted?
+        # Sometimes we render a script that has no ID; in this case, it doesn't
+        # exist outside of the execution scope, and will not have a path.
+        return nil if @path.nil?
         File.exist?(@path)
       end
     end
