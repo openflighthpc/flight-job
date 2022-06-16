@@ -90,10 +90,6 @@ module FlightJob
       def exists?
         File.exist?(@path)
       end
-
-      def fetch(key, default = nil)
-        @hash.fetch(key, default)
-      end
     end
   end
 end

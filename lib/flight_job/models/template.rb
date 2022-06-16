@@ -85,7 +85,7 @@ module FlightJob
     end
 
     def script_template_name
-      metadata.fetch('script_template', 'script.sh')
+      metadata.script_template || 'script.sh'
     end
 
     def metadata
