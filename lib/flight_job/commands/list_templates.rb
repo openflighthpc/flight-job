@@ -37,7 +37,17 @@ module FlightJob
       end
 
       def templates
-        @templates ||= Template.load_all(opts)
+        @templates ||=
+          begin
+            templates = Template.load_all(opts)
+            if opts.json
+              # Prevent invalid templates from reaching the webapp.  Not ideal,
+              # but a decent workaround until the webapp can be updated.
+              templates.reject { |t| !t.errors.empty? }
+            else
+              templates
+            end
+          end
       end
     end
   end

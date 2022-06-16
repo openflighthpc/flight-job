@@ -37,7 +37,17 @@ module FlightJob
       end
 
       def scripts
-        @scripts ||= Script.load_all(opts)
+        @scripts ||=
+          begin
+            scripts = Script.load_all(opts)
+            if opts.json
+              # Prevent invalid scripts from reaching the webapp.  Not ideal,
+              # but a decent workaround until the webapp can be updated.
+              scripts.reject { |s| !s.errors.empty? }
+            else
+              scripts
+            end
+          end
       end
     end
   end

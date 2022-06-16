@@ -99,7 +99,7 @@ module FlightJob
 
     def serializable_hash(opts = nil)
       opts ||= {}
-      md = metadata.except("generation_questions", "submission_questions", "__meta__")
+      md = metadata.to_hash.except("generation_questions", "submission_questions", "__meta__")
       md.merge(
         'id' => id,
         'path' => workload_path,
