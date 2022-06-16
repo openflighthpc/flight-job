@@ -30,43 +30,10 @@ require "json_schemer"
 require_relative "template/schema_defs"
 require_relative "template/validator"
 require_relative '../matcher'
+require_relative 'template/metadata'
 
 module FlightJob
   class Template < ApplicationModel
-    SCHEMA = JSONSchemer.schema({
-      "type" => "object",
-      "$comment" => "strip-schema",
-      "additionalProperties" => false,
-      "required" => [
-        "synopsis",
-        "version",
-        "generation_questions",
-        "name",
-        "copyright",
-        "license"
-      ],
-      "properties" => {
-        "copyright" => { "type" => "string" },
-        "description" => { "type" => "string" },
-        "generation_questions" => {
-          "type" => "array",
-          "items" => { "$ref" => "#/$defs/question_def" }
-        },
-        "submission_questions" => {
-          "type" => "array",
-          "items" => { "$ref" => "#/$defs/question_def" }
-        },
-        "license" => { "type" => "string" },
-        "name" => { "type" => "string" },
-        "priority" => { "type" => "integer" },
-        "script_template" => { "type" => "string" },
-        "synopsis" => { "type" => "string" },
-        "tags" => { "type" => "array", "items" => { "type" => "string" }},
-        "version" => { "type" => "integer", "enum" => [0] },
-        "__meta__" => {}
-      },
-      "$defs" => {}.merge!(SchemaDefs::VALIDATOR_DEF).merge!(SchemaDefs::QUESTION_DEF)
-    })
 
     def self.load_all(opts = nil)
       Dir.glob(new(id: '*').metadata_path).map do |path|
@@ -84,6 +51,9 @@ module FlightJob
 
     attr_accessor :id, :index
 
+    delegate(*Metadata.attribute_names - %i[generation_questions submission_questions], to: :metadata)
+    delegate :exists?, to: :metadata
+
     validates_with Template::Validator
 
     validate do
@@ -96,10 +66,6 @@ module FlightJob
     def pass_filter?(filters)
       @_matcher ||= Matcher.new(filters, {id: id, name: name})
       @_matcher.matches?
-    end
-
-    def exists?
-      File.exist? metadata_path
     end
 
     def metadata_path
@@ -119,21 +85,16 @@ module FlightJob
     end
 
     def script_template_name
-      metadata.fetch('script_template', 'script.sh')
+      metadata.script_template || 'script.sh'
     end
 
-    # NOTE: The raw metadata is exposed through the CLI with the --json flag.
-    # This allows it to be directly passed to the API layer.
-    # Consider refactoring when introducing a non-backwards compatible change
     def metadata
-      return @metadata if defined?(@metadata)
-      @metadata = YAML.load(File.read(metadata_path)).to_h
-    rescue Errno::ENOENT
-      errors.add(:metadata, "has not been saved")
-      @metadata = {}
-    rescue Psych::SyntaxError
-      errors.add(:metadata, "is not valid YAML")
-      @metadata = {}
+      @metadata ||= if File.exist?(metadata_path)
+                      Metadata.load_from_path(metadata_path, self)
+                    else
+                      errors.add(:metadata, "has not been saved")
+                      Metadata.blank(metadata_path, self)
+                    end
     end
 
     def serializable_hash(opts = nil)
@@ -219,34 +180,6 @@ module FlightJob
           end
         end
       end
-    end
-
-    def priority
-      metadata['priority']
-    end
-
-    def name
-       metadata['name']
-    end
-
-    def copyright
-       metadata['copyright']
-    end
-    
-    def license
-       metadata['license']
-    end
-    
-    def synopsis
-       metadata['synopsis']
-    end
-
-    def description
-       metadata['description']
-    end
-
-    def tags
-      metadata['tags'] || []
     end
 
     def generate_submit_args(job)

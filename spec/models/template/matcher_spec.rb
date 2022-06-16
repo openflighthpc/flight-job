@@ -10,7 +10,7 @@ RSpec.describe 'Template filtering' do
 
   before(:all) do
     @templates_dir = Flight.config.templates_dir
-    Flight.config.templates_dir = File.join(Flight.root, 'spec/fixtures/templates')
+    Flight.config.templates_dir = File.join(Flight.root, 'spec/fixtures/templates/matcher')
   end
   after(:all) do
     Flight.config.templates_dir = @templates_dir
