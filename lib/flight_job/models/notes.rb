@@ -1,5 +1,5 @@
 #==============================================================================
-# Copyright (C) 2021-present Alces Flight Ltd.
+# Copyright (C) 2022-present Alces Flight Ltd.
 #
 # This file is part of Flight Job.
 #
@@ -24,47 +24,27 @@
 # For more information on Flight Job, please visit:
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
-
-require 'output_mode'
-
 module FlightJob
-  class Outputs::ListScripts < OutputMode::Formatters::Index
-    def render(*a, **o)
-      super.tap do |txt|
-        next unless humanize?
-        next unless @invalid_script
-        txt << "\n"
-        txt << pastel.red(" * Invalid script")
-      end
-    end
-
-    def register_all
-      register_id
-      register(header: 'Template ID') { |s| s.template_id }
-      register(header: 'File Name') { |s| s.script_name }
-
-      register(header: 'Created at') do |script|
-        Time.parse script.created_at if script.created_at
+  class Script < ApplicationModel
+    class Notes
+      def initialize(script_id, notes = nil)
+        @script_id = script_id
+        @notes = notes
       end
 
-      if verbose?
-        register(header: 'Path') { |s| s.script_path }
+      def read
+        @notes ||= File.exist?(path) ? File.read(path) : ''
       end
-    end
 
-    def register_id
-      register(header: 'ID', row_color: :yellow) do |script|
-        if script.valid?
-          script.id
-        else
-          @invalid_script = true
-          pastel.red "#{script.id}*"
-        end
+      def save(notes = nil)
+        @notes = notes if notes
+        File.write(path, @notes || '')
+        FileUtils.chmod(0600, path)
       end
-    end
 
-    def pastel
-      @pastel ||= Pastel.new(enabled: color?)
+      def path
+        @path ||= File.join(FlightJob.config.scripts_dir, @script_id, 'notes.md')
+      end
     end
   end
 end

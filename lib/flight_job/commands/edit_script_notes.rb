@@ -36,19 +36,19 @@ module FlightJob
 
         if stdin_flag?(opts.notes)
           # Update the notes from stdin
-          File.write script.notes_path, cached_stdin
+          script.notes.save(cached_stdin)
 
         elsif opts.notes && opts.notes[0] == '@'
           # Update the notes from a file
-          File.write script.notes_path, read_file(opts.notes[1..])
+          script.notes.save(read_file(opts.notes[1..]))
 
         elsif opts.notes
           # Update the notes from the CLI
-          File.write script.notes_path, opts.notes
+          script.notes.save(opts.notes)
 
         else
           # Open the notes in the editor
-          new_editor.open(script.notes_path)
+          new_editor.open(script.notes.path)
         end
       end
     end

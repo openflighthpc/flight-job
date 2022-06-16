@@ -50,13 +50,13 @@ module FlightJob
       register(section: :main, header: 'Path') { |s| s.script_path }
 
       register(section: :main, header: 'Created at') do |script|
-        Time.parse script.created_at
+        Time.parse script.created_at if script.created_at
       end
 
       if humanize?
-        notes = MarkdownRenderer.new(object.notes).wrap_markdown
+        notes = MarkdownRenderer.new(object.notes.read).wrap_markdown
       else
-        notes = object.notes
+        notes = object.notes.read
       end
       register(section: :notes, header: 'Notes') { notes }
     end

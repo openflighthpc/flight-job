@@ -118,7 +118,8 @@ module FlightJob
       def create_script(script_id, answers, notes)
         verify_id(script_id) if script_id
         opts = ( script_id ? { id: script_id } : {} )
-        script = Script.new( notes: notes, **opts )
+        script = Script.new( **opts )
+        script.initialize_notes(notes)
         script.initialize_metadata(template, answers)
         script.render_and_save
         script

@@ -236,7 +236,7 @@ module FlightJob
           FlightJob.logger.error("Failed to load script: #{id}\n") do
             script.errors.full_messages
           end
-          raise InternalError, "Unexpectedly failed to load script: #{id}"
+          raise InternalError, "Failed to load invalid script: #{id}"
         end
       end
     end
