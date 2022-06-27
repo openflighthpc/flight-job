@@ -25,5 +25,5 @@
 # https://github.com/openflighthpc/flight-job
 #==============================================================================
 module FlightJob
-  VERSION = '2.10.0~rc2'
+  VERSION = '2.10.0'
 end
