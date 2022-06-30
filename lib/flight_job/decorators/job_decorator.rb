@@ -218,7 +218,8 @@ module FlightJob
           hash["stderr_size"] = File.size(stderr_path) if object.stderr_readable?
 
           if Flight.config.includes.include? 'script'
-            hash['script'] = object.load_script
+            script = object.load_script
+            hash['script'] = script.persisted? ? script : nil
           end
 
           # Always serialize the result_files
