@@ -222,19 +222,6 @@ module FlightJob
       nil
     end
 
-    def stdout_readable?
-      return false unless stdout_path
-      return false unless File.exist? stdout_path
-      File.stat(stdout_path).readable?
-    end
-
-    def stderr_readable?
-      return false if stderr_merged?
-      return false unless stderr_path
-      return false unless File.exist? stderr_path
-      File.stat(stderr_path).readable?
-    end
-
     def stderr_merged?
       stdout_path == stderr_path
     end
