@@ -214,8 +214,8 @@ module FlightJob
           # NOTE: The API uses the 'size' attributes as a proxy check to exists/readability
           #       as well as getting the size. Non-readable stdout/stderr would be
           #       unusual, and can be ignored
-          hash["stdout_size"] = File.size(stdout_path) if object.stdout_readable?
-          hash["stderr_size"] = File.size(stderr_path) if object.stderr_readable?
+          hash["stdout_size"] = File.size(stdout_path) if stdout_readable?
+          hash["stderr_size"] = File.size(stderr_path) if stderr_readable?
 
           if Flight.config.includes.include? 'script'
             script = object.load_script
@@ -237,6 +237,19 @@ module FlightJob
       end
 
       private
+
+      def stdout_readable?
+        return false unless stdout_path
+        return false unless File.exist? stdout_path
+        File.stat(stdout_path).readable?
+      end
+
+      def stderr_readable?
+        return false if stderr_merged?
+        return false unless stderr_path
+        return false unless File.exist? stderr_path
+        File.stat(stderr_path).readable?
+      end
 
       def first_task
         @first_task = Task.load_first(id) || false if @first_task.nil?
