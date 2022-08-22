@@ -245,8 +245,8 @@ module FlightJob
       end
 
       def stderr_readable?
-        return false if stderr_merged?
         return false unless stderr_path
+        return false if object.stderr_merged?
         return false unless File.exist? stderr_path
         File.stat(stderr_path).readable?
       end
