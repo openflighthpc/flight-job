@@ -18,7 +18,7 @@ its results.
 Flight Job is available as part of the *Flight User Suite*.  This is the
 easiest method for installing Flight Job and all its dependencies.  It is
 documented in [the OpenFlight
-Documentation](https://use.openflighthpc.org/installing-user-suite/install.html#installing-flight-user-suite).
+Documentation](https://docs.openflighthpc.org/hpc_environment_usage/flight_overview/installing_flight_user_suite/).
 
 ### Manual Installation
 
