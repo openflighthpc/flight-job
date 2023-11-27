@@ -90,7 +90,7 @@ module FlightJob
       end
 
       def with_save_point(&block)
-        raise "Nested calls to with_save_point unsupported" if defined?(@save_point)
+        raise "Nested calls to with_save_point unsupported" if defined?(@save_point) && !@save_point.nil?
         @save_point = @hash.deep_dup
         yield
       ensure
