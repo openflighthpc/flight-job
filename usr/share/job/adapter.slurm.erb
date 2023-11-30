@@ -199,6 +199,17 @@ request_allocation() {
 # Functions used to orchestrate the creation of your interactive session on a
 # compute node with Flight Desktop.
 
+session_term() {
+    echo "Terminating session..."
+    if [ -f $CONTROLS_DIR/flight_desktop_id ]; then
+      local desktop_id=$(cat $CONTROLS_DIR/flight_desktop_id)
+      echo "Killing session for job: ${desktop_id}"
+      ${flight_ROOT:-/opt/flight}/bin/flight desktop kill ${desktop_id}
+    fi
+}
+
+trap session_term SIGTERM
+
 create_session_script() {
     SESSION_SCRIPT=$( mktemp --tmpdir session-script.XXXXXX.sh )
     echo "Creating session script ${SESSION_SCRIPT}"
