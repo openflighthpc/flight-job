@@ -153,7 +153,11 @@ request_allocation() {
         # Request an allocation from the scheduler.  The allocation will run
         # this script again on the allocated node.
         echo "srun ${srun_args[@]}" | tee_session_output
-        srun "${srun_args[@]}" 2> >( tee >( bookkeeping_for_pending_job ) | tee_session_output )
+        (
+          set -o pipefail
+          srun "${srun_args[@]}" 2> >( tee >( bookkeeping_for_pending_job ) | tee_session_output ) \
+            | cat
+        )
         submit_status=$?
         if [ ! -f "${CONTROLS_DIR}/scheduler_id" ] ; then
             # The scheduler_id hasn't been recorded.  We assume that the
@@ -236,7 +240,8 @@ session_start() {
             --script ${SESSION_SCRIPT} \
             --no-override-env \
             --name ${FLIGHT_JOB_ID} \
-            | tee >( grep '^Identity' | cut -f2 | register_control "flight_desktop_id" )
+            | tee >( grep '^Identity' | cut -f2 | register_control "flight_desktop_id" ) \
+            | cat
     )
 
     SESSION_STARTED=$?
